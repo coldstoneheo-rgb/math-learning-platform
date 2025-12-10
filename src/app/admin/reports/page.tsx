@@ -14,7 +14,8 @@ export default function ReportsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [reports, setReports] = useState<ReportWithStudent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'test' | 'weekly' | 'monthly'>('all');
+  const [filter, setFilter] = useState<'all' | 'test' | 'weekly' | 'monthly' | 'consolidated'>('all');
+  const [showNewMenu, setShowNewMenu] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoadReports();
@@ -135,14 +136,40 @@ export default function ReportsPage() {
               <option value="test">시험 분석</option>
               <option value="weekly">주간 리포트</option>
               <option value="monthly">월간 리포트</option>
+              <option value="consolidated">통합 리포트</option>
             </select>
           </div>
-          <a
-            href="/admin/reports/new"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            + 새 리포트
-          </a>
+          <div className="relative">
+            <button
+              onClick={() => setShowNewMenu(!showNewMenu)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            >
+              + 새 리포트
+              <span className="text-xs">▼</span>
+            </button>
+            {showNewMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                <a
+                  href="/admin/reports/new"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  시험 분석
+                </a>
+                <a
+                  href="/admin/reports/monthly/new"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  월간 리포트
+                </a>
+                <a
+                  href="/admin/reports/consolidated/new"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  통합 리포트
+                </a>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 리포트 목록 */}
