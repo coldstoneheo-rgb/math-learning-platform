@@ -120,12 +120,18 @@ export default function AdminDashboard() {
         </div>
 
         {/* 퀵 액션 카드 */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
           <DashboardCard
             title="학생 관리"
             description="학생 추가, 수정, 삭제"
             icon="👨‍🎓"
             href="/admin/students"
+          />
+          <DashboardCard
+            title="학부모 관리"
+            description="학부모 계정 생성 및 자녀 연결"
+            icon="👨‍👩‍👧"
+            href="/admin/parents"
           />
           <DashboardCard
             title="리포트 생성"
