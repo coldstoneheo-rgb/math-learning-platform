@@ -3,50 +3,53 @@
 > **목표**: "종합 학습 컨설팅 시스템"으로 진화
 
 **작성일**: 2025-11-25
-**프로젝트**: AI Math Learning Report Generator
-**참고 문서**: PROMPT_IMPROVEMENT_PROPOSAL.md, PRD_IMPROVEMENT.md, 컴포넌트 품질 분석
+**최종 업데이트**: 2025-12-22
+**프로젝트**: Math Learning Platform (Next.js + Supabase + Vercel)
+**참고 문서**: CLAUDE.md, MathLearning_PRD_v3.0_Implementation.md, PROMPT_IMPROVEMENT_PROPOSAL.md
 
 ---
 
 ## 📋 목차
 
-1. [현재 상태 요약](#현재-상태-요약)
-2. [핵심 개선 방향](#핵심-개선-방향)
-3. [Phase 0: 긴급 개선 (1-2주)](#phase-0-긴급-개선)
-4. [Phase 1: 품질 고도화 (2-4주)](#phase-1-품질-고도화)
-5. [Phase 2: 데이터 기반 지능화 (1-2개월)](#phase-2-데이터-기반-지능화)
-6. [Phase 3: 플랫폼화 (3-6개월)](#phase-3-플랫폼화)
-7. [실행 체크리스트](#실행-체크리스트)
+1. [현재 상태 요약](#1-현재-상태-요약)
+2. [핵심 개선 방향](#2-핵심-개선-방향)
+3. [Phase 0: 긴급 개선 ✅ 완료](#3-phase-0-긴급-개선)
+4. [Phase 1: 품질 고도화 🔄 진행중](#4-phase-1-품질-고도화)
+5. [Phase 2: 데이터 기반 지능화 ⭐ 핵심](#5-phase-2-데이터-기반-지능화)
+6. [Phase 3: 플랫폼화](#6-phase-3-플랫폼화)
+7. [실행 체크리스트](#7-실행-체크리스트)
 
 ---
 
 ## 1. 현재 상태 요약
 
-### ✅ 잘 구현된 부분
+### ✅ 구현 완료된 기능
 
 | 영역 | 점수 | 평가 |
 |---|---|---|
-| **사용자 경험 (UX)** | ⭐⭐⭐⭐⭐ | 로딩, 에러, 피드백 모두 우수 |
-| **컴포넌트 구조** | ⭐⭐⭐⭐ | 논리적 분리, 재사용성 양호 |
-| **타입 안전성** | ⭐⭐⭐⭐ | 중요 부분은 잘 지켜짐 |
-| **에러 처리** | ⭐⭐⭐⭐ | 기본 패턴 구현됨 |
-| **반응형 디자인** | ⭐⭐⭐⭐⭐ | 모바일/태블릿/데스크톱 모두 대응 |
+| **Next.js App Router 구조** | ⭐⭐⭐⭐⭐ | 완벽한 라우팅 및 서버 컴포넌트 활용 |
+| **Supabase 연동** | ⭐⭐⭐⭐⭐ | PostgreSQL + Auth + RLS 구현 완료 |
+| **AI 프롬프트 (5가지 관점)** | ⭐⭐⭐⭐⭐ | 심층 분석 프롬프트 구현 완료 |
+| **타입 안전성** | ⭐⭐⭐⭐⭐ | 엄격한 TypeScript 타입 정의 |
+| **반응형 UI** | ⭐⭐⭐⭐⭐ | 모바일/태블릿/데스크톱 완벽 대응 |
+| **보안 (API 키 보호)** | ⭐⭐⭐⭐⭐ | 서버사이드 API Route 패턴 적용 |
 
-### ❌ 개선 필요 부분
+### 🔄 개선 필요 부분
 
 | 영역 | 점수 | 문제점 | 영향도 |
 |---|---|---|---|
-| **프롬프트 품질** | ⭐⭐⭐ | 개인화/구체성/미래 비전 부족 | 🔴 높음 |
-| **상태 관리** | ⭐⭐⭐ | Prop drilling, 복잡한 유니온 타입 | 🟡 중간 |
-| **중복 코드** | ⭐⭐⭐ | 여러 곳에 중복 패턴 존재 | 🟡 중간 |
-| **파일 크기** | ⭐⭐⭐ | 400줄+ 컴포넌트 | 🟢 낮음 |
+| **피드백 루프** | ⭐⭐ | 전략 효과 측정 시스템 부재 | 🔴 높음 |
+| **예측 모델** | ⭐⭐⭐ | 단순 선형 예측, 정확도 검증 없음 | 🔴 높음 |
+| **데이터 활용** | ⭐⭐⭐ | 축적된 데이터 분석 기능 부족 | 🟡 중간 |
+| **학부모 기능** | ⭐⭐⭐ | 기본 열람만 가능, 상호작용 부족 | 🟡 중간 |
 
 ### 🎯 핵심 문제 진단
 
-**프로젝트의 가장 큰 문제는 "프롬프트 품질"입니다.**
+**현재 시스템의 핵심 과제:**
 
-현재 구현된 기능들(UI, 데이터 흐름, 에러 처리)은 모두 양호하지만,
-**AI 분석의 핵심인 프롬프트가 프로젝트 목표("종합 학습 컨설팅")를 충분히 반영하지 못하고 있습니다.**
+1. **피드백 루프 부재**: AI가 제안한 전략이 실제로 효과가 있었는지 추적하지 못함
+2. **예측 정확도 미검증**: 3개월/6개월 예측이 실제와 맞는지 확인하는 메커니즘 없음
+3. **데이터 사일로**: 축적된 시험 데이터를 패턴 분석에 활용하지 못함
 
 ---
 
@@ -54,883 +57,766 @@
 
 ### 🎯 개선 원칙
 
-1. **"프롬프트 먼저"**: 코드 리팩토링보다 프롬프트 품질 개선이 우선
-2. **"측정 가능한 목표"**: 모든 개선은 측정 가능한 지표와 연결
-3. **"점진적 개선"**: 한 번에 모든 것을 바꾸지 않고 단계적으로
-4. **"사용자 피드백 중심"**: 실제 사용자(교사, 학생, 학부모) 피드백 수집 및 반영
+1. **"데이터가 지능을 만든다"**: 축적된 데이터로 예측 정확도 향상
+2. **"측정 가능한 목표"**: 모든 전략은 측정 가능한 성과 지표 연결
+3. **"피드백 루프 필수"**: 전략 → 실행 → 결과 → 개선 사이클 구축
+4. **"점진적 고도화"**: 단계적으로 시스템 지능화
 
 ### 📊 성공 지표 (KPI)
 
-| 지표 | 현재 | 목표 (Phase 0 후) | 목표 (Phase 2 후) |
+| 지표 | 현재 | 목표 (Phase 1 후) | 목표 (Phase 2 후) |
 |---|---|---|---|
-| **분석 정확도** | 60% | 85% | 95% |
-| **전략 실행률** | 30% | 70% | 85% |
+| **분석 정확도** | 85% | 90% | 95% |
+| **전략 실행률** | 30% | 60% | 80% |
+| **예측 정확도** | TBD | 70% | 85% |
 | **학생 성적 향상** | TBD | +5점/3개월 | +10점/3개월 |
 | **교사 만족도** | TBD | 8/10 | 9/10 |
-| **리포트 생성 시간** | ~10분 | ~5분 | ~3분 |
 
 ---
 
-## 3. Phase 0: 긴급 개선 (1-2주) 🔥
+## 3. Phase 0: 긴급 개선 ✅ 완료
 
-> **목표**: 프롬프트 품질 개선으로 분석 정확도 대폭 향상
-> **예상 효과**: 분석 정확도 60% → 85%, 전략 실행률 30% → 70%
+> **상태**: 완료 (2025-12-22)
+> **성과**: 프롬프트 품질 대폭 향상, 타입 시스템 강화
 
-### 3.1. 프롬프트 전면 개선 ⭐ **최우선**
+### 3.1. 프롬프트 전면 개선 ✅
 
-#### Task 1: `generateTestAnalysis` 프롬프트 교체
+#### 완료된 작업
 
-**현재 문제**:
-- 오답 분석이 일반적 ("계산 실수", "개념 이해도")
-- 구체적 전략 기준 모호
-- 미래 비전 없음
-- 습관 분석 부재
-
-**개선 작업**:
+**`src/lib/gemini.ts` - 5가지 관점 분석 프롬프트:**
 
 ```typescript
-// src/services/geminiService.ts
+const SYSTEM_PROMPT = `당신은 학생의 수학 학습을 종합적으로 컨설팅하는 전문 AI 교육 컨설턴트입니다.
 
-// 1. 프롬프트 교체
-export const generateTestAnalysis = async (...) => {
-    const prompt = `
-        // ✅ 새로운 프롬프트 (PROMPT_IMPROVEMENT_PROPOSAL.md 참조)
+## 핵심 목표 5가지
+1. 학생의 현재 학습 현황을 매우 정확히 파악
+2. 오답의 근본 원인과 사고 패턴 분석
+3. 잠재적 위험 습관 조기 탐지
+4. 실행 가능한 구체적 개선 방법 제시 (5요소 필수)
+5. 장기적 성장 비전 제공 (3개월, 6개월 예측)
 
-        **역할:**
-        종합 학습 컨설턴트 (사고 패턴, 학습 습관, 성장 가능성 분석)
+## 문항별 심층 분석: 5가지 관점 (필수)
+1️⃣ 사고의 출발점 분석
+2️⃣ 풀이 진행 과정 분석
+3️⃣ 계산 및 실수 패턴
+4️⃣ 문제 해석 능력
+5️⃣ 풀이 습관 관찰
 
-        **핵심 목표:**
-        1. 학생의 현재 학습 현황을 매우 정확히 파악
-        2. 오답의 근본 원인과 사고 패턴 분석
-        3. 잠재적 위험 습관 조기 탐지
-        4. 실행 가능한 구체적 개선 방법 제시 (5요소: 무엇을, 어디서, 얼마나, 어떻게, 측정)
-        5. 장기적 성장 비전 제공 (3개월, 6개월 예측)
-
-        **문항별 심층 분석 (5가지 관점):**
-        1️⃣ 사고의 출발점 분석
-        2️⃣ 풀이 진행 과정 분석
-        3️⃣ 계산 및 실수 패턴
-        4️⃣ 문제 해석 능력
-        5️⃣ 풀이 습관 관찰
-
-        **오답 패턴 종합 분석:**
-        - 반복 실수 유형 분류
-        - 사고 패턴 파악
-        - ⚠️ 잠재적 위험 습관 탐지 체크리스트
-
-        **개선 전략 (5요소 필수):**
-        1. 무엇을: 구체적 교재, 자료
-        2. 어디서: 페이지, 챕터
-        3. 얼마나: 횟수, 시간
-        4. 어떻게: 구체적 방법
-        5. 측정 방법: 성과 확인 방법
-
-        **종합 결론 + 미래 비전:**
-        - 현재 상태 진단
-        - 핵심 강점 재강조
-        - 최우선 개선 과제
-        - ⭐ 미래 비전 (3개월, 6개월, 장기 예측)
-    `;
-
-    // ... (기존 API 호출 코드)
-};
+## 개선 전략 5요소 (모든 전략에 필수 포함)
+- 무엇을: 구체적 교재, 자료
+- 어디서: 페이지, 챕터
+- 얼마나: 횟수, 시간
+- 어떻게: 구체적 방법
+- 측정 방법: 성과 확인 기준`;
 ```
 
-**체크리스트**:
-- [ ] 프롬프트 교체 완료
-- [ ] 테스트 시험지 3개로 테스트
-- [ ] 출력 결과 검증 (5가지 관점 모두 포함되는지)
-- [ ] 전략의 5요소 포함 여부 확인
-- [ ] 미래 비전 포함 여부 확인
+### 3.2. 타입 시스템 강화 ✅
 
-**예상 소요 시간**: 2-3일
-
----
-
-#### Task 2: `generateConsolidatedReport` 프롬프트 교체
-
-**개선 작업**:
+**`src/types/index.ts` - 완료된 타입 정의:**
 
 ```typescript
-export const generateConsolidatedReport = async (...) => {
-    const prompt = `
-        **역할:**
-        장기 성장 추이 분석 전문가
-
-        **변화 패턴 분석:**
-        - 점수 변화 (변화량, 변화율, 평가)
-        - 강점 변화 (유지/새로운/약화)
-        - 약점 변화 (개선/지속/새로운)
-        - ⭐ 이전 전략 효과 평가
-
-        **성장 곡선 분석:**
-        1. 성장 속도 평가 (급성장/점진적/정체/하락)
-        2. 성장 패턴 분류 (선형/가속/정체 후 성장/불안정)
-        3. ⭐ 미래 예측
-           - 다음 시험 (1개월 후) 예상 점수 ± 오차
-           - 3개월 후 예상 점수
-           - 6개월 후 목표 달성 가능성 (확률 %)
-
-        **개선된 전략:**
-        - 이전 전략 효과 반영
-        - 수정/보완된 새로운 전략
-        - 우선순위 재설정
-    `;
-};
-```
-
-**체크리스트**:
-- [ ] 프롬프트 교체 완료
-- [ ] 성장 곡선 분석 로직 검증
-- [ ] 미래 예측 정확도 테스트
-- [ ] 전략 효과 평가 기능 확인
-
-**예상 소요 시간**: 1-2일
-
----
-
-#### Task 3: 주간/월간 리포트 프롬프트 개선
-
-**개선 작업**:
-
-```typescript
-// 주간 리포트
-export const generateWeeklyReport = async (...) => {
-    const previousPlanText = previousPlan && previousPlan.length > 0
-        ? previousPlan.map(p => `- 목표: ${p.goal}, 계획: ${p.plan}`).join('\n')
-        : '없음';
-
-    const prompt = `
-        // ✅ 추가: 이전 계획 달성도 평가 필수
-
-        **과업:**
-        - **(중요)** 이전 주 학습 계획이 제공된 경우,
-          이번 주 학습 성과(achievements)와 보완점(improvements)을 작성할 때
-          해당 계획의 달성 여부를 반드시 분석하고 그 결과를 반영해주세요.
-
-        - 예시: "이전 주 목표였던 [계산 실수 50% 감소]는 [달성/미달성]했습니다.
-                실제로 [X%] 감소하여 [평가]입니다."
-    `;
-};
-
-// 월간 리포트도 유사하게 개선
-```
-
-**체크리스트**:
-- [ ] 이전 계획 달성도 평가 로직 추가
-- [ ] 학습 습관 패턴 추적 기능 추가
-- [ ] 구체적 복습 문제 선정 기준 명확화
-
-**예상 소요 시간**: 1일
-
----
-
-### 3.2. 타입 시스템 강화
-
-#### Task 4: 새로운 타입 정의
-
-**개선 작업**:
-
-```typescript
-// src/types.ts
-
-// ✅ 추가: 우선순위 타입
-export type StrategyPriority = 'P0' | 'P1' | 'P2';
-
-// ✅ 개선: ImprovementStrategyItem에 필드 추가
-export interface ImprovementStrategyItem {
-  category: '약점 보완' | '강점 강화' | '학습 습관' | '기타';
+// 5요소 실행 전략
+interface ActionablePrescriptionItem {
+  priority: number;           // 1=긴급, 2=중요, 3=장기
+  type: '개념 교정' | '습관 교정' | '전략 개선';
   title: string;
   description: string;
-  priority?: StrategyPriority;  // 새로 추가
-  measurementMethod?: string;   // 새로 추가
-  expectedEffect?: string;      // 새로 추가
+  whatToDo: string;           // 무엇을
+  where: string;              // 어디서
+  howMuch: string;            // 얼마나
+  howTo: string;              // 어떻게
+  measurementMethod: string;  // 측정 방법
+  expectedEffect?: string;
 }
 
-// ✅ 새로운 타입: 학습 습관
-export interface LearningHabit {
+// 학습 습관 분석
+interface LearningHabit {
   type: 'good' | 'bad';
   description: string;
   frequency: 'always' | 'often' | 'sometimes';
 }
 
-// ✅ 새로운 타입: 위험 요인
-export interface RiskFactor {
+// 위험 요인 탐지
+interface RiskFactor {
   factor: string;
   severity: 'high' | 'medium' | 'low';
   recommendation: string;
 }
 
-// ✅ 새로운 타입: 성장 예측
-export interface GrowthPrediction {
+// 성장 예측
+interface GrowthPrediction {
   timeframe: '1개월' | '3개월' | '6개월' | '1년';
   predictedScore: number;
-  confidenceLevel: number; // 0-100
+  confidenceLevel: number;  // 0-100
   assumptions: string[];
 }
-
-// ✅ 개선: DetailedProblemAnalysis에 필드 추가
-export interface DetailedProblemAnalysis {
-  problemNumber: string;
-  keyConcept: string;
-  isCorrect: boolean;
-  studentAttemptAnalysis: string;
-  thinkingStartPoint?: string;  // 새로 추가: 사고 출발점
-  solutionProgress?: string;    // 새로 추가: 진행 과정
-  errorPattern?: string;        // 새로 추가: 실수 패턴
-  interpretationAbility?: string; // 새로 추가: 해석 능력
-  solvingHabit?: string;        // 새로 추가: 풀이 습관
-}
-
-// ✅ 개선: AnalysisReport에 필드 추가
-export interface AnalysisReport {
-  id?: number;
-  testInfo: TestInfo;
-  testResults: TestResults;
-  resultAnalysis: ResultAnalysis;
-  detailedAnalysis?: DetailedProblemAnalysis[];
-  strengthsWeaknesses: StrengthWeakness[];
-  swotAnalysis: SwotData;
-  improvementStrategy: ImprovementStrategyItem[];
-  conclusion: string;
-  learningHabits?: LearningHabit[];       // 새로 추가
-  riskFactors?: RiskFactor[];             // 새로 추가
-  growthPredictions?: GrowthPrediction[]; // 새로 추가
-}
-
-// ✅ 새로운 타입: 구조화된 결론
-export interface StructuredConclusion {
-  currentState: string;      // 현재 상태 진단
-  keyStrengths: string[];    // 핵심 강점
-  priorityTasks: string[];   // 최우선 과제
-  futureVision: {
-    threeMonths: string;     // 3개월 후 예상
-    sixMonths: string;       // 6개월 후 목표
-    longTerm: string;        // 장기 성장 경로
-  };
-  encouragement: string;     // 격려 메시지
-}
 ```
 
-**체크리스트**:
-- [ ] 새로운 타입 정의 완료
-- [ ] 기존 타입 확장 완료
-- [ ] 모든 컴포넌트에서 새 타입 사용 확인
-- [ ] TypeScript 컴파일 에러 없는지 확인
+### Phase 0 완료 체크리스트
 
-**예상 소요 시간**: 반나절
-
----
-
-### 3.3. 스키마 업데이트
-
-#### Task 5: Gemini JSON 스키마 업데이트
-
-**개선 작업**:
-
-```typescript
-// src/services/geminiService.ts
-
-// ✅ 개선: qualitativeAnalysisSchema에 필드 추가
-const qualitativeAnalysisSchema = {
-    type: Type.OBJECT,
-    properties: {
-        strengthsWeaknesses: { ... },
-        swotAnalysis: { ... },
-        improvementStrategy: {
-            type: Type.ARRAY,
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    category: { ... },
-                    title: { ... },
-                    description: { ... },
-                    // ✅ 새로 추가
-                    priority: {
-                        type: Type.STRING,
-                        enum: ['P0', 'P1', 'P2'],
-                        description: "P0=긴급, P1=중요, P2=장기"
-                    },
-                    measurementMethod: {
-                        type: Type.STRING,
-                        description: "성과 측정 방법 (예: 정답률 90% 달성)"
-                    },
-                    expectedEffect: {
-                        type: Type.STRING,
-                        description: "예상 효과 (예: 2주 내 실수 50% 감소)"
-                    }
-                },
-                required: ['category', 'title', 'description', 'priority', 'measurementMethod']
-            }
-        },
-        conclusion: { ... },
-        // ✅ 새로 추가
-        learningHabits: {
-            type: Type.ARRAY,
-            description: "관찰된 학습 습관 (좋은 습관, 나쁜 습관 구분)",
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    type: { type: Type.STRING, enum: ['good', 'bad'] },
-                    description: { type: Type.STRING },
-                    frequency: { type: Type.STRING, enum: ['always', 'often', 'sometimes'] }
-                },
-                required: ['type', 'description', 'frequency']
-            }
-        },
-        riskFactors: {
-            type: Type.ARRAY,
-            description: "잠재적 위험 요인 (안좋은 습관이 초래할 수 있는 위험)",
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    factor: { type: Type.STRING },
-                    severity: { type: Type.STRING, enum: ['high', 'medium', 'low'] },
-                    recommendation: { type: Type.STRING }
-                },
-                required: ['factor', 'severity', 'recommendation']
-            }
-        },
-        growthPredictions: {
-            type: Type.ARRAY,
-            description: "성장 예측 (1개월, 3개월, 6개월, 1년 후)",
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    timeframe: { type: Type.STRING, enum: ['1개월', '3개월', '6개월', '1년'] },
-                    predictedScore: { type: Type.INTEGER },
-                    confidenceLevel: { type: Type.INTEGER, description: "신뢰도 (0-100)" },
-                    assumptions: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                        description: "예측의 전제 조건"
-                    }
-                },
-                required: ['timeframe', 'predictedScore', 'confidenceLevel']
-            }
-        }
-    },
-    required: [
-        'strengthsWeaknesses', 'swotAnalysis', 'improvementStrategy', 'conclusion',
-        'learningHabits', 'riskFactors', 'growthPredictions'  // ✅ 필수 항목에 추가
-    ]
-};
-```
-
-**체크리스트**:
-- [ ] 스키마 업데이트 완료
-- [ ] 프롬프트와 스키마 일치 여부 확인
-- [ ] Gemini API 응답 검증
-
-**예상 소요 시간**: 반나절
+- [x] 5가지 관점 분석 프롬프트 구현
+- [x] 5요소 개선 전략 타입 정의
+- [x] 학습 습관/위험 요인 타입 추가
+- [x] 성장 예측 타입 추가
+- [x] Next.js API Route에서 Gemini 호출
+- [x] Supabase에 분석 결과 저장 (JSONB)
 
 ---
 
-### 3.4. 테스트 및 검증
-
-#### Task 6: 실제 데이터로 테스트
-
-**테스트 시나리오**:
-
-1. **시험 분석 리포트**
-   - 실제 학생 시험지 이미지 3개 업로드
-   - 생성된 리포트 검증:
-     - [ ] `studentAttemptAnalysis`에 5가지 관점 포함?
-     - [ ] `improvementStrategy`에 5요소 포함?
-     - [ ] `growthPredictions` 있는가?
-     - [ ] `learningHabits`, `riskFactors` 있는가?
-
-2. **통합 분석 리포트**
-   - 동일 학생의 2개 시험 선택
-   - 생성된 리포트 검증:
-     - [ ] 성장 곡선 분석 포함?
-     - [ ] 미래 예측 포함?
-     - [ ] 이전 전략 효과 평가 있는가?
-
-3. **주간/월간 리포트**
-   - 이전 계획이 있는 학생으로 테스트
-   - 생성된 리포트 검증:
-     - [ ] 이전 계획 달성도 평가 포함?
-
-**체크리스트**:
-- [ ] 3명 이상의 실제 학생 데이터로 테스트
-- [ ] 교사에게 피드백 요청
-- [ ] 발견된 문제점 문서화
-- [ ] 프롬프트 미세 조정
-
-**예상 소요 시간**: 2-3일
-
----
-
-### Phase 0 요약
-
-| Task | 소요 시간 | 우선순위 | 담당자 |
-|---|---|---|---|
-| 1. generateTestAnalysis 프롬프트 교체 | 2-3일 | P0 | 개발자 |
-| 2. generateConsolidatedReport 프롬프트 교체 | 1-2일 | P0 | 개발자 |
-| 3. 주간/월간 리포트 프롬프트 개선 | 1일 | P1 | 개발자 |
-| 4. 타입 시스템 강화 | 0.5일 | P1 | 개발자 |
-| 5. 스키마 업데이트 | 0.5일 | P1 | 개발자 |
-| 6. 테스트 및 검증 | 2-3일 | P0 | 개발자 + 교사 |
-| **총계** | **7-11일** | | |
-
-**Phase 0 완료 기준**:
-- [ ] 모든 프롬프트 교체 완료
-- [ ] 3명 이상 실제 학생 데이터로 검증 완료
-- [ ] 교사 피드백 긍정적 (8/10 이상)
-- [ ] 분석 정확도 체감 상승
-
----
-
-## 4. Phase 1: 품질 고도화 (2-4주)
+## 4. Phase 1: 품질 고도화 🔄 진행중
 
 > **목표**: 코드 품질 개선 및 사용자 경험 향상
-> **예상 효과**: 사용자 만족도 4.5/5, 리포트 생성 시간 5분 이내
+> **예상 효과**: 사용자 만족도 향상, 리포트 생성 시간 단축
 
-### 4.1. 상태 관리 개선
+### 4.1. 리포트 타입 확장 ✅
 
-#### Task 7: Context API 도입
+**완료된 리포트 페이지:**
 
-**문제**: Prop drilling으로 인한 유지보수성 저하
+| 리포트 타입 | 경로 | 상태 |
+|---|---|---|
+| 시험 분석 | `/admin/reports/new` | ✅ 완료 |
+| 주간 리포트 | `/admin/reports/weekly/new` | ✅ 완료 |
+| 월간 리포트 | `/admin/reports/monthly/new` | ✅ 완료 |
+| 통합 분석 | `/admin/reports/consolidated/new` | ✅ 완료 |
 
-**해결 방안**:
+### 4.2. 학부모 대시보드 🔄
 
-```typescript
-// src/contexts/AppContext.tsx (새로 생성)
-
-import React, { createContext, useContext, useState } from 'react';
-
-interface AppContextType {
-  viewState: ViewState;
-  setViewState: (state: ViewState) => void;
-  selectedStudent: string;
-  setSelectedStudent: (student: string) => void;
-  selectedReportType: ReportType | null;
-  setSelectedReportType: (type: ReportType | null) => void;
-  errorMessage: string;
-  setErrorMessage: (msg: string) => void;
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [viewState, setViewState] = useState<ViewState>('studentSelector');
-  // ... 기타 상태
-
-  const value = {
-    viewState, setViewState,
-    selectedStudent, setSelectedStudent,
-    // ...
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-};
-
-export const useApp = () => {
-  const context = useContext(AppContext);
-  if (!context) throw new Error('useApp must be used within AppProvider');
-  return context;
-};
-```
+**구현 예정:**
 
 ```typescript
-// src/App.tsx
+// src/app/parent/page.tsx
+export default async function ParentDashboard() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-import { AppProvider } from './contexts/AppContext';
+  // 자녀 정보 조회 (RLS 자동 적용)
+  const { data: children } = await supabase
+    .from('students')
+    .select('*, reports(*)');
 
-function App() {
   return (
-    <AppProvider>
-      <MainApp />
-    </AppProvider>
+    <div>
+      <GrowthChart data={children[0].reports} />
+      <RecentReports reports={children[0].reports} />
+      <LearningPlanChecklist />
+    </div>
   );
 }
-
-// MainApp 컴포넌트는 useApp() 훅 사용
 ```
 
-**체크리스트**:
-- [ ] AppContext 생성
-- [ ] App.tsx에 AppProvider 적용
-- [ ] 모든 컴포넌트에서 props 대신 useApp() 사용
-- [ ] Prop drilling 제거 확인
+### 4.3. PDF 내보내기 개선 ⏳
 
-**예상 소요 시간**: 2-3일
+**개선 사항:**
+- [ ] 한글 폰트 임베드 (Pretendard)
+- [ ] 고해상도 차트 렌더링 (scale: 3)
+- [ ] 인쇄 최적화 CSS
+- [ ] 페이지 나누기 자동화
+
+### Phase 1 체크리스트
+
+- [x] 시험 분석 리포트 페이지
+- [x] 주간/월간 리포트 페이지
+- [x] 통합 분석 리포트 페이지
+- [ ] 학부모 대시보드 완성
+- [ ] PDF 내보내기 개선
+- [ ] 에러 처리 고도화 (Toast 시스템)
 
 ---
 
-#### Task 8: 커스텀 훅 추출
+## 5. Phase 2: 데이터 기반 지능화 ⭐ 핵심
 
-**문제**: 중복된 데이터 fetching 로직
+> **목표**: 축적된 데이터를 활용하여 시스템 지능화
+> **핵심 키워드**: 데이터 기반 지능화, 예측 모델 고도화, 피드백 루프 구축
 
-**해결 방안**:
+### 5.1. 피드백 루프 구축 🔴 최우선
+
+**목표**: 전략 제안 → 실행 → 결과 측정 → 전략 개선 사이클 구축
+
+#### 5.1.1. 전략 효과 추적 테이블
+
+```sql
+-- Supabase에서 실행
+CREATE TABLE strategy_tracking (
+  id SERIAL PRIMARY KEY,
+  report_id INTEGER REFERENCES reports(id),
+  strategy_index INTEGER NOT NULL,        -- 해당 리포트의 몇 번째 전략인지
+  strategy_content JSONB NOT NULL,        -- 전략 내용 (ActionablePrescriptionItem)
+
+  -- 실행 추적
+  execution_status TEXT DEFAULT 'pending', -- pending | in_progress | completed | skipped
+  execution_notes TEXT,                    -- 실행 관련 메모
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+
+  -- 효과 측정
+  target_concept TEXT,                     -- 해당 전략이 다루는 개념
+  pre_score DECIMAL,                       -- 전략 실행 전 해당 개념 정답률
+  post_score DECIMAL,                      -- 전략 실행 후 해당 개념 정답률
+  improvement_rate DECIMAL,                -- 개선율 (%)
+
+  -- 평가
+  effectiveness_rating INTEGER,            -- 1-5 효과 평가 (교사/학생 평가)
+  feedback TEXT,                           -- 피드백 코멘트
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 인덱스 생성
+CREATE INDEX idx_strategy_tracking_report ON strategy_tracking(report_id);
+CREATE INDEX idx_strategy_tracking_concept ON strategy_tracking(target_concept);
+```
+
+#### 5.1.2. 전략 효과 분석 API
 
 ```typescript
-// src/hooks/useStudents.ts (새로 생성)
+// src/app/api/strategies/effectiveness/route.ts
+import { createClient } from '@/lib/supabase/server';
 
-import { useState, useEffect } from 'react';
-import { dbService } from '../services/dbService';
-import type { Student } from '../types';
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const studentId = searchParams.get('studentId');
 
-export const useStudents = () => {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const supabase = await createClient();
 
-  const fetchStudents = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await dbService.getAllStudents();
-      setStudents(data);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
+  // 해당 학생의 모든 전략과 효과 조회
+  const { data: strategies } = await supabase
+    .from('strategy_tracking')
+    .select(`
+      *,
+      reports!inner(student_id, test_date)
+    `)
+    .eq('reports.student_id', studentId)
+    .order('created_at', { ascending: false });
+
+  // 전략 유형별 효과 분석
+  const effectivenessByType = analyzeByType(strategies);
+
+  // 개념별 개선 추이
+  const improvementByConcept = analyzeByConceptt(strategies);
+
+  // 가장 효과적인 전략 패턴 추출
+  const bestPatterns = extractBestPatterns(strategies);
+
+  return Response.json({
+    strategies,
+    effectivenessByType,
+    improvementByConcept,
+    bestPatterns,
+    recommendations: generateRecommendations(bestPatterns)
+  });
+}
+
+function analyzeByType(strategies: StrategyTracking[]) {
+  const types = ['개념 교정', '습관 교정', '전략 개선'];
+  return types.map(type => {
+    const typeStrategies = strategies.filter(s =>
+      s.strategy_content.type === type
+    );
+    const avgImprovement = typeStrategies.reduce((sum, s) =>
+      sum + (s.improvement_rate || 0), 0
+    ) / (typeStrategies.length || 1);
+
+    return {
+      type,
+      count: typeStrategies.length,
+      avgImprovement,
+      completionRate: typeStrategies.filter(s =>
+        s.execution_status === 'completed'
+      ).length / (typeStrategies.length || 1)
+    };
+  });
+}
+```
+
+#### 5.1.3. 피드백 기반 프롬프트 강화
+
+```typescript
+// src/lib/gemini.ts - 피드백 데이터 포함 분석
+
+export async function analyzeWithFeedback(
+  studentName: string,
+  formData: TestFormData,
+  currentImages: string[],
+  pastStrategies: StrategyTracking[]  // 이전 전략 효과 데이터
+) {
+  // 효과적이었던 전략 추출
+  const effectiveStrategies = pastStrategies
+    .filter(s => s.improvement_rate > 10)
+    .map(s => ({
+      type: s.strategy_content.type,
+      content: s.strategy_content.title,
+      improvement: s.improvement_rate
+    }));
+
+  // 효과 없었던 전략 추출
+  const ineffectiveStrategies = pastStrategies
+    .filter(s => s.improvement_rate < 5 && s.execution_status === 'completed')
+    .map(s => ({
+      type: s.strategy_content.type,
+      content: s.strategy_content.title,
+      reason: s.feedback
+    }));
+
+  const feedbackContext = `
+## 이전 전략 효과 분석 (중요!)
+
+### ✅ 효과적이었던 전략 (유사한 방식 권장)
+${effectiveStrategies.map(s =>
+  `- ${s.type}: ${s.content} (개선율: ${s.improvement}%)`
+).join('\n')}
+
+### ❌ 효과 없었던 전략 (다른 접근 필요)
+${ineffectiveStrategies.map(s =>
+  `- ${s.type}: ${s.content} (이유: ${s.reason})`
+).join('\n')}
+
+위 피드백을 반영하여:
+1. 효과적이었던 전략과 유사한 방식의 새 전략 제안
+2. 효과 없었던 전략은 완전히 다른 접근법으로 대체
+3. 이 학생에게 맞는 개인화된 전략 수립
+`;
+
+  const prompt = SYSTEM_PROMPT + feedbackContext + TEST_ANALYSIS_PROMPT;
+  // ... Gemini API 호출
+}
+```
+
+### 5.2. 예측 모델 고도화 🔴 중요
+
+**목표**: 더 정확한 성장 예측 및 예측 정확도 검증
+
+#### 5.2.1. 예측 정확도 추적 테이블
+
+```sql
+-- 예측 검증 테이블
+CREATE TABLE prediction_verification (
+  id SERIAL PRIMARY KEY,
+  report_id INTEGER REFERENCES reports(id),
+  student_id INTEGER REFERENCES students(id),
+
+  -- 예측 내용
+  prediction_date DATE NOT NULL,          -- 예측 생성일
+  target_date DATE NOT NULL,              -- 예측 대상일 (1개월/3개월/6개월 후)
+  timeframe TEXT NOT NULL,                -- '1개월' | '3개월' | '6개월'
+  predicted_score INTEGER NOT NULL,       -- 예측 점수
+  confidence_level INTEGER NOT NULL,      -- 신뢰도 (0-100)
+  assumptions JSONB,                      -- 예측 가정
+
+  -- 실제 결과
+  actual_score INTEGER,                   -- 실제 점수 (해당 시점에 업데이트)
+  actual_test_id INTEGER,                 -- 실제 시험 리포트 ID
+
+  -- 정확도 분석
+  error_amount INTEGER,                   -- 오차 (actual - predicted)
+  error_percentage DECIMAL,               -- 오차율
+  is_accurate BOOLEAN,                    -- 오차 10% 이내면 true
+
+  -- 메타데이터
+  verified_at TIMESTAMPTZ,                -- 검증 완료 시점
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 정기 검증을 위한 인덱스
+CREATE INDEX idx_prediction_target_date ON prediction_verification(target_date);
+CREATE INDEX idx_prediction_student ON prediction_verification(student_id);
+```
+
+#### 5.2.2. 예측 정확도 검증 자동화
+
+```typescript
+// src/app/api/predictions/verify/route.ts
+import { createClient } from '@/lib/supabase/server';
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  // 검증 대상 예측 조회 (target_date가 지났고 아직 검증 안 된 것)
+  const { data: pendingPredictions } = await supabase
+    .from('prediction_verification')
+    .select('*, students(*)')
+    .lte('target_date', today)
+    .is('actual_score', null);
+
+  const results = [];
+
+  for (const prediction of pendingPredictions || []) {
+    // 해당 학생의 target_date 근처 시험 결과 찾기
+    const { data: nearbyTests } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('student_id', prediction.student_id)
+      .gte('test_date', prediction.target_date)
+      .order('test_date', { ascending: true })
+      .limit(1);
+
+    if (nearbyTests && nearbyTests.length > 0) {
+      const actualTest = nearbyTests[0];
+      const actualScore = actualTest.total_score;
+      const errorAmount = actualScore - prediction.predicted_score;
+      const errorPercentage = Math.abs(errorAmount) / prediction.predicted_score * 100;
+
+      // 예측 검증 결과 업데이트
+      await supabase
+        .from('prediction_verification')
+        .update({
+          actual_score: actualScore,
+          actual_test_id: actualTest.id,
+          error_amount: errorAmount,
+          error_percentage: errorPercentage,
+          is_accurate: errorPercentage <= 10,
+          verified_at: new Date().toISOString()
+        })
+        .eq('id', prediction.id);
+
+      results.push({
+        studentName: prediction.students.name,
+        timeframe: prediction.timeframe,
+        predicted: prediction.predicted_score,
+        actual: actualScore,
+        accuracy: 100 - errorPercentage
+      });
     }
+  }
+
+  return Response.json({ verified: results.length, results });
+}
+```
+
+#### 5.2.3. 향상된 예측 알고리즘
+
+```typescript
+// src/lib/prediction.ts
+
+interface PredictionInput {
+  historicalScores: Array<{ date: string; score: number; maxScore: number }>;
+  learningStyle: 'visual' | 'verbal' | 'logical';
+  strategyCompletionRate: number;
+  weaknessImprovementRate: number;
+  pastPredictionAccuracy?: number;  // 이전 예측 정확도
+}
+
+export function calculateEnhancedPrediction(input: PredictionInput): GrowthPrediction[] {
+  const { historicalScores, strategyCompletionRate, weaknessImprovementRate, pastPredictionAccuracy } = input;
+
+  // 1. 기본 추세 분석 (선형 회귀)
+  const trend = calculateTrend(historicalScores);
+
+  // 2. 계절성 분석 (학기 시작/끝 패턴)
+  const seasonalFactor = calculateSeasonalFactor();
+
+  // 3. 전략 실행률 기반 가중치
+  const executionWeight = 0.5 + (strategyCompletionRate * 0.5);
+
+  // 4. 약점 개선율 기반 보정
+  const improvementBonus = weaknessImprovementRate * 0.3;
+
+  // 5. 과거 예측 정확도 기반 신뢰도 조정
+  const confidenceAdjustment = pastPredictionAccuracy
+    ? pastPredictionAccuracy / 100
+    : 0.7;
+
+  const predictions: GrowthPrediction[] = [
+    {
+      timeframe: '1개월',
+      predictedScore: Math.round(
+        (trend.slope * 30 + trend.intercept) * executionWeight + improvementBonus
+      ),
+      confidenceLevel: Math.round(85 * confidenceAdjustment),
+      assumptions: [
+        `현재 학습 추세 유지 (기울기: ${trend.slope.toFixed(2)}/일)`,
+        `전략 실행률 ${Math.round(strategyCompletionRate * 100)}% 기준`,
+        '큰 변동 없는 학습 환경 가정'
+      ]
+    },
+    {
+      timeframe: '3개월',
+      predictedScore: Math.round(
+        (trend.slope * 90 + trend.intercept) * executionWeight * seasonalFactor + improvementBonus * 2
+      ),
+      confidenceLevel: Math.round(70 * confidenceAdjustment),
+      assumptions: [
+        '현재 개선 속도 유지',
+        `약점 영역 ${Math.round(weaknessImprovementRate * 100)}% 추가 개선 예상`,
+        '학기 중 일관된 학습'
+      ]
+    },
+    {
+      timeframe: '6개월',
+      predictedScore: Math.round(
+        (trend.slope * 180 + trend.intercept) * executionWeight * seasonalFactor + improvementBonus * 3
+      ),
+      confidenceLevel: Math.round(55 * confidenceAdjustment),
+      assumptions: [
+        '장기 학습 계획 충실 이행',
+        '정기적 피드백 및 전략 조정',
+        '학습 환경 안정적 유지'
+      ]
+    }
+  ];
+
+  return predictions;
+}
+
+function calculateTrend(scores: Array<{ date: string; score: number }>) {
+  // 선형 회귀 계산
+  const n = scores.length;
+  if (n < 2) return { slope: 0, intercept: scores[0]?.score || 0 };
+
+  const xValues = scores.map((_, i) => i);
+  const yValues = scores.map(s => s.score);
+
+  const xMean = xValues.reduce((a, b) => a + b, 0) / n;
+  const yMean = yValues.reduce((a, b) => a + b, 0) / n;
+
+  const numerator = xValues.reduce((sum, x, i) =>
+    sum + (x - xMean) * (yValues[i] - yMean), 0
+  );
+  const denominator = xValues.reduce((sum, x) =>
+    sum + Math.pow(x - xMean, 2), 0
+  );
+
+  const slope = denominator !== 0 ? numerator / denominator : 0;
+  const intercept = yMean - slope * xMean;
+
+  return { slope, intercept };
+}
+```
+
+### 5.3. 학습 스타일 분류 시스템
+
+**목표**: 학생의 풀이 패턴 분석 → 개인화된 전략 제공
+
+#### 5.3.1. 학습 스타일 분류 로직
+
+```typescript
+// src/lib/learningStyle.ts
+
+export type LearningStyle = 'visual' | 'verbal' | 'logical';
+
+interface StyleIndicators {
+  usesGraphs: number;       // 그래프/그림 사용 빈도
+  writesExplanations: number; // 문장 설명 빈도
+  usesFormulas: number;     // 공식 위주 풀이 빈도
+  stepByStep: number;       // 단계별 풀이 빈도
+}
+
+export function classifyLearningStyle(
+  analysisHistory: AnalysisData[]
+): { style: LearningStyle; confidence: number; indicators: StyleIndicators } {
+
+  const indicators: StyleIndicators = {
+    usesGraphs: 0,
+    writesExplanations: 0,
+    usesFormulas: 0,
+    stepByStep: 0
   };
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
+  // 과거 분석에서 패턴 추출
+  for (const analysis of analysisHistory) {
+    for (const detail of analysis.detailedAnalysis || []) {
+      if (detail.solvingHabit?.includes('그림') || detail.solvingHabit?.includes('그래프')) {
+        indicators.usesGraphs++;
+      }
+      if (detail.solvingHabit?.includes('설명') || detail.solvingHabit?.includes('문장')) {
+        indicators.writesExplanations++;
+      }
+      if (detail.solvingHabit?.includes('공식') || detail.solvingHabit?.includes('수식')) {
+        indicators.usesFormulas++;
+      }
+      if (detail.solvingHabit?.includes('단계') || detail.solvingHabit?.includes('차례')) {
+        indicators.stepByStep++;
+      }
+    }
+  }
 
-  const addStudent = async (studentData: Omit<Student, 'id' | 'studentId'>) => {
-    await dbService.addStudent(studentData);
-    await fetchStudents();
-  };
+  // 스타일 분류
+  const total = Object.values(indicators).reduce((a, b) => a + b, 0) || 1;
+  const visualScore = indicators.usesGraphs / total;
+  const verbalScore = indicators.writesExplanations / total;
+  const logicalScore = (indicators.usesFormulas + indicators.stepByStep) / total;
 
-  const updateStudent = async (student: Student) => {
-    await dbService.updateStudent(student);
-    await fetchStudents();
-  };
+  const maxScore = Math.max(visualScore, verbalScore, logicalScore);
 
-  const deleteStudent = async (id: number) => {
-    await dbService.deleteStudent(id);
-    await fetchStudents();
-  };
+  let style: LearningStyle;
+  if (maxScore === visualScore) style = 'visual';
+  else if (maxScore === verbalScore) style = 'verbal';
+  else style = 'logical';
 
   return {
-    students,
-    loading,
-    error,
-    addStudent,
-    updateStudent,
-    deleteStudent,
-    refetch: fetchStudents
+    style,
+    confidence: Math.round(maxScore * 100),
+    indicators
   };
-};
-```
-
-```typescript
-// src/hooks/useReports.ts (새로 생성)
-
-export const useReports = (studentName?: string) => {
-  // 유사한 구조
-};
-```
-
-**사용 예시**:
-
-```typescript
-// StudentSelector.tsx
-
-import { useStudents } from '../hooks/useStudents';
-
-export const StudentSelector = () => {
-  const { students, loading, error, addStudent, deleteStudent } = useStudents();
-
-  // 더 이상 fetchStudents 함수를 직접 작성할 필요 없음
-
-  return (
-    // ...
-  );
-};
-```
-
-**체크리스트**:
-- [ ] useStudents 훅 생성
-- [ ] useReports 훅 생성
-- [ ] useFileUpload 훅 생성 (드래그 앤 드롭 로직)
-- [ ] 모든 컴포넌트에 적용
-
-**예상 소요 시간**: 2일
-
----
-
-### 4.2. 중복 코드 제거
-
-#### Task 9: 공통 컴포넌트 추출
-
-**문제**: EditableInput/Textarea가 여러 곳에 중복 정의됨
-
-**해결 방안**:
-
-```typescript
-// src/components/common/EditableInput.tsx (새로 생성)
-
-interface EditableInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  className?: string;
-  placeholder?: string;
 }
-
-export const EditableInput: React.FC<EditableInputProps> = ({
-  value, onChange, className, placeholder
-}) => {
-  return (
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`border-b border-transparent hover:border-gray-300
-                  focus:border-indigo-500 focus:outline-none transition-colors ${className}`}
-      placeholder={placeholder}
-    />
-  );
-};
 ```
+
+#### 5.3.2. 스타일별 맞춤 전략 데이터베이스
+
+```sql
+-- 학습 스타일별 전략 템플릿
+CREATE TABLE strategy_templates (
+  id SERIAL PRIMARY KEY,
+  learning_style TEXT NOT NULL,           -- 'visual' | 'verbal' | 'logical'
+  weakness_type TEXT NOT NULL,            -- '계산 실수' | '개념 이해' | '문제 해석' 등
+
+  -- 전략 템플릿
+  strategy_title TEXT NOT NULL,
+  strategy_description TEXT NOT NULL,
+  what_to_do TEXT NOT NULL,               -- 무엇을
+  where_to TEXT NOT NULL,                 -- 어디서
+  how_much TEXT NOT NULL,                 -- 얼마나
+  how_to TEXT NOT NULL,                   -- 어떻게
+  measurement TEXT NOT NULL,              -- 측정 방법
+
+  -- 효과 통계 (피드백 루프 데이터로 업데이트)
+  usage_count INTEGER DEFAULT 0,
+  avg_improvement_rate DECIMAL DEFAULT 0,
+  success_rate DECIMAL DEFAULT 0,         -- 10% 이상 개선 비율
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 초기 데이터 삽입 예시
+INSERT INTO strategy_templates (learning_style, weakness_type, strategy_title, strategy_description, what_to_do, where_to, how_much, how_to, measurement) VALUES
+('visual', '계산 실수', '시각적 계산 검증법', '계산 과정을 색깔 펜으로 구분하여 시각화', '3색 볼펜', '모든 계산 문제', '매일 10문제', '각 단계를 다른 색으로 표시하며 검산', '계산 실수 50% 감소'),
+('verbal', '개념 이해', '개념 설명 노트 작성', '배운 개념을 자신의 말로 설명하는 노트 작성', '개념 설명 노트', '새로 배운 개념마다', '개념당 A4 반 페이지', '친구에게 설명하듯이 구어체로 작성', '개념 적용 정답률 80% 달성'),
+('logical', '문제 해석', '조건 체크리스트법', '문제의 모든 조건을 번호 붙여 나열 후 체크', '조건 분석 양식', '서술형 문제', '문제당 2분 투자', '조건 번호 → 사용 여부 체크 표 작성', '조건 누락 0건 달성');
+```
+
+### 5.4. 데이터 분석 대시보드
+
+**목표**: 축적된 데이터를 시각화하여 인사이트 제공
 
 ```typescript
-// src/components/common/EditableTextarea.tsx (새로 생성)
+// src/app/admin/analytics/page.tsx
 
-export const EditableTextarea: React.FC<EditableTextareaProps> = ({ ... }) => {
-  // 유사한 구조
-};
-```
+export default async function AnalyticsDashboard() {
+  const supabase = await createClient();
 
-**체크리스트**:
-- [ ] EditableInput 컴포넌트 생성
-- [ ] EditableTextarea 컴포넌트 생성
-- [ ] CustomTooltip 컴포넌트 생성 (Recharts용)
-- [ ] FileUploadArea 컴포넌트 개선
-- [ ] 모든 곳에서 공통 컴포넌트 사용
+  // 전체 학생 성적 추이
+  const { data: scoresTrend } = await supabase.rpc('get_scores_trend');
 
-**예상 소요 시간**: 1-2일
+  // 개념별 오답률 분포
+  const { data: errorDistribution } = await supabase.rpc('get_error_distribution');
 
----
+  // 전략 효과 순위
+  const { data: strategyRanking } = await supabase.rpc('get_strategy_effectiveness');
 
-### 4.3. UI/UX 개선
+  // 예측 정확도 추이
+  const { data: predictionAccuracy } = await supabase.rpc('get_prediction_accuracy');
 
-#### Task 10: Toast 알림 시스템 도입
-
-**문제**: alert()로 에러 표시 → 사용자 경험 저하
-
-**해결 방안**:
-
-```bash
-npm install react-hot-toast
-```
-
-```typescript
-// src/App.tsx
-
-import { Toaster } from 'react-hot-toast';
-
-function App() {
   return (
-    <AppProvider>
-      <Toaster position="top-right" />
-      <MainApp />
-    </AppProvider>
+    <div className="grid grid-cols-2 gap-6 p-6">
+      <Card title="전체 성적 추이">
+        <LineChart data={scoresTrend} />
+      </Card>
+
+      <Card title="개념별 오답률">
+        <BarChart data={errorDistribution} />
+      </Card>
+
+      <Card title="효과적인 전략 TOP 10">
+        <StrategyRankingTable data={strategyRanking} />
+      </Card>
+
+      <Card title="예측 정확도">
+        <AccuracyGauge data={predictionAccuracy} />
+      </Card>
+    </div>
   );
 }
 ```
 
-```typescript
-// 사용 예시
+### Phase 2 체크리스트
 
-import toast from 'react-hot-toast';
+- [ ] **피드백 루프 구축**
+  - [ ] strategy_tracking 테이블 생성
+  - [ ] 전략 효과 분석 API 구현
+  - [ ] 피드백 기반 프롬프트 강화
+  - [ ] 교사용 전략 효과 대시보드
 
-try {
-  await addStudent(studentData);
-  toast.success('학생이 성공적으로 추가되었습니다.');
-} catch (err) {
-  toast.error((err as Error).message || '학생 추가에 실패했습니다.');
-}
-```
+- [ ] **예측 모델 고도화**
+  - [ ] prediction_verification 테이블 생성
+  - [ ] 예측 정확도 자동 검증 API
+  - [ ] 향상된 예측 알고리즘 구현
+  - [ ] 예측 정확도 리포트
 
-**체크리스트**:
-- [ ] react-hot-toast 설치
-- [ ] 모든 alert() → toast로 교체
-- [ ] 성공/에러/로딩 Toast 스타일 커스터마이징
+- [ ] **학습 스타일 분류**
+  - [ ] 스타일 분류 로직 구현
+  - [ ] strategy_templates 테이블 생성
+  - [ ] 스타일별 맞춤 전략 제공
 
-**예상 소요 시간**: 1일
-
----
-
-#### Task 11: PDF 템플릿 전문화
-
-**개선 방안**:
-
-1. **폰트 개선**: 한글 폰트 임베드 (Noto Sans KR)
-2. **레이아웃 개선**: 여백, 줄 간격 조정
-3. **색상 체계**: 브랜드 컬러 일관성
-4. **차트 품질**: 고해상도 렌더링
-
-**체크리스트**:
-- [ ] 한글 폰트 웹폰트로 로드
-- [ ] PDF 생성 시 scale 조정 (2 → 3)
-- [ ] 색상 변수화 (Tailwind config)
-- [ ] 인쇄 최적화 CSS 추가
-
-**예상 소요 시간**: 1-2일
+- [ ] **데이터 분석 대시보드**
+  - [ ] 분석용 Supabase 함수 생성
+  - [ ] 대시보드 UI 구현
+  - [ ] 실시간 KPI 모니터링
 
 ---
 
-### Phase 1 요약
+## 6. Phase 3: 플랫폼화
 
-| Task | 소요 시간 | 우선순위 |
-|---|---|---|
-| 7. Context API 도입 | 2-3일 | P1 |
-| 8. 커스텀 훅 추출 | 2일 | P1 |
-| 9. 공통 컴포넌트 추출 | 1-2일 | P2 |
-| 10. Toast 알림 시스템 | 1일 | P1 |
-| 11. PDF 템플릿 전문화 | 1-2일 | P2 |
-| **총계** | **7-10일** | |
+> **목표**: 웹 기반 협업 플랫폼으로 확장
 
----
+### 6.1. 학부모 상호작용 강화
 
-## 5. Phase 2: 데이터 기반 지능화 (1-2개월)
+- **실시간 알림**: 새 리포트 생성 시 이메일/푸시 알림
+- **학습 계획 체크리스트**: 학부모가 자녀 학습 진행 확인
+- **교사-학부모 메시지**: 간단한 피드백 교환 기능
 
-> **목표**: 축적된 데이터 활용하여 시스템 고도화
-> **예상 효과**: 분석 정확도 95%, 성적 향상 속도 2배
+### 6.2. 학생 자기주도 학습
 
-### 5.1. 학습 스타일 분류 시스템
-
-**목표**: 학생의 풀이 패턴 분석 → 학습 스타일 자동 분류
-
-**구현**:
-- 시각형 학습자: 그림/그래프를 많이 그림, 시각 자료 선호
-- 언어형 학습자: 문장으로 설명 많이 씀, 논리적 흐름 중시
-- 논리형 학습자: 공식 위주, 단계적 풀이
-
-**적용**:
-- 학습 스타일별 맞춤 전략 데이터베이스
-- 프롬프트에 학습 스타일 정보 포함
-
----
-
-### 5.2. 예측 모델 고도화
-
-**목표**: 더 정확한 성장 예측
-
-**방법**:
-1. 과거 데이터 축적 (최소 30명 학생, 각 5개 이상 시험)
-2. 성장 곡선 피팅 알고리즘 (선형 회귀, 다항 회귀)
-3. 예측 정확도 검증 (실제 점수와 비교)
-
----
-
-### 5.3. 자동 문제 추천
-
-**목표**: 약점 개념에 맞는 복습 문제 자동 추천
-
-**구현**:
-- 문제 데이터베이스 구축 (개념, 난이도, 유형 태그)
-- 학생의 약점 개념과 매칭
-- 난이도 단계적 추천 (쉬운 → 중간 → 어려운)
-
----
-
-### 5.4. 피드백 루프 구축
-
-**목표**: 전략 효과 측정 및 자동 수정
-
-**구현**:
-1. 전략 실행 여부 체크리스트
-2. 다음 시험에서 해당 영역 정답률 확인
-3. 효과 있으면 유지, 없으면 전략 수정
-4. A/B 테스트로 더 효과적인 전략 발견
-
----
-
-## 6. Phase 3: 플랫폼화 (3-6개월)
-
-> **목표**: 웹 기반 플랫폼으로 확장
-
-### 6.1. 웹 대시보드
-
-- 교사: 전체 학생 현황, 성적 추이 한눈에
-- 학생: 내 학습 현황, 할 일 목록
-- 학부모: 자녀 리포트 실시간 조회
-
-### 6.2. 협업 기능
-
-- 교사-학생-학부모 메시지 교환
-- 전략 실행 체크리스트 (학생이 직접 체크)
-- 목표 달성 시 보상 시스템 (배지, 레벨업)
+- **목표 설정**: 학생이 직접 목표 설정 및 추적
+- **성취 배지**: 목표 달성 시 배지 부여
+- **학습 일지**: 매일 학습 내용 기록
 
 ### 6.3. 외부 연동
 
-- 노션: 학생 개인 페이지 자동 생성/업데이트
-- 구글 클래스룸 연동
-- 학원 관리 시스템 API 제공
+- **노션 연동**: 학생별 노션 페이지 자동 생성
+- **캘린더 연동**: 학습 일정 Google Calendar 연동
+- **알림 서비스**: 카카오톡 알림 (선택)
 
-### 6.4. 모바일 앱
+### 6.4. 모바일 앱 (장기)
 
-- 사진 촬영으로 즉시 시험지 업로드
-- 푸시 알림 (새 리포트, 할 일 알림)
+- **사진 촬영 업로드**: 시험지 즉시 촬영 → 분석
+- **푸시 알림**: 학습 리마인더
+- **오프라인 지원**: 리포트 캐싱
 
 ---
 
 ## 7. 실행 체크리스트
 
-### 🔥 Phase 0: 긴급 개선 (1-2주 내 완료)
+### Phase 0: 긴급 개선 ✅ 완료
 
-- [ ] **Week 1**
-  - [ ] Day 1-2: generateTestAnalysis 프롬프트 교체
-  - [ ] Day 3: generateConsolidatedReport 프롬프트 교체
-  - [ ] Day 4: 주간/월간 리포트 프롬프트 개선
-  - [ ] Day 5: 타입 시스템 강화 + 스키마 업데이트
+- [x] 5가지 관점 분석 프롬프트 구현
+- [x] 5요소 개선 전략 구현
+- [x] 타입 시스템 강화
+- [x] Next.js API Route 패턴 적용
+- [x] Supabase JSONB 저장
 
-- [ ] **Week 2**
-  - [ ] Day 1-3: 실제 학생 데이터 3명 이상으로 테스트
-  - [ ] Day 4: 교사 피드백 수집 및 반영
-  - [ ] Day 5: 프롬프트 미세 조정 및 최종 검증
+### Phase 1: 품질 고도화 🔄 진행중
 
-- [ ] **Phase 0 완료 기준**
-  - [ ] 분석 정확도 체감 상승 (교사 피드백 8/10 이상)
-  - [ ] 전략에 5요소 모두 포함 확인
-  - [ ] 미래 비전 포함 확인
-  - [ ] Git 커밋 & 푸시 완료
+- [x] 시험 분석 리포트 페이지
+- [x] 주간/월간/통합 리포트 페이지
+- [ ] 학부모 대시보드 완성
+- [ ] PDF 내보내기 개선
+- [ ] 에러 처리 고도화
 
----
+### Phase 2: 데이터 기반 지능화 ⏳ 다음 목표
 
-### ⚡ Phase 1: 품질 고도화 (2-4주)
+- [ ] 피드백 루프 구축 (최우선)
+- [ ] 예측 모델 고도화
+- [ ] 학습 스타일 분류 시스템
+- [ ] 데이터 분석 대시보드
 
-- [ ] **Week 1**
-  - [ ] Context API 도입
-  - [ ] 커스텀 훅 추출
+### Phase 3: 플랫폼화 ⏳ 장기
 
-- [ ] **Week 2**
-  - [ ] 공통 컴포넌트 추출
-  - [ ] Toast 시스템 도입
-  - [ ] PDF 템플릿 개선
-
-- [ ] **Phase 1 완료 기준**
-  - [ ] Prop drilling 제거 확인
-  - [ ] 중복 코드 80% 이상 제거
-  - [ ] 리포트 생성 시간 5분 이내
-  - [ ] 사용자 만족도 4.5/5
-
----
-
-### 📊 Phase 2: 데이터 기반 지능화 (1-2개월)
-
-- [ ] 학습 스타일 분류 시스템 구축
-- [ ] 예측 모델 정확도 검증
-- [ ] 문제 데이터베이스 구축 (최소 500문제)
-- [ ] 피드백 루프 자동화
-
----
-
-### 🌐 Phase 3: 플랫폼화 (3-6개월)
-
-- [ ] 백엔드 서버 구축 (Node.js + PostgreSQL)
-- [ ] 웹 대시보드 프론트엔드 개발
-- [ ] 노션 연동 API 개발
-- [ ] 모바일 앱 개발 (React Native)
+- [ ] 학부모 상호작용 강화
+- [ ] 학생 자기주도 학습 기능
+- [ ] 외부 서비스 연동
+- [ ] 모바일 앱
 
 ---
 
@@ -938,78 +824,24 @@ try {
 
 ### 진행 상황 추적
 
-| Phase | 진행률 | 예상 완료일 | 실제 완료일 |
+| Phase | 진행률 | 예상 완료일 | 비고 |
 |---|---|---|---|
-| Phase 0 | 0% | 2025-12-09 | - |
-| Phase 1 | 0% | 2025-12-31 | - |
-| Phase 2 | 0% | 2026-02-28 | - |
-| Phase 3 | 0% | 2026-06-30 | - |
+| Phase 0 | 100% ✅ | 2025-12-22 | 완료 |
+| Phase 1 | 70% 🔄 | 2026-01-15 | 학부모 대시보드 남음 |
+| Phase 2 | 0% ⏳ | 2026-03-31 | 핵심 과제 |
+| Phase 3 | 0% ⏳ | 2026-06-30 | 장기 목표 |
 
 ### KPI 추적
 
 | 지표 | 목표 | 현재 | 달성률 |
 |---|---|---|---|
-| 분석 정확도 | 85% (P0), 95% (P2) | 60% | 0% |
-| 전략 실행률 | 70% (P0), 85% (P2) | 30% | 0% |
+| 분석 정확도 | 95% (P2) | 85% | 89% |
+| 전략 실행률 | 80% (P2) | 30% | 37% |
+| 예측 정확도 | 85% (P2) | TBD | - |
 | 학생 성적 향상 | +10점/3개월 | TBD | - |
-| 교사 만족도 | 8/10 (P0), 9/10 (P2) | TBD | - |
-| 리포트 생성 시간 | <5분 | ~10분 | 0% |
-
----
-
-## 9. 리스크 및 대응 방안
-
-### 기술적 리스크
-
-| 리스크 | 확률 | 영향도 | 대응 방안 |
-|---|---|---|---|
-| Gemini API 비용 급증 | 중간 | 높음 | 캐싱 강화, 토큰 최적화 |
-| 프롬프트 개선 효과 미미 | 낮음 | 높음 | A/B 테스트, 점진적 개선 |
-| 데이터 마이그레이션 실패 | 낮음 | 중간 | 백업 우선, 롤백 계획 |
-
-### 일정 지연 리스크
-
-| 원인 | 확률 | 대응 방안 |
-|---|---|---|
-| 프롬프트 테스트 시간 소요 | 높음 | 병렬 테스트, 자동화 |
-| 사용자 피드백 수집 지연 | 중간 | 사전 테스터 그룹 구성 |
-| 타입 에러 해결 시간 | 중간 | TypeScript 전문가 리뷰 |
-
----
-
-## 10. 결론 및 다음 단계
-
-### 🎯 핵심 메시지
-
-**"프롬프트가 모든 것을 결정합니다."**
-
-현재 코드 품질은 양호하지만, 프로젝트의 핵심 가치("종합 학습 컨설팅")를 실현하려면 **프롬프트 품질 개선이 최우선**입니다.
-
-### ✅ 즉시 실행 (내일부터)
-
-1. **Phase 0 시작**
-   - generateTestAnalysis 프롬프트 교체
-   - 새로운 타입 정의
-   - 스키마 업데이트
-
-2. **테스트 환경 준비**
-   - 실제 학생 시험지 3개 준비
-   - 교사 피드백 수집 계획 수립
-
-3. **진행 상황 추적**
-   - 매일 체크리스트 업데이트
-   - 주간 회의로 진행 상황 공유
-
-### 📞 지원 요청
-
-Phase 0 진행 중 다음이 필요하면 언제든 요청:
-- 프롬프트 미세 조정
-- TypeScript 타입 에러 해결
-- 테스트 결과 분석
-- 다음 단계 계획 수립
 
 ---
 
 **작성일**: 2025-11-25
-**최종 업데이트**: 2025-11-25
-**다음 검토일**: Phase 0 완료 후 (예상 2025-12-09)
+**최종 업데이트**: 2025-12-22
+**다음 검토일**: Phase 1 완료 후 (예상 2026-01-15)
