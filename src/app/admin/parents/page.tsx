@@ -123,15 +123,15 @@ export default function ParentsPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('계정 생성 실패');
 
-      // 2. users 테이블에 정보 저장
+      // 2. users 테이블에 정보 저장 (upsert: 트리거가 이미 생성했을 수 있음)
       const { error: userError } = await supabase
         .from('users')
-        .insert({
+        .upsert({
           id: authData.user.id,
           email: formData.email,
           name: formData.name,
           role: 'parent',
-        });
+        }, { onConflict: 'id' });
 
       if (userError) throw userError;
 
