@@ -3,7 +3,24 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Student, Report } from '@/types';
+import type { User, Student, Report, AnalysisData } from '@/types';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Legend,
+} from 'recharts';
 
 interface StudentWithReports extends Student {
   reports: Report[];
@@ -114,19 +131,63 @@ export default function ParentDashboard() {
     return labels[type] || type;
   };
 
-  // 최근 5개 시험의 점수 추이 계산
+  // 최근 10개 시험의 점수 추이 계산 (차트용)
   const getScoreTrend = (reports: Report[]) => {
     return reports
       .filter(r => r.report_type === 'test' && r.total_score && r.max_score)
-      .slice(0, 5)
+      .slice(0, 10)
       .reverse()
       .map(r => ({
         date: r.test_date || '',
         name: r.test_name || '',
+        shortName: (r.test_name || '').length > 8
+          ? (r.test_name || '').substring(0, 8) + '...'
+          : (r.test_name || ''),
         score: r.total_score || 0,
         maxScore: r.max_score || 100,
         percentage: Math.round(((r.total_score || 0) / (r.max_score || 100)) * 100),
+        displayDate: r.test_date
+          ? new Date(r.test_date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+          : '',
       }));
+  };
+
+  // 수학 역량 레이더 차트 데이터 추출
+  const getMathCapabilityData = (reports: Report[]) => {
+    const latestReport = reports.find(r =>
+      r.report_type === 'test' &&
+      r.analysis_data &&
+      (r.analysis_data as AnalysisData).macroAnalysis?.mathCapability
+    );
+
+    if (!latestReport) return null;
+
+    const capability = (latestReport.analysis_data as AnalysisData).macroAnalysis?.mathCapability;
+    if (!capability) return null;
+
+    return [
+      { subject: '계산 속도', value: capability.calculationSpeed, fullMark: 100 },
+      { subject: '계산 정확도', value: capability.calculationAccuracy, fullMark: 100 },
+      { subject: '응용력', value: capability.applicationAbility, fullMark: 100 },
+      { subject: '논리력', value: capability.logic, fullMark: 100 },
+      { subject: '불안 조절', value: capability.anxietyControl, fullMark: 100 },
+    ];
+  };
+
+  // 성장률 계산 (최근 5개 vs 이전 5개)
+  const getGrowthRate = (reports: Report[]) => {
+    const testReports = reports
+      .filter(r => r.report_type === 'test' && r.total_score && r.max_score)
+      .map(r => ((r.total_score || 0) / (r.max_score || 100)) * 100);
+
+    if (testReports.length < 2) return null;
+
+    const recentAvg = testReports.slice(0, Math.min(5, Math.floor(testReports.length / 2)))
+      .reduce((a, b) => a + b, 0) / Math.min(5, Math.floor(testReports.length / 2));
+    const pastAvg = testReports.slice(Math.min(5, Math.floor(testReports.length / 2)))
+      .reduce((a, b) => a + b, 0) / (testReports.length - Math.min(5, Math.floor(testReports.length / 2)));
+
+    return Math.round(recentAvg - pastAvg);
   };
 
   // 평균 점수 계산
@@ -257,15 +318,12 @@ export default function ParentDashboard() {
                   />
                 </div>
 
-                {/* 성장 그래프 */}
-                {getScoreTrend(selectedChild.reports).length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">성적 추이</h3>
-                    <div className="h-48">
-                      <SimpleBarChart data={getScoreTrend(selectedChild.reports)} />
-                    </div>
-                  </div>
-                )}
+                {/* 성장 그래프 섹션 */}
+                <GrowthChartSection
+                  scoreTrend={getScoreTrend(selectedChild.reports)}
+                  mathCapability={getMathCapabilityData(selectedChild.reports)}
+                  growthRate={getGrowthRate(selectedChild.reports)}
+                />
 
                 {/* 최근 리포트 목록 */}
                 <div className="bg-white rounded-xl shadow-sm p-6">
@@ -333,26 +391,222 @@ function StatCard({ label, value, unit }: { label: string; value: number | strin
   );
 }
 
-// 간단한 막대 차트 컴포넌트
-function SimpleBarChart({ data }: { data: { date: string; name: string; percentage: number }[] }) {
-  const maxValue = 100;
+// 성장 그래프 섹션 컴포넌트
+interface ScoreTrendItem {
+  date: string;
+  name: string;
+  shortName: string;
+  score: number;
+  maxScore: number;
+  percentage: number;
+  displayDate: string;
+}
+
+interface MathCapabilityItem {
+  subject: string;
+  value: number;
+  fullMark: number;
+}
+
+interface GrowthChartSectionProps {
+  scoreTrend: ScoreTrendItem[];
+  mathCapability: MathCapabilityItem[] | null;
+  growthRate: number | null;
+}
+
+function GrowthChartSection({ scoreTrend, mathCapability, growthRate }: GrowthChartSectionProps) {
+  const [activeTab, setActiveTab] = useState<'trend' | 'capability'>('trend');
+
+  if (scoreTrend.length === 0 && !mathCapability) {
+    return null;
+  }
 
   return (
-    <div className="flex items-end justify-between h-full gap-2">
-      {data.map((item, index) => (
-        <div key={index} className="flex-1 flex flex-col items-center">
-          <div className="text-sm font-semibold text-indigo-600 mb-1">{item.percentage}%</div>
-          <div className="w-full bg-gray-100 rounded-t-lg relative" style={{ height: '120px' }}>
-            <div
-              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-indigo-500 to-indigo-400 rounded-t-lg transition-all"
-              style={{ height: `${(item.percentage / maxValue) * 100}%` }}
-            />
+    <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+      {/* 헤더 및 탭 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-gray-900">성장 분석</h3>
+          {growthRate !== null && (
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              growthRate > 0
+                ? 'bg-green-100 text-green-700'
+                : growthRate < 0
+                ? 'bg-red-100 text-red-700'
+                : 'bg-gray-100 text-gray-700'
+            }`}>
+              {growthRate > 0 ? '+' : ''}{growthRate}% 성장
+            </span>
+          )}
+        </div>
+
+        {/* 탭 버튼 */}
+        {mathCapability && (
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('trend')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'trend'
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              성적 추이
+            </button>
+            <button
+              onClick={() => setActiveTab('capability')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'capability'
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              수학 역량
+            </button>
           </div>
-          <div className="text-xs text-gray-500 mt-2 text-center truncate w-full" title={item.name}>
-            {item.date ? new Date(item.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : '-'}
+        )}
+      </div>
+
+      {/* 성적 추이 차트 */}
+      {activeTab === 'trend' && scoreTrend.length > 0 && (
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={scoreTrend}
+              margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
+            >
+              <defs>
+                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="displayDate"
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tickLine={false}
+                axisLine={{ stroke: '#e5e7eb' }}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tickLine={false}
+                axisLine={{ stroke: '#e5e7eb' }}
+                tickFormatter={(value) => `${value}%`}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload as ScoreTrendItem;
+                    return (
+                      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+                        <p className="font-medium text-gray-900">{data.name}</p>
+                        <p className="text-sm text-gray-500">{data.date}</p>
+                        <p className="text-lg font-bold text-indigo-600 mt-1">
+                          {data.score} / {data.maxScore}점 ({data.percentage}%)
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="percentage"
+                stroke="#6366f1"
+                strokeWidth={3}
+                fill="url(#colorScore)"
+                dot={{ fill: '#6366f1', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, fill: '#4f46e5' }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* 수학 역량 레이더 차트 */}
+      {activeTab === 'capability' && mathCapability && (
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={mathCapability}>
+              <PolarGrid stroke="#e5e7eb" />
+              <PolarAngleAxis
+                dataKey="subject"
+                tick={{ fontSize: 12, fill: '#374151' }}
+              />
+              <PolarRadiusAxis
+                angle={90}
+                domain={[0, 100]}
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tickCount={5}
+              />
+              <Radar
+                name="수학 역량"
+                dataKey="value"
+                stroke="#8b5cf6"
+                fill="#8b5cf6"
+                fillOpacity={0.3}
+                strokeWidth={2}
+              />
+              <Legend />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload as MathCapabilityItem;
+                    return (
+                      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+                        <p className="font-medium text-gray-900">{data.subject}</p>
+                        <p className="text-lg font-bold text-purple-600">{data.value}점</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* 추이 요약 */}
+      {scoreTrend.length >= 2 && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
+              <span className="text-gray-600">
+                최근 점수: <span className="font-semibold text-gray-900">{scoreTrend[scoreTrend.length - 1].percentage}%</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-gray-300"></span>
+              <span className="text-gray-600">
+                첫 점수: <span className="font-semibold text-gray-900">{scoreTrend[0].percentage}%</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600">
+                총 변화:
+                <span className={`font-semibold ml-1 ${
+                  scoreTrend[scoreTrend.length - 1].percentage - scoreTrend[0].percentage > 0
+                    ? 'text-green-600'
+                    : scoreTrend[scoreTrend.length - 1].percentage - scoreTrend[0].percentage < 0
+                    ? 'text-red-600'
+                    : 'text-gray-900'
+                }`}>
+                  {scoreTrend[scoreTrend.length - 1].percentage - scoreTrend[0].percentage > 0 ? '+' : ''}
+                  {scoreTrend[scoreTrend.length - 1].percentage - scoreTrend[0].percentage}%p
+                </span>
+              </span>
+            </div>
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
