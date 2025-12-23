@@ -55,16 +55,21 @@ export async function middleware(request: NextRequest) {
 
   // 로그인한 사용자가 로그인/회원가입 페이지 접근 시 역할별 대시보드로 리다이렉트
   if (user && isAuthPage) {
-    const { data: userData } = await supabase
+    const { data: userData, error } = await supabase
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single();
 
+    // users 테이블에 데이터가 없으면 로그인 페이지에 머무름 (신규 가입 등)
+    if (error || !userData) {
+      return supabaseResponse;
+    }
+
     const url = request.nextUrl.clone();
-    if (userData?.role === 'teacher') {
+    if (userData.role === 'teacher') {
       url.pathname = '/admin';
-    } else if (userData?.role === 'parent') {
+    } else if (userData.role === 'parent') {
       url.pathname = '/parent';
     } else {
       url.pathname = '/';
