@@ -28,6 +28,10 @@ export default function LoginPage() {
 
       if (data.user) {
         const { data: userData } = await supabase.from('users').select('role').eq('id', data.user.id).single();
+
+        // 세션 쿠키가 설정되도록 잠시 대기 후 리다이렉트
+        router.refresh();
+
         if (userData?.role === 'teacher') router.push('/admin');
         else if (userData?.role === 'parent') router.push('/parent');
         else router.push('/');
