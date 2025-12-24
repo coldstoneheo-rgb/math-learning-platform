@@ -24,3 +24,21 @@ body {
     'Pretendard Variable', Pretendard, 'Noto Sans KR', 'Segoe UI',
     Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
+
+/* 버튼 및 클릭 가능한 요소에 pointer 커서 적용 */
+button,
+a,
+[role="button"] {
+  cursor: pointer;
+}
+
+/* 비입력 요소에서 텍스트 선택 커서 방지 */
+.stat-card,
+.dashboard-card,
+h1, h2, h3, h4, h5, h6,
+label,
+th,
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}

@@ -116,7 +116,7 @@ export default function AdminDashboard() {
           <StatCard label="등록 학생" value={stats.students} unit="명" />
           <StatCard label="생성 리포트" value={stats.reports} unit="개" />
           <StatCard label="이번 주 분석" value={0} unit="건" />
-          <StatCard label="평균 점수" value={0} unit="점" />
+          <StatCard label="시스템 완성도" value={75} unit="%" description="ML 엔진 고도화 예정" />
         </div>
 
         {/* 퀵 액션 카드 */}
@@ -135,9 +135,9 @@ export default function AdminDashboard() {
           />
           <DashboardCard
             title="리포트 생성"
-            description="시험지 분석 및 리포트 생성"
+            description="주간/월간/시험 분석 리포트 생성"
             icon="📊"
-            href="/admin/reports/new"
+            href="/admin/reports/create"
           />
           <DashboardCard
             title="리포트 관리"
@@ -147,10 +147,10 @@ export default function AdminDashboard() {
           />
         </div>
 
-        {/* 최근 리포트 */}
+        {/* 최근 이벤트 */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">최근 리포트</h3>
+            <h3 className="text-lg font-semibold text-gray-900">최근 이벤트</h3>
             <a href="/admin/reports" className="text-sm text-indigo-600 hover:text-indigo-700">
               전체 보기 →
             </a>
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
 
           {recentReports.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
-              아직 생성된 리포트가 없습니다.<br />
+              아직 이벤트가 없습니다.<br />
               시험지를 분석하여 첫 리포트를 생성해보세요.
             </p>
           ) : (
@@ -169,16 +169,28 @@ export default function AdminDashboard() {
                   href={`/admin/reports/${report.id}`}
                   className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-2 px-2 rounded transition-colors"
                 >
-                  <div>
-                    <span className="font-medium text-gray-900">{report.students?.name}</span>
-                    <span className="text-gray-500 mx-2">·</span>
-                    <span className="text-gray-600">{report.test_name}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-semibold text-indigo-600">
-                      {report.total_score}/{report.max_score}
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm">
+                      {report.report_type === 'test' ? '📝' : report.report_type === 'weekly' ? '📅' : report.report_type === 'monthly' ? '📆' : '📊'}
                     </span>
-                    <span className="text-sm text-gray-400">{report.test_date}</span>
+                    <div>
+                      <span className="font-medium text-gray-900">{report.students?.name}</span>
+                      <span className="text-gray-500 mx-2">
+                        {report.report_type === 'test' ? '시험 분석 완료' :
+                         report.report_type === 'weekly' ? '주간 리포트 생성' :
+                         report.report_type === 'monthly' ? '월간 리포트 생성' : '통합 분석 완료'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {report.report_type === 'test' && report.total_score && (
+                      <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-sm font-medium">
+                        {report.total_score}점
+                      </span>
+                    )}
+                    <span className="text-sm text-gray-400">
+                      {new Date(report.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                    </span>
                   </div>
                 </a>
               ))}
@@ -190,13 +202,16 @@ export default function AdminDashboard() {
   );
 }
 
-function StatCard({ label, value, unit }: { label: string; value: number; unit: string }) {
+function StatCard({ label, value, unit, description }: { label: string; value: number; unit: string; description?: string }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4">
+    <div className="bg-white rounded-xl shadow-sm p-4 stat-card">
       <div className="text-sm text-gray-500">{label}</div>
       <div className="text-2xl font-bold text-gray-900 mt-1">
         {value}<span className="text-sm font-normal text-gray-500 ml-1">{unit}</span>
       </div>
+      {description && (
+        <div className="text-xs text-gray-400 mt-1">{description}</div>
+      )}
     </div>
   );
 }
@@ -210,7 +225,7 @@ function DashboardCard({ title, description, icon, href }: {
   return (
     <a
       href={href}
-      className="block bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-gray-100"
+      className="block bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-gray-100 dashboard-card"
     >
       <div className="text-3xl mb-3">{icon}</div>
       <h3 className="text-lg font-semibold text-gray-900 mb-1">{title}</h3>
