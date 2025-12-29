@@ -22,7 +22,15 @@ export interface Student {
 }
 
 export type StudentInput = Omit<Student, 'id' | 'created_at'>;
-export type ReportType = 'test' | 'weekly' | 'monthly' | 'consolidated';
+// 6대 리포트 타입 (확장된 버전)
+export type ReportType =
+  | 'level_test'     // 진단/레벨 테스트 (신규 등록 시)
+  | 'test'           // 일반 시험 분석
+  | 'weekly'         // 주간 리포트
+  | 'monthly'        // 월간 리포트
+  | 'semi_annual'    // 반기 리포트
+  | 'annual'         // 연간 리포트
+  | 'consolidated';  // 레거시: 통합 리포트 (deprecated)
 
 export interface TestInfo {
   testName: string;
@@ -501,5 +509,923 @@ export interface TodayClassStudent {
     score: number;
     max_score: number;
     trend: 'up' | 'down' | 'stable';
+  };
+}
+
+// ============================================
+// 학생 메타 프로필 (5대 핵심 지표)
+// ============================================
+
+/**
+ * ErrorSignature - 오류 서명
+ * 학생의 고유한 오류 패턴을 식별하는 지표
+ */
+export interface ErrorSignature {
+  // 주요 오류 유형과 빈도
+  primaryErrorTypes: {
+    type: '개념 오류' | '절차 오류' | '계산 오류' | '문제 오독' | '기타/부주의';
+    frequency: number; // 0-100 (백분율)
+    recentTrend: 'increasing' | 'decreasing' | 'stable';
+  }[];
+  // 특징적 오류 패턴 (자연어 설명)
+  signaturePatterns: string[];
+  // 영역별 취약도 맵
+  domainVulnerability: {
+    domain: string; // e.g., "분수 계산", "방정식", "도형"
+    vulnerabilityScore: number; // 0-100 (높을수록 취약)
+    lastAssessed: string; // ISO date
+  }[];
+  // 마지막 업데이트 시점
+  lastUpdated: string;
+}
+
+/**
+ * AbsorptionRate - 흡수율
+ * 새로운 개념을 학습하고 적용하는 속도
+ */
+export interface AbsorptionRate {
+  // 전체 흡수율 점수
+  overallScore: number; // 0-100
+  // 영역별 흡수율
+  byDomain: {
+    domain: string;
+    score: number;
+    assessmentCount: number;
+  }[];
+  // 흡수 패턴 유형
+  learningType: 'fast-starter' | 'steady-grower' | 'slow-but-deep' | 'inconsistent';
+  // 최적 학습 조건
+  optimalConditions: string[];
+  // 최근 3개월 트렌드
+  recentTrend: {
+    month: string;
+    score: number;
+  }[];
+  lastUpdated: string;
+}
+
+/**
+ * SolvingStamina - 문제풀이 지구력
+ * 장시간 집중력과 문제풀이 지속 능력
+ */
+export interface SolvingStamina {
+  // 전체 지구력 점수
+  overallScore: number; // 0-100
+  // 최적 집중 시간대 (분 단위)
+  optimalDuration: number;
+  // 문제 수별 정확도 변화
+  accuracyBySequence: {
+    problemRange: string; // e.g., "1-5", "6-10", "11-15"
+    accuracy: number; // 0-100
+  }[];
+  // 피로도 패턴
+  fatiguePattern: 'early-fatigue' | 'mid-dip' | 'late-fatigue' | 'consistent';
+  // 회복 전략 효과성
+  recoveryStrategies: {
+    strategy: string;
+    effectiveness: 'high' | 'medium' | 'low';
+  }[];
+  lastUpdated: string;
+}
+
+/**
+ * MetaCognitionLevel - 메타인지 수준
+ * 자신의 학습 상태를 인지하고 조절하는 능력
+ */
+export interface MetaCognitionLevel {
+  // 전체 메타인지 점수
+  overallScore: number; // 0-100
+  // 세부 영역별 점수
+  subScores: {
+    // 자기 평가 정확도 (예측 점수 vs 실제 점수)
+    selfAssessmentAccuracy: number;
+    // 오답 인식 능력 (틀린 문제 자각 정도)
+    errorRecognition: number;
+    // 전략 선택 능력 (상황에 맞는 풀이법 선택)
+    strategySelection: number;
+    // 시간 관리 능력
+    timeManagement: number;
+  };
+  // 메타인지 발달 단계
+  developmentStage: 'beginner' | 'developing' | 'competent' | 'proficient' | 'expert';
+  // 개선 영역
+  improvementAreas: string[];
+  lastUpdated: string;
+}
+
+/**
+ * Baseline - 기준점 데이터
+ * 최초 진단 시점의 학습 상태 스냅샷
+ */
+export interface Baseline {
+  // 최초 진단 일자
+  assessmentDate: string;
+  // 진단 시험 ID (level_test report)
+  levelTestReportId?: number;
+  // 초기 학력 수준 (학년 기준)
+  initialLevel: {
+    grade: number; // 해당 학년
+    percentile: number; // 백분위
+    evaluatedAt: string;
+  };
+  // 영역별 초기 점수
+  domainScores: {
+    domain: string;
+    score: number;
+    maxScore: number;
+    percentile: number;
+  }[];
+  // 초기 강점/약점 요약
+  initialStrengths: string[];
+  initialWeaknesses: string[];
+  // 초기 학습 성향
+  initialLearningStyle: 'visual' | 'verbal' | 'logical' | 'mixed';
+}
+
+/**
+ * StudentMetaProfile - 학생 메타 프로필
+ * 학생의 5대 핵심 학습 지표를 종합한 프로필
+ */
+export interface StudentMetaProfile {
+  // 기준점 (최초 진단 데이터)
+  baseline: Baseline;
+  // 오류 서명 (고유 오류 패턴)
+  errorSignature: ErrorSignature;
+  // 흡수율 (학습 속도)
+  absorptionRate: AbsorptionRate;
+  // 문제풀이 지구력
+  solvingStamina: SolvingStamina;
+  // 메타인지 수준
+  metaCognitionLevel: MetaCognitionLevel;
+  // 마지막 업데이트 (any indicator)
+  lastUpdated: string;
+  // 프로필 버전 (스키마 변경 추적용)
+  version: string;
+}
+
+// ============================================
+// 6대 리포트 분석 타입 정의
+// ============================================
+
+/**
+ * GrowthComparison - 성장 비교 데이터
+ * 이전 리포트와의 비교 분석
+ */
+export interface GrowthComparison {
+  // 비교 대상 리포트
+  comparedTo: {
+    reportId: number;
+    reportType: ReportType;
+    reportDate: string;
+  };
+  // 점수 변화
+  scoreChange: {
+    previous: number;
+    current: number;
+    delta: number;
+    percentageChange: number;
+  };
+  // 개선된 영역
+  improvedAreas: {
+    area: string;
+    previousScore: number;
+    currentScore: number;
+    improvement: number;
+  }[];
+  // 퇴보한 영역
+  declinedAreas: {
+    area: string;
+    previousScore: number;
+    currentScore: number;
+    decline: number;
+  }[];
+  // 해결된 취약점
+  resolvedWeaknesses: string[];
+  // 새로 발견된 취약점
+  newWeaknesses: string[];
+  // 성장 요약
+  growthSummary: string;
+}
+
+/**
+ * FutureVisionExtended - 확장된 미래 비전
+ * 단기/중기/장기 예측 및 격려 메시지
+ */
+export interface FutureVisionExtended {
+  // 단기 비전 (1개월)
+  shortTerm: {
+    timeframe: '1개월';
+    goals: string[];
+    predictedScore?: number;
+    confidenceLevel: number;
+    milestones: string[];
+  };
+  // 중기 비전 (3개월)
+  midTerm: {
+    timeframe: '3개월';
+    goals: string[];
+    predictedScore?: number;
+    confidenceLevel: number;
+    milestones: string[];
+  };
+  // 장기 비전 (6개월~1년)
+  longTerm: {
+    timeframe: '6개월' | '1년';
+    goals: string[];
+    predictedScore?: number;
+    confidenceLevel: number;
+    milestones: string[];
+  };
+  // 성장 경로 서사
+  growthNarrative: string;
+  // 맞춤 격려 메시지
+  encouragementMessage: string;
+}
+
+/**
+ * LevelTestAnalysis - 진단/레벨 테스트 분석
+ * 신규 학생 등록 시 최초 진단 리포트
+ */
+export interface LevelTestAnalysis {
+  // 기본 테스트 정보
+  testInfo: TestInfo;
+  testResults: TestResults;
+  // 영역별 진단 결과
+  domainDiagnosis: {
+    domain: string;
+    score: number;
+    maxScore: number;
+    percentile: number;
+    gradeEquivalent: string; // e.g., "중1 수준", "초6 상위"
+    diagnosis: string;
+  }[];
+  // 학년 수준 평가
+  gradeLevelAssessment: {
+    currentGrade: number;
+    assessedLevel: number;
+    gap: number; // 양수: 앞서있음, 음수: 뒤처짐
+    explanation: string;
+  };
+  // 선수학습 결손 분석
+  prerequisiteGaps: {
+    concept: string;
+    expectedLevel: string;
+    actualLevel: string;
+    priority: 'critical' | 'important' | 'minor';
+    remedyPlan: string;
+  }[];
+  // 초기 학습 성향 진단
+  learningStyleDiagnosis: {
+    style: 'visual' | 'verbal' | 'logical' | 'mixed';
+    confidence: number;
+    characteristics: string[];
+    recommendations: string[];
+  };
+  // 초기 Baseline 설정
+  initialBaseline: Baseline;
+  // 맞춤 커리큘럼 제안
+  suggestedCurriculum: {
+    phase: string;
+    duration: string;
+    focus: string;
+    goals: string[];
+  }[];
+  // 부모님께 전달할 메시지
+  parentBriefing: string;
+}
+
+/**
+ * TestReportAnalysis - 일반 시험 분석
+ * 기존 AnalysisData를 확장한 시험 분석
+ */
+export interface TestReportAnalysis extends AnalysisData {
+  // 메타프로필 기반 분석
+  metaProfileAnalysis?: {
+    // 오류 서명 매칭
+    errorSignatureMatch: {
+      matchedPatterns: string[];
+      newPatterns: string[];
+      resolvedPatterns: string[];
+    };
+    // 흡수율 평가
+    absorptionAssessment: {
+      newConceptsIntroduced: string[];
+      absorptionRate: number;
+      comparison: string;
+    };
+    // 지구력 분석
+    staminaAssessment: {
+      problemSequenceAnalysis: string;
+      fatigueIndicators: string[];
+    };
+    // 메타인지 분석
+    metaCognitionAssessment: {
+      selfAwarenessIndicators: string[];
+      strategyUseAnalysis: string;
+    };
+  };
+  // 성장 비교 (이전 시험 대비)
+  growthComparison?: GrowthComparison;
+  // 미래 비전
+  futureVision?: FutureVisionExtended;
+}
+
+/**
+ * WeeklyReportAnalysis - 주간 리포트 분석
+ * 주간 학습 피드백 및 마이크로 루프
+ */
+export interface WeeklyReportAnalysis {
+  // 기본 정보
+  period: string;
+  weekNumber: number;
+  studentName: string;
+  studentGrade: string;
+  // 수업 정보
+  classSessions: {
+    date: string;
+    duration: number;
+    keywords: string[];
+    understandingLevel: number;
+    attentionLevel: number;
+  }[];
+  // 학습 내용 평가
+  learningContent: {
+    topic: string;
+    evaluation: 'excellent' | 'good' | 'not_good';
+    details: string;
+  }[];
+  // 숙제 완료율
+  assignmentCompletion: {
+    total: number;
+    completed: number;
+    rate: number;
+    quality: 'excellent' | 'good' | 'needs_improvement';
+  };
+  // 주간 성취
+  weeklyAchievements: string[];
+  // 개선 필요 영역
+  areasForImprovement: string[];
+  // 복습 과제
+  reviewAssignments: {
+    source: string;
+    page: string;
+    number: string;
+    concept: string;
+    reason: string;
+  }[];
+  // 다음 주 계획
+  nextWeekPlan: {
+    focus: string;
+    goals: string[];
+    assignments: string[];
+  };
+  // 마이크로 루프 피드백
+  microLoopFeedback: {
+    // 지난주 목표 달성도
+    lastWeekGoalAchievement: {
+      goal: string;
+      achieved: boolean;
+      notes: string;
+    }[];
+    // 연속성 지표
+    continuityScore: number;
+    // 모멘텀 상태
+    momentumStatus: 'accelerating' | 'maintaining' | 'slowing' | 'recovering';
+  };
+  // 간단한 격려 메시지
+  encouragement: string;
+  // 선생님 코멘트
+  teacherComment: string;
+}
+
+/**
+ * MonthlyReportAnalysis - 월간 리포트 분석
+ * 월간 성장 종합 및 마이크로 루프 점검
+ */
+export interface MonthlyReportAnalysis {
+  // 기본 정보
+  period: string;
+  month: { year: number; month: number };
+  studentName: string;
+  // 월간 수업 요약
+  classSessionsSummary: {
+    totalClasses: number;
+    totalHours: number;
+    attendanceRate: number;
+    averageUnderstanding: number;
+    averageAttention: number;
+  };
+  // 커리큘럼 진도
+  curriculumProgress: {
+    startUnit: string;
+    endUnit: string;
+    completionRate: number;
+    paceAssessment: 'ahead' | 'on_track' | 'behind';
+    paceAdjustmentNeeded: string;
+  };
+  // 학습 내용 종합
+  learningContentSummary: {
+    excellentTopics: string[];
+    goodTopics: string[];
+    challengingTopics: string[];
+  };
+  // 월간 시험 성적 (있는 경우)
+  testPerformance?: {
+    testCount: number;
+    averageScore: number;
+    highestScore: number;
+    lowestScore: number;
+    trend: 'improving' | 'stable' | 'declining';
+  };
+  // 숙제 수행 종합
+  assignmentSummary: {
+    totalAssigned: number;
+    completionRate: number;
+    averageQuality: number;
+    consistencyScore: number;
+  };
+  // 월간 성취
+  monthlyAchievements: string[];
+  // 해결된 취약점
+  resolvedWeaknesses: string[];
+  // 새로 발견된 이슈
+  newChallenges: string[];
+  // 부모님 보고 섹션
+  parentReport: {
+    highlights: string[];
+    concerns: string[];
+    recommendations: string[];
+    costInfo?: string;
+  };
+  // 마이크로 루프 월간 점검
+  microLoopMonthlyReview: {
+    // 월간 목표 달성도
+    monthlyGoalAchievement: number;
+    // 주간 연속성 점수 평균
+    weeklyConsistency: number;
+    // 성장 모멘텀
+    growthMomentum: 'accelerating' | 'maintaining' | 'slowing';
+    // 조정 필요 여부
+    adjustmentNeeded: boolean;
+    adjustmentRecommendations: string[];
+  };
+  // 다음 달 계획
+  nextMonthPlan: {
+    mainGoals: string[];
+    focusAreas: string[];
+    expectedCoverage: string;
+  };
+  // 미래 비전 (1개월 단위)
+  shortTermVision: {
+    predictedProgress: string;
+    keyMilestones: string[];
+    potentialChallenges: string[];
+  };
+  // 선생님 종합 메시지
+  teacherMessage: string;
+}
+
+/**
+ * SemiAnnualReportAnalysis - 반기 리포트 분석
+ * 6개월 성장 종합 및 매크로 루프
+ */
+export interface SemiAnnualReportAnalysis {
+  // 기본 정보
+  period: string;
+  halfYear: '상반기' | '하반기';
+  year: number;
+  studentName: string;
+  // 반기 요약 통계
+  periodSummary: {
+    totalClasses: number;
+    totalHours: number;
+    totalTests: number;
+    averageScore: number;
+    scoreImprovement: number;
+  };
+  // 성장 궤적 분석
+  growthTrajectory: {
+    startingPoint: {
+      date: string;
+      score: number;
+      level: string;
+    };
+    currentPoint: {
+      date: string;
+      score: number;
+      level: string;
+    };
+    growthCurve: {
+      month: string;
+      score: number;
+      milestone?: string;
+    }[];
+    growthRate: number; // 백분율
+    growthType: 'exponential' | 'linear' | 'plateau' | 'fluctuating';
+  };
+  // 메타프로필 변화 분석
+  metaProfileEvolution: {
+    errorSignatureChange: {
+      resolvedPatterns: string[];
+      persistentPatterns: string[];
+      newPatterns: string[];
+      overallTrend: 'improving' | 'stable' | 'concerning';
+    };
+    absorptionRateChange: {
+      previous: number;
+      current: number;
+      trend: 'improving' | 'stable' | 'declining';
+    };
+    staminaChange: {
+      previous: number;
+      current: number;
+      trend: 'improving' | 'stable' | 'declining';
+    };
+    metaCognitionChange: {
+      previous: number;
+      current: number;
+      trend: 'improving' | 'stable' | 'declining';
+    };
+  };
+  // 취약점 종합 점검
+  weaknessReview: {
+    startingWeaknesses: string[];
+    resolved: string[];
+    improved: string[];
+    persistent: string[];
+    new: string[];
+    resolutionRate: number;
+  };
+  // 강점 발전 현황
+  strengthDevelopment: {
+    consolidatedStrengths: string[];
+    emergingStrengths: string[];
+    leveragedFor: string[];
+  };
+  // 매크로 루프 분석
+  macroLoopAnalysis: {
+    // 반기 목표 달성도
+    goalAchievementRate: number;
+    // 월간 리포트 기반 일관성
+    monthlyConsistency: {
+      month: string;
+      score: number;
+    }[];
+    // 전체 학습 효율성
+    learningEfficiency: number;
+    // 전략적 조정 제안
+    strategicAdjustments: {
+      area: string;
+      currentApproach: string;
+      suggestedChange: string;
+      expectedImpact: string;
+    }[];
+  };
+  // 학년 수준 재평가
+  levelReassessment: {
+    previousLevel: string;
+    currentLevel: string;
+    gradeGrowth: number;
+    comparisonToStandard: string;
+  };
+  // 다음 반기 전략
+  nextHalfStrategy: {
+    primaryGoals: string[];
+    focusDomains: string[];
+    targetScore: number;
+    keyMilestones: {
+      month: number;
+      milestone: string;
+    }[];
+    riskMitigation: string[];
+  };
+  // 장기 비전 업데이트
+  longTermVisionUpdate: {
+    yearEndProjection: string;
+    nextYearOutlook: string;
+    potentialPaths: string[];
+  };
+  // 부모님 종합 보고
+  parentComprehensiveReport: {
+    executiveSummary: string;
+    detailedAnalysis: string;
+    investmentReturn: string;
+    recommendations: string[];
+  };
+  // 선생님 반기 평가
+  teacherAssessment: string;
+}
+
+/**
+ * AnnualReportAnalysis - 연간 리포트 분석
+ * 1년 성장 종합 및 다음 학년 준비
+ */
+export interface AnnualReportAnalysis {
+  // 기본 정보
+  year: number;
+  studentName: string;
+  startGrade: number;
+  endGrade: number;
+  // 연간 통계
+  annualStatistics: {
+    totalClasses: number;
+    totalHours: number;
+    totalTests: number;
+    totalReports: number;
+    averageScore: number;
+    scoreImprovement: number;
+    attendanceRate: number;
+  };
+  // 연간 성장 스토리
+  growthStory: {
+    beginningState: {
+      date: string;
+      description: string;
+      keyMetrics: Record<string, number>;
+    };
+    majorMilestones: {
+      date: string;
+      milestone: string;
+      significance: string;
+    }[];
+    turningPoints: {
+      date: string;
+      event: string;
+      impact: string;
+    }[];
+    endingState: {
+      date: string;
+      description: string;
+      keyMetrics: Record<string, number>;
+    };
+    narrativeSummary: string;
+  };
+  // Baseline 대비 성장
+  baselineComparison: {
+    initialBaseline: Baseline;
+    currentMetrics: {
+      domain: string;
+      initial: number;
+      current: number;
+      growth: number;
+      growthRate: number;
+    }[];
+    overallGrowthRate: number;
+    growthCategory: 'exceptional' | 'excellent' | 'good' | 'steady' | 'needs_attention';
+  };
+  // 메타프로필 연간 진화
+  metaProfileAnnualEvolution: {
+    errorSignature: {
+      yearStart: ErrorSignature;
+      yearEnd: ErrorSignature;
+      improvements: string[];
+      persistentIssues: string[];
+    };
+    absorptionRate: {
+      trend: { month: string; score: number }[];
+      improvement: number;
+      assessment: string;
+    };
+    solvingStamina: {
+      trend: { month: string; score: number }[];
+      improvement: number;
+      assessment: string;
+    };
+    metaCognitionLevel: {
+      trend: { month: string; score: number }[];
+      improvement: number;
+      assessment: string;
+    };
+  };
+  // 취약점 최종 점검
+  weaknessFinalReview: {
+    yearStartWeaknesses: string[];
+    resolvedThisYear: string[];
+    stillActive: string[];
+    newlyDeveloped: string[];
+    priorityForNextYear: string[];
+    overallResolutionRate: number;
+  };
+  // 강점 발전 종합
+  strengthFinalReview: {
+    consolidatedStrengths: string[];
+    newStrengths: string[];
+    leverageOpportunities: string[];
+  };
+  // 학년 성취도
+  gradeAchievement: {
+    expectedCurriculum: string[];
+    actualCompleted: string[];
+    completionRate: number;
+    gradeLevel: '학년 초과' | '학년 적정' | '학년 미달';
+    nextGradeReadiness: number;
+  };
+  // 매크로 루프 연간 종합
+  annualMacroLoopSummary: {
+    // 상/하반기 비교
+    halfYearComparison: {
+      firstHalf: { averageScore: number; growthRate: number };
+      secondHalf: { averageScore: number; growthRate: number };
+    };
+    // 학습 효율성 추이
+    efficiencyTrend: {
+      quarter: string;
+      efficiency: number;
+    }[];
+    // 전략 효과성 평가
+    strategyEffectiveness: {
+      strategy: string;
+      implemented: boolean;
+      effectiveness: 'high' | 'medium' | 'low';
+      notes: string;
+    }[];
+    // 전체 학습 ROI
+    learningROI: {
+      timeInvested: number;
+      improvementAchieved: number;
+      efficiencyRating: string;
+    };
+  };
+  // 다음 학년 준비
+  nextYearPreparation: {
+    prerequisites: {
+      concept: string;
+      status: 'mastered' | 'adequate' | 'needs_work';
+      action: string;
+    }[];
+    readinessScore: number;
+    recommendedPace: 'accelerated' | 'normal' | 'supported';
+    focusAreas: string[];
+    earlyWarnings: string[];
+  };
+  // 장기 학습 경로
+  longTermPath: {
+    currentTrajectory: string;
+    projectedOutcomes: {
+      timeframe: string;
+      projection: string;
+      confidence: number;
+    }[];
+    recommendedPath: string;
+    alternativePaths: string[];
+  };
+  // 성장 스토리 서사
+  growthNarrativeFinal: {
+    headline: string;
+    journey: string;
+    achievements: string[];
+    challenges: string[];
+    transformationSummary: string;
+    lookingAhead: string;
+  };
+  // 부모님 연간 종합 보고
+  parentAnnualReport: {
+    letterToParents: string;
+    yearHighlights: string[];
+    investmentSummary: string;
+    nextYearRecommendations: string[];
+  };
+  // 선생님 연간 평가
+  teacherAnnualAssessment: {
+    overallRating: 'exceptional' | 'excellent' | 'good' | 'satisfactory' | 'needs_improvement';
+    assessment: string;
+    proudMoments: string[];
+    areasForGrowth: string[];
+    personalMessage: string;
+  };
+}
+
+// ============================================
+// Growth Loop 시스템 타입
+// ============================================
+
+/**
+ * MicroLoopData - 마이크로 루프 데이터
+ * 주간/월간 피드백 사이클
+ */
+export interface MicroLoopData {
+  loopType: 'weekly' | 'monthly';
+  cycleNumber: number;
+  // 이전 사이클 목표
+  previousGoals: {
+    goal: string;
+    achieved: boolean;
+    achievementRate: number;
+    notes: string;
+  }[];
+  // 현재 사이클 성과
+  currentPerformance: {
+    metric: string;
+    target: number;
+    actual: number;
+    variance: number;
+  }[];
+  // 조정 사항
+  adjustments: {
+    area: string;
+    previousSetting: string;
+    newSetting: string;
+    reason: string;
+  }[];
+  // 다음 사이클 목표
+  nextCycleGoals: {
+    goal: string;
+    metric: string;
+    target: number;
+    deadline: string;
+  }[];
+  // 연속성 점수
+  continuityScore: number;
+  // 모멘텀
+  momentum: 'accelerating' | 'maintaining' | 'slowing' | 'recovering';
+}
+
+/**
+ * MacroLoopData - 매크로 루프 데이터
+ * 반기/연간 전략 사이클
+ */
+export interface MacroLoopData {
+  loopType: 'semi_annual' | 'annual';
+  // 장기 목표 진척
+  longTermGoalProgress: {
+    goal: string;
+    startDate: string;
+    targetDate: string;
+    currentProgress: number;
+    onTrack: boolean;
+    adjustmentNeeded: string;
+  }[];
+  // 전략 효과성
+  strategyEffectiveness: {
+    strategy: string;
+    implementedDuration: string;
+    measuredOutcome: string;
+    effectiveness: 'highly_effective' | 'effective' | 'neutral' | 'ineffective';
+    recommendation: 'continue' | 'modify' | 'discontinue';
+  }[];
+  // 패턴 분석
+  patternAnalysis: {
+    identifiedPatterns: string[];
+    positivePatterns: string[];
+    negativePatterns: string[];
+    interventionPlan: string[];
+  };
+  // Baseline 대비 성장
+  baselineGrowth: {
+    metric: string;
+    baseline: number;
+    current: number;
+    growthPercentage: number;
+    trajectory: 'above_expected' | 'on_track' | 'below_expected';
+  }[];
+  // 다음 매크로 사이클 전략
+  nextCycleStrategy: {
+    primaryObjectives: string[];
+    keyStrategies: string[];
+    resourceAllocation: string[];
+    riskFactors: string[];
+    contingencyPlans: string[];
+  };
+}
+
+/**
+ * ContextData - AI 프롬프트 컨텍스트 데이터
+ * 이전 리포트에서 주입할 데이터
+ */
+export interface AnalysisContextData {
+  // 학생 메타 프로필
+  metaProfile?: StudentMetaProfile;
+  // 최근 리포트 요약 (최대 3개)
+  recentReports?: {
+    reportId: number;
+    reportType: ReportType;
+    reportDate: string;
+    summary: string;
+    keyFindings: string[];
+    unresolvedIssues: string[];
+  }[];
+  // 활성 취약점
+  activeWeaknesses?: {
+    concept: string;
+    severity: number;
+    duration: string;
+    attempts: number;
+  }[];
+  // 활성 강점
+  activeStrengths?: {
+    concept: string;
+    level: number;
+    consistency: string;
+  }[];
+  // 현재 마이크로 루프 상태
+  currentMicroLoop?: MicroLoopData;
+  // 현재 매크로 루프 상태 (반기/연간 리포트용)
+  currentMacroLoop?: MacroLoopData;
+  // 이전 리포트의 미래 비전 (비교용)
+  previousVision?: {
+    reportId: number;
+    predictions: string[];
+    actualOutcomes: string[];
+    accuracy: number;
   };
 }
