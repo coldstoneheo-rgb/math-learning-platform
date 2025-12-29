@@ -135,6 +135,8 @@ export default function NewReportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName: selectedStudent.name,
+          studentId: selectedStudentId,
+          reportType: 'test',
           formData,
           currentImages: images,
         }),

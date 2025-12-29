@@ -18,6 +18,8 @@ export interface Student {
   parent_id?: string;
   learning_style?: 'visual' | 'verbal' | 'logical';
   personality_traits?: string[];
+  // 학생 메타프로필 (JSONB)
+  meta_profile?: StudentMetaProfile | null;
   created_at: string;
 }
 
@@ -247,6 +249,9 @@ export interface AnalyzeApiRequest {
   formData: TestAnalysisFormData;
   currentImages: string[];
   pastImages?: string[];
+  // 성장 컨텍스트 주입을 위한 추가 필드
+  studentId?: number;
+  reportType?: ReportType;
 }
 
 export interface AnalyzeApiResponse {

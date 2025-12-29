@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { analyzeTestPaper, GeminiApiError, GeminiParseError } from '@/lib/gemini';
-import type { AnalyzeApiRequest, AnalyzeApiResponse } from '@/types';
+import { analyzeTestPaperWithContext, GeminiApiError, GeminiParseError } from '@/lib/gemini';
+import { buildAnalysisContext } from '@/lib/context-builder';
+import type { AnalyzeApiRequest, AnalyzeApiResponse, ReportType } from '@/types';
 
 export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeApiResponse>> {
   try {
@@ -32,11 +33,21 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
       return NextResponse.json({ success: false, error: '필수 정보가 누락되었습니다.' }, { status: 400 });
     }
 
-    const analysisData = await analyzeTestPaper(
+    // 학생 ID가 있으면 컨텍스트 빌드
+    let context = undefined;
+    if (body.studentId) {
+      const reportType: ReportType = body.reportType || 'test';
+      context = await buildAnalysisContext(body.studentId, reportType);
+    }
+
+    // 컨텍스트를 포함한 분석 실행
+    const analysisData = await analyzeTestPaperWithContext(
       body.studentName,
       body.formData,
       body.currentImages,
-      body.pastImages || []
+      body.pastImages || [],
+      body.reportType || 'test',
+      context
     );
 
     return NextResponse.json({ success: true, analysisData });

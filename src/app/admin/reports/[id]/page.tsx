@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Report, Student, AnalysisData } from '@/types';
+import { MetaHeader, VisionFooter } from '@/components/report';
+import type { User, Report, Student, AnalysisData, FutureVisionExtended } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
@@ -107,6 +108,15 @@ export default function ReportDetailPage() {
 
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* 학생 메타프로필 헤더 */}
+        {report.students && (
+          <MetaHeader
+            metaProfile={report.students.meta_profile}
+            studentName={report.students.name}
+            studentGrade={report.students.grade}
+          />
+        )}
+
         {/* 헤더 정보 */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex justify-between items-start">
@@ -240,30 +250,13 @@ export default function ReportDetailPage() {
           </div>
         )}
 
-        {/* 미래 비전 */}
-        {analysis.macroAnalysis?.futureVision && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">🚀 성장 비전</h3>
-            <div className="space-y-3">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <span className="text-blue-700 font-medium">3개월 후:</span>
-                <p className="text-blue-600 text-sm mt-1">{analysis.macroAnalysis.futureVision.threeMonths}</p>
-              </div>
-              <div className="p-3 bg-indigo-50 rounded-lg">
-                <span className="text-indigo-700 font-medium">6개월 후:</span>
-                <p className="text-indigo-600 text-sm mt-1">{analysis.macroAnalysis.futureVision.sixMonths}</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <span className="text-purple-700 font-medium">장기 목표:</span>
-                <p className="text-purple-600 text-sm mt-1">{analysis.macroAnalysis.futureVision.longTerm}</p>
-              </div>
-              {analysis.macroAnalysis.futureVision.encouragement && (
-                <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg text-white">
-                  <p className="font-medium">💬 {analysis.macroAnalysis.futureVision.encouragement}</p>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* 미래 비전 - VisionFooter 컴포넌트 사용 */}
+        {report.students && (analysis.macroAnalysis?.futureVision || analysis.growthPredictions) && (
+          <VisionFooter
+            legacyVision={analysis.macroAnalysis?.futureVision}
+            growthPredictions={analysis.growthPredictions}
+            studentName={report.students.name}
+          />
         )}
 
         {/* 문항별 분석 */}
