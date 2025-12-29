@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { updateStudentProfileFromMonthly } from '@/lib/student-profile-extractor';
 import type { Student, User, MonthlyReportData } from '@/types';
 
 export default function NewMonthlyReportPage() {
@@ -172,15 +173,31 @@ export default function NewMonthlyReportPage() {
         reviewProblems: formData.reviewProblems.filter(r => r.source.trim() || r.concept.trim()),
       };
 
-      const { error: insertError } = await supabase.from('reports').insert({
-        student_id: selectedStudentId,
-        report_type: 'monthly',
-        test_name: `${formData.schedule.year}년 ${formData.schedule.month}월 월간 리포트`,
-        test_date: `${formData.schedule.year}-${String(formData.schedule.month).padStart(2, '0')}-01`,
-        analysis_data: filteredData,
-      });
+      const { data: insertedReport, error: insertError } = await supabase
+        .from('reports')
+        .insert({
+          student_id: selectedStudentId,
+          report_type: 'monthly',
+          test_name: `${formData.schedule.year}년 ${formData.schedule.month}월 월간 리포트`,
+          test_date: `${formData.schedule.year}-${String(formData.schedule.month).padStart(2, '0')}-01`,
+          analysis_data: filteredData,
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
+
+      // 학생 프로필 자동 추출 (취약점, 강점)
+      if (insertedReport?.id) {
+        const profileResult = await updateStudentProfileFromMonthly(
+          selectedStudentId,
+          insertedReport.id,
+          filteredData
+        );
+        if (!profileResult.success) {
+          console.warn('학생 프로필 업데이트 실패:', profileResult.error);
+        }
+      }
 
       alert('월간 리포트가 저장되었습니다.');
       router.push('/admin/reports');

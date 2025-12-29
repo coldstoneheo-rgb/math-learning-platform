@@ -270,7 +270,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* 퀵 액션 카드 */}
-        <div className="grid md:grid-cols-5 gap-4 mb-8">
+        <div className="grid md:grid-cols-6 gap-4 mb-8">
           <DashboardCard
             title="학생 관리"
             description="추가, 수정, 삭제"
@@ -279,19 +279,25 @@ export default function AdminDashboard() {
           />
           <DashboardCard
             title="수업 일정"
-            description="요일별 수업 시간 관리"
+            description="요일별 수업 시간"
             icon="📅"
             href="/admin/schedules"
           />
           <DashboardCard
+            title="수업 기록"
+            description="수업 내용 기록"
+            icon="✏️"
+            href="/admin/class-record"
+          />
+          <DashboardCard
             title="학부모 관리"
-            description="계정 생성 및 자녀 연결"
+            description="계정 및 자녀 연결"
             icon="👨‍👩‍👧"
             href="/admin/parents"
           />
           <DashboardCard
             title="리포트 생성"
-            description="주간/월간/시험 분석"
+            description="주간/월간/시험"
             icon="📊"
             href="/admin/reports/create"
           />
@@ -420,7 +426,7 @@ function TodayStudentCard({
           </div>
         </div>
         <a
-          href={`/admin/reports/create`}
+          href={`/admin/class-record?student=${student.id}`}
           className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
         >
           기록

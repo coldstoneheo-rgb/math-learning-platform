@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { updateStudentProfile } from '@/lib/student-profile-extractor';
 import type { Student, User, TestAnalysisFormData, AnalysisData } from '@/types';
 
 export default function NewReportPage() {
@@ -163,19 +164,35 @@ export default function NewReportPage() {
     try {
       const supabase = createClient();
 
-      const { error: insertError } = await supabase.from('reports').insert({
-        student_id: selectedStudentId,
-        report_type: 'test',
-        test_name: formData.testName,
-        test_date: formData.testDate,
-        total_score: analysisResult.testResults?.totalScore || 0,
-        max_score: formData.maxScore,
-        rank: analysisResult.testResults?.rank || null,
-        total_students: analysisResult.testResults?.totalStudents || null,
-        analysis_data: analysisResult,
-      });
+      const { data: insertedReport, error: insertError } = await supabase
+        .from('reports')
+        .insert({
+          student_id: selectedStudentId,
+          report_type: 'test',
+          test_name: formData.testName,
+          test_date: formData.testDate,
+          total_score: analysisResult.testResults?.totalScore || 0,
+          max_score: formData.maxScore,
+          rank: analysisResult.testResults?.rank || null,
+          total_students: analysisResult.testResults?.totalStudents || null,
+          analysis_data: analysisResult,
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
+
+      // 학생 프로필 자동 추출 (취약점, 강점, 패턴)
+      if (insertedReport?.id) {
+        const profileResult = await updateStudentProfile(
+          selectedStudentId,
+          insertedReport.id,
+          analysisResult
+        );
+        if (!profileResult.success) {
+          console.warn('학생 프로필 업데이트 실패:', profileResult.error);
+        }
+      }
 
       alert('리포트가 저장되었습니다.');
       router.push('/admin');

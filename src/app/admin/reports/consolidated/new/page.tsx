@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Student, User, Report, MacroAnalysis, ActionablePrescriptionItem, GrowthPrediction } from '@/types';
+import { updateStudentProfileFromConsolidated } from '@/lib/student-profile-extractor';
+import type { Student, User, Report, MacroAnalysis, ActionablePrescriptionItem, GrowthPrediction, ConsolidatedReportData } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Pick<Student, 'name' | 'student_id' | 'grade'>;
@@ -179,7 +180,7 @@ export default function NewConsolidatedReportPage() {
         throw new Error('선택된 리포트를 찾을 수 없습니다.');
       }
 
-      const consolidatedData = {
+      const consolidatedData: ConsolidatedReportData = {
         reports: [report1, report2] as [Report, Report],
         allReportsForStudent: studentReports,
         consolidatedQualitative: {
@@ -191,15 +192,31 @@ export default function NewConsolidatedReportPage() {
 
       const student = students.find(s => s.id === selectedStudentId);
 
-      const { error: insertError } = await supabase.from('reports').insert({
-        student_id: selectedStudentId,
-        report_type: 'consolidated',
-        test_name: `${student?.name} 통합 분석 리포트`,
-        test_date: new Date().toISOString().split('T')[0],
-        analysis_data: consolidatedData,
-      });
+      const { data: insertedReport, error: insertError } = await supabase
+        .from('reports')
+        .insert({
+          student_id: selectedStudentId,
+          report_type: 'consolidated',
+          test_name: `${student?.name} 통합 분석 리포트`,
+          test_date: new Date().toISOString().split('T')[0],
+          analysis_data: consolidatedData,
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
+
+      // 학생 프로필 자동 추출 (취약점, 강점)
+      if (insertedReport?.id) {
+        const profileResult = await updateStudentProfileFromConsolidated(
+          selectedStudentId,
+          insertedReport.id,
+          consolidatedData
+        );
+        if (!profileResult.success) {
+          console.warn('학생 프로필 업데이트 실패:', profileResult.error);
+        }
+      }
 
       alert('통합 리포트가 저장되었습니다.');
       router.push('/admin/reports');
