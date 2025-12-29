@@ -28,6 +28,14 @@ This document provides comprehensive guidance for AI assistants working with the
 - Student management with role-based access (Teacher, Parent, Student)
 - Four report types: Weekly, Monthly, Test Analysis, and Consolidated
 - AI-powered test paper analysis with 5-perspective deep analysis
+- **Class Management System:**
+  - Schedule management (weekly class schedules)
+  - Class session recording (learning keywords, understanding/attention levels)
+  - Assignment tracking and management
+- **Student Profile Auto-Extraction:**
+  - Automatic weakness/strength/pattern extraction from all report types
+  - Status tracking (active → improving → resolved → recurring)
+  - Profile history for audit trail
 - Data visualization with charts (Recharts)
 - PDF export functionality
 - Cloud-first architecture with Supabase
@@ -60,7 +68,7 @@ This document provides comprehensive guidance for AI assistants working with the
 ## Tech Stack
 
 ### Core Framework
-- **Next.js 16.0.7** (App Router) - Full-stack React framework
+- **Next.js 16.1.0** (App Router with Turbopack) - Full-stack React framework
 - **TypeScript 5.x** - Type-safe development (Strict mode)
 - **React 19.2.1** - UI framework (patched for CVE-2025-55182)
 
@@ -164,16 +172,20 @@ math-learning-platform/
 │   │   │   ├── login/page.tsx
 │   │   │   └── signup/page.tsx
 │   │   ├── admin/                    # Teacher dashboard
-│   │   │   ├── page.tsx              # Main dashboard
+│   │   │   ├── page.tsx              # Main dashboard (with "오늘 수업" section)
 │   │   │   ├── students/page.tsx     # Student management
+│   │   │   ├── schedules/page.tsx    # Class schedule management (NEW)
+│   │   │   ├── class-record/page.tsx # Class session recording (NEW)
+│   │   │   ├── assignments/page.tsx  # Assignment management (NEW)
 │   │   │   ├── reports/
 │   │   │   │   ├── page.tsx          # Report list
+│   │   │   │   ├── create/page.tsx   # Report type selection
 │   │   │   │   ├── new/page.tsx      # Test analysis creation
 │   │   │   │   ├── monthly/new/page.tsx      # Monthly report
 │   │   │   │   ├── consolidated/new/page.tsx # Consolidated report
 │   │   │   │   └── [id]/page.tsx     # Report detail
-│   │   │   └── parents/page.tsx      # Parent management (TODO)
-│   │   ├── parent/                   # Parent dashboard (TODO)
+│   │   │   └── parents/page.tsx      # Parent management
+│   │   ├── parent/                   # Parent dashboard
 │   │   │   ├── page.tsx              # Parent main
 │   │   │   └── reports/[id]/page.tsx # Report view
 │   │   ├── api/
@@ -185,7 +197,8 @@ math-learning-platform/
 │   │   ├── supabase/
 │   │   │   ├── client.ts             # Browser Supabase client
 │   │   │   └── server.ts             # Server Supabase client
-│   │   └── gemini.ts                 # Gemini API wrapper
+│   │   ├── gemini.ts                 # Gemini API wrapper
+│   │   └── student-profile-extractor.ts  # Profile auto-extraction (NEW)
 │   │
 │   └── types/
 │       └── index.ts                  # TypeScript type definitions
@@ -206,6 +219,7 @@ math-learning-platform/
 │
 ├── CLAUDE.md                         # This file - AI assistant guide
 ├── MathLearning_PRD_v3.0_Implementation.md  # Product requirements
+├── ML_ENGINE_ENHANCEMENT_PLAN.md     # ML Engine roadmap
 ├── IMPROVEMENT_ROADMAP.md            # Development roadmap
 ├── PROMPT_IMPROVEMENT_PROPOSAL.md    # AI prompt improvements
 └── QA_AND_OPTIMIZATION.md            # QA plan
@@ -358,6 +372,126 @@ interface GrowthPrediction {
 }
 ```
 
+### Class Management (NEW)
+```typescript
+// 수업 일정
+interface Schedule {
+  id: number;
+  student_id: number;
+  day_of_week: 0 | 1 | 2 | 3 | 4 | 5 | 6;  // 0=일요일
+  start_time: string;  // 'HH:mm'
+  end_time: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// 수업 기록
+interface ClassSession {
+  id: number;
+  student_id: number;
+  schedule_id?: number;
+  session_date: string;
+  start_time?: string;
+  end_time?: string;
+  learning_keywords: string[];      // 학습 키워드 태그
+  covered_concepts: string[];       // 다룬 개념
+  summary?: string;
+  understanding_level: number;      // 1-5
+  attention_level: number;          // 1-5
+  notes?: string;
+  created_at: string;
+}
+
+// 숙제
+type AssignmentStatus = 'assigned' | 'in_progress' | 'completed' | 'overdue';
+
+interface Assignment {
+  id: number;
+  student_id: number;
+  class_session_id?: number;
+  assignment_type: 'workbook' | 'review' | 'practice' | 'custom';
+  title: string;
+  source?: string;      // 교재명
+  page_range?: string;  // 페이지 범위
+  due_date?: string;
+  status: AssignmentStatus;
+  completed_at?: string;
+  notes?: string;
+  created_at: string;
+}
+```
+
+### Student Profile (Global Attributes) (NEW)
+```typescript
+// 취약점 상태
+type WeaknessStatus = 'active' | 'improving' | 'resolved' | 'recurring';
+type WeaknessCategory = 'concept' | 'calculation' | 'application' | 'reading' | 'habit';
+
+// 학생 취약점 (모든 리포트에서 추출된 전역 정보)
+interface StudentWeakness {
+  id: number;
+  student_id: number;
+  concept: string;
+  category: WeaknessCategory;
+  severity: number;               // 1-5
+  status: WeaknessStatus;
+  occurrence_count: number;
+  first_detected_at: string;
+  first_detected_report_id?: number;
+  last_detected_at: string;
+  last_detected_report_id?: number;
+  resolved_at?: string;
+  recurred_at?: string;
+  related_report_ids?: number[];
+  teacher_note?: string;
+  is_manually_added: boolean;
+}
+
+// 학생 강점
+type StrengthCategory = 'concept' | 'calculation' | 'application' | 'reading' | 'creativity';
+
+interface StudentStrength {
+  id: number;
+  student_id: number;
+  concept: string;
+  category: StrengthCategory;
+  level: number;                  // 1-5
+  status: 'active' | 'dormant';
+  confirmation_count: number;
+  first_detected_at: string;
+  last_confirmed_at: string;
+  related_report_ids?: number[];
+}
+
+// 학생 패턴
+interface StudentPattern {
+  id: number;
+  student_id: number;
+  pattern_type: 'habit' | 'error' | 'learning';
+  description: string;
+  is_positive: boolean;
+  frequency: 'always' | 'often' | 'sometimes';
+  status: 'active' | 'resolved';
+  occurrence_count: number;
+  related_report_ids?: number[];
+}
+
+// 프로필 변경 이력
+interface StudentProfileHistory {
+  id: number;
+  student_id: number;
+  report_id?: number;
+  change_type: ProfileChangeType;
+  attribute_type: 'weakness' | 'strength' | 'pattern';
+  attribute_id: number;
+  previous_state: Record<string, unknown> | null;
+  new_state: Record<string, unknown>;
+  changed_by: 'ai' | 'teacher';
+  teacher_approved: boolean;
+  created_at: string;
+}
+```
+
 ---
 
 ## Key Services
@@ -443,6 +577,65 @@ export async function POST(request: Request) {
   // 3. Return structured response
   return Response.json({ success: true, analysisData });
 }
+```
+
+### 4. Student Profile Extractor (`src/lib/student-profile-extractor.ts`) (NEW)
+
+**Purpose:** Automatically extract weaknesses, strengths, and patterns from report analysis data.
+
+**Key Functions:**
+```typescript
+// 시험 분석 리포트에서 프로필 업데이트
+export async function updateStudentProfile(
+  studentId: number,
+  reportId: number,
+  analysisData: AnalysisData
+): Promise<{ success: boolean; error?: string }>;
+
+// 월간 리포트에서 프로필 업데이트
+export async function updateStudentProfileFromMonthly(
+  studentId: number,
+  reportId: number,
+  monthlyData: MonthlyReportData
+): Promise<{ success: boolean; error?: string }>;
+
+// 주간 리포트에서 프로필 업데이트
+export async function updateStudentProfileFromWeekly(
+  studentId: number,
+  reportId: number,
+  weeklyData: WeeklyReportData
+): Promise<{ success: boolean; error?: string }>;
+
+// 통합 리포트에서 프로필 업데이트
+export async function updateStudentProfileFromConsolidated(
+  studentId: number,
+  reportId: number,
+  consolidatedData: ConsolidatedReportData
+): Promise<{ success: boolean; error?: string }>;
+
+// 활성 취약점 조회
+export async function getActiveWeaknesses(studentId: number): Promise<StudentWeakness[]>;
+
+// 활성 강점 조회
+export async function getActiveStrengths(studentId: number): Promise<StudentStrength[]>;
+
+// 활성 패턴 조회
+export async function getActivePatterns(studentId: number): Promise<StudentPattern[]>;
+```
+
+**Extraction Sources:**
+| Report Type | Weaknesses From | Strengths From |
+|-------------|-----------------|----------------|
+| Test Analysis | macroAnalysis.weaknesses, detailedAnalysis errors, riskFactors | macroAnalysis.strengths, high scores, optimal solutions |
+| Monthly | learningContent (not_good), needsImprovement | learningContent (excellent), whatWentWell |
+| Weekly | learningContent (not_good), improvements | learningContent (excellent), achievements |
+| Consolidated | macroAnalysis.weaknesses, actionablePrescription | macroAnalysis.strengths |
+
+**Status Transitions:**
+```
+new weakness → active → improving → resolved
+                          ↓
+                       recurring (if detected again after resolved)
 ```
 
 ---
@@ -621,6 +814,62 @@ const { data: reports } = await supabase
   .order('test_date', { ascending: false });
 ```
 
+### Recording a Class Session (NEW)
+```typescript
+const supabase = createClient();
+const sessionData = {
+  student_id: selectedStudentId,
+  session_date: '2025-01-15',
+  start_time: '15:00',
+  end_time: '16:30',
+  learning_keywords: ['일차방정식', '이항'],
+  covered_concepts: ['등식의 성질', '이항의 원리'],
+  understanding_level: 4,
+  attention_level: 3,
+  notes: '분배법칙 복습 필요',
+};
+
+const { error } = await supabase.from('class_sessions').insert(sessionData);
+```
+
+### Getting Today's Scheduled Students (NEW)
+```typescript
+const supabase = createClient();
+const today = new Date().getDay();  // 0-6
+
+const { data: todaySchedules } = await supabase
+  .from('schedules')
+  .select('*, students(id, name, grade, student_id)')
+  .eq('day_of_week', today)
+  .eq('is_active', true)
+  .order('start_time');
+```
+
+### Getting Student's Active Weaknesses (NEW)
+```typescript
+import { getActiveWeaknesses } from '@/lib/student-profile-extractor';
+
+const weaknesses = await getActiveWeaknesses(studentId);
+// Returns: StudentWeakness[] sorted by severity (desc)
+```
+
+### Creating Report with Profile Extraction (NEW)
+```typescript
+import { updateStudentProfile } from '@/lib/student-profile-extractor';
+
+// 1. Save report
+const { data: report, error } = await supabase
+  .from('reports')
+  .insert({ ... })
+  .select('id')
+  .single();
+
+// 2. Extract profile data automatically
+if (report?.id) {
+  await updateStudentProfile(studentId, report.id, analysisData);
+}
+```
+
 ---
 
 ## AI Integration
@@ -690,6 +939,15 @@ npm run build
 - [ ] PDF export (if implemented)
 - [ ] Responsive design on mobile
 - [ ] Error handling (invalid inputs, API failures)
+- [ ] **Class Management (NEW):**
+  - [ ] Create/edit/delete class schedules
+  - [ ] Record class sessions with learning keywords
+  - [ ] Add/complete/delete assignments
+  - [ ] View today's class section on dashboard
+- [ ] **Profile Extraction (NEW):**
+  - [ ] Verify weaknesses extracted after report creation
+  - [ ] Check weakness status transitions
+  - [ ] View student's active weaknesses on dashboard
 
 ### Linting
 ```bash
@@ -779,6 +1037,6 @@ git push -u origin claude/branch-name
 
 ---
 
-**Last Updated:** 2025-12-22
-**Platform:** Next.js 16.0.7 + Supabase + Vercel
+**Last Updated:** 2025-12-29
+**Platform:** Next.js 16.1.0 + Supabase + Vercel
 **For questions, refer to PRD and other documentation files.**

@@ -1,13 +1,13 @@
   
 **수학 학습 분석 플랫폼**
 
-Product Requirements Document v3.0
+Product Requirements Document v3.1
 
 Vercel \+ Supabase 기반 웹 플랫폼 구축
 
-문서 버전: 3.0
+문서 버전: 3.1 (Updated)
 
-작성일: 2025년 12월
+작성일: 2025년 12월 (최종 업데이트: 2025-12-29)
 
 대상 사용자: 50명 (학생 25명 \+ 학부모 25명)
 
@@ -163,7 +163,7 @@ Vercel \+ Supabase 기반 웹 플랫폼 구축
 
 | 구분 | 기술 | 비고 |
 | ----- | ----- | ----- |
-| **Framework** | Next.js 14+ (App Router) | React Server Components 지원 |
+| **Framework** | Next.js 16.1.0 (App Router + Turbopack) | React Server Components 지원 |
 | **Language** | TypeScript 5.2+ | Strict Mode 필수 |
 | **Hosting** | Vercel | 무료 티어: 100GB 대역폭/월 |
 | **Database** | Supabase PostgreSQL | 무료 티어: 500MB DB |
@@ -242,6 +242,129 @@ CREATE TABLE reports (
 
   created\_at TIMESTAMPTZ DEFAULT NOW()
 
+);
+
+**schedules 테이블 (수업 일정)** *(NEW)*
+
+CREATE TABLE schedules (
+  id SERIAL PRIMARY KEY,
+  student\_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+  day\_of\_week INTEGER NOT NULL CHECK (day\_of\_week BETWEEN 0 AND 6),
+  start\_time TIME NOT NULL,
+  end\_time TIME NOT NULL,
+  is\_active BOOLEAN DEFAULT true,
+  created\_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+**class\_sessions 테이블 (수업 기록)** *(NEW)*
+
+CREATE TABLE class\_sessions (
+  id SERIAL PRIMARY KEY,
+  student\_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+  schedule\_id INTEGER REFERENCES schedules(id),
+  session\_date DATE NOT NULL,
+  start\_time TIME,
+  end\_time TIME,
+  learning\_keywords TEXT[] DEFAULT '{}',
+  covered\_concepts TEXT[] DEFAULT '{}',
+  summary TEXT,
+  understanding\_level INTEGER CHECK (understanding\_level BETWEEN 1 AND 5),
+  attention\_level INTEGER CHECK (attention\_level BETWEEN 1 AND 5),
+  notes TEXT,
+  created\_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+**assignments 테이블 (숙제)** *(NEW)*
+
+CREATE TABLE assignments (
+  id SERIAL PRIMARY KEY,
+  student\_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+  class\_session\_id INTEGER REFERENCES class\_sessions(id),
+  assignment\_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  source TEXT,
+  page\_range TEXT,
+  due\_date DATE,
+  status TEXT DEFAULT 'assigned',
+  completed\_at TIMESTAMPTZ,
+  notes TEXT,
+  created\_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+**student\_weaknesses 테이블 (취약점 - 전역)** *(NEW)*
+
+CREATE TABLE student\_weaknesses (
+  id SERIAL PRIMARY KEY,
+  student\_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+  concept TEXT NOT NULL,
+  category TEXT,
+  severity INTEGER CHECK (severity BETWEEN 1 AND 5),
+  status TEXT DEFAULT 'active',
+  occurrence\_count INTEGER DEFAULT 1,
+  first\_detected\_at TIMESTAMPTZ DEFAULT NOW(),
+  first\_detected\_report\_id INTEGER REFERENCES reports(id),
+  last\_detected\_at TIMESTAMPTZ DEFAULT NOW(),
+  last\_detected\_report\_id INTEGER REFERENCES reports(id),
+  resolved\_at TIMESTAMPTZ,
+  recurred\_at TIMESTAMPTZ,
+  related\_report\_ids INTEGER[] DEFAULT '{}',
+  teacher\_note TEXT,
+  is\_manually\_added BOOLEAN DEFAULT false,
+  created\_at TIMESTAMPTZ DEFAULT NOW(),
+  updated\_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+**student\_strengths 테이블 (강점 - 전역)** *(NEW)*
+
+CREATE TABLE student\_strengths (
+  id SERIAL PRIMARY KEY,
+  student\_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+  concept TEXT NOT NULL,
+  category TEXT,
+  level INTEGER CHECK (level BETWEEN 1 AND 5),
+  status TEXT DEFAULT 'active',
+  confirmation\_count INTEGER DEFAULT 1,
+  first\_detected\_at TIMESTAMPTZ DEFAULT NOW(),
+  first\_detected\_report\_id INTEGER REFERENCES reports(id),
+  last\_confirmed\_at TIMESTAMPTZ DEFAULT NOW(),
+  last\_confirmed\_report\_id INTEGER REFERENCES reports(id),
+  related\_report\_ids INTEGER[] DEFAULT '{}',
+  created\_at TIMESTAMPTZ DEFAULT NOW(),
+  updated\_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+**student\_patterns 테이블 (패턴 - 전역)** *(NEW)*
+
+CREATE TABLE student\_patterns (
+  id SERIAL PRIMARY KEY,
+  student\_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+  pattern\_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  is\_positive BOOLEAN DEFAULT false,
+  frequency TEXT DEFAULT 'sometimes',
+  status TEXT DEFAULT 'active',
+  occurrence\_count INTEGER DEFAULT 1,
+  first\_detected\_at TIMESTAMPTZ DEFAULT NOW(),
+  last\_detected\_at TIMESTAMPTZ DEFAULT NOW(),
+  related\_report\_ids INTEGER[] DEFAULT '{}',
+  created\_at TIMESTAMPTZ DEFAULT NOW(),
+  updated\_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+**student\_profile\_history 테이블 (프로필 변경 이력)** *(NEW)*
+
+CREATE TABLE student\_profile\_history (
+  id SERIAL PRIMARY KEY,
+  student\_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+  report\_id INTEGER REFERENCES reports(id),
+  change\_type TEXT NOT NULL,
+  attribute\_type TEXT NOT NULL,
+  attribute\_id INTEGER NOT NULL,
+  previous\_state JSONB,
+  new\_state JSONB NOT NULL,
+  changed\_by TEXT DEFAULT 'ai',
+  teacher\_approved BOOLEAN DEFAULT false,
+  created\_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 ## **4.2 analysis\_data JSONB 구조**
@@ -476,9 +599,12 @@ Vercel 대시보드에서 환경 변수를 설정합니다:
 
 * 전체 학생 수, 이번 주 생성된 리포트 수, 학부모 열람 횟수 표시
 
+* **오늘 수업 섹션 (NEW):** 오늘 예정된 학생 목록과 각 학생의 정보 표시
+  * 최근 점수, 학습 키워드, 숙제 현황, 활성 취약점
+
 * 최근 활동 목록 (리포트 생성, 학부모 가입 등)
 
-* 빠른 액션 버튼: 학생 등록, 리포트 생성, 학부모 계정 관리
+* 빠른 액션 버튼: 학생 등록, 리포트 생성, 학부모 계정 관리, **수업 일정, 수업 기록, 숙제 관리**
 
 **학생 관리 (/admin/students):**
 
@@ -509,6 +635,44 @@ Vercel 대시보드에서 환경 변수를 설정합니다:
 * 초대 링크 발송 기능
 
 * 학부모-자녀 연결/해제
+
+**수업 일정 관리 (/admin/schedules):** *(NEW)*
+
+* 요일별 주간 스케줄 그리드 뷰
+
+* 학생별 수업 시간 추가/수정/삭제
+
+* 활성/비활성 토글
+
+* 학생별 일정 요약 테이블
+
+**수업 기록 (/admin/class-record):** *(NEW)*
+
+* 학생 선택 (URL 파라미터로 사전 선택 가능)
+
+* 수업 날짜/시간 입력
+
+* 학습 키워드 및 다룬 개념 (동적 배열 입력)
+
+* 이해도/집중도 레벨 (1-5 선택)
+
+* 선생님 메모
+
+* 숙제 배정 옵션
+
+* 최근 수업 기록 사이드바
+
+**숙제 관리 (/admin/assignments):** *(NEW)*
+
+* 통계 카드 (전체, 대기중, 완료, 미완료)
+
+* 학생별/상태별 필터
+
+* 숙제 추가 모달 (제목, 교재, 페이지, 마감일)
+
+* 상태 업데이트 (완료 처리, 되돌리기)
+
+* 삭제 기능
 
 ## **7.2 학부모 대시보드**
 
@@ -546,6 +710,39 @@ Vercel 대시보드에서 환경 변수를 설정합니다:
 | **주간** | 주간 학습 내용, 달성도, 다음 주 계획 | 매주 금요일 |
 | **월간** | 월간 성장 추이, 습관 패턴, 종합 평가 | 매월 마지막 주 |
 | **통합** | 장기 성장 곡선, 미래 예측, 종합 컨설팅 | 학기말 / 요청시 |
+
+## **7.4 학생 프로필 자동 추출 (NEW)**
+
+리포트 생성 시 AI 분석 결과에서 자동으로 학생의 취약점, 강점, 패턴을 추출하여 전역 프로필에 저장합니다.
+
+**추출 소스:**
+
+| 리포트 타입 | 취약점 추출 | 강점 추출 |
+| ----- | ----- | ----- |
+| **시험 분석** | macroAnalysis.weaknesses, detailedAnalysis 오류, riskFactors | macroAnalysis.strengths, 높은 점수, 최적 풀이 |
+| **월간** | learningContent (not\_good), needsImprovement | learningContent (excellent), whatWentWell |
+| **주간** | learningContent (not\_good), improvements | learningContent (excellent), achievements |
+| **통합** | macroAnalysis.weaknesses, actionablePrescription | macroAnalysis.strengths |
+
+**상태 전환 흐름:**
+
+```
+새 취약점 → active → improving → resolved
+                        ↓
+                     recurring (해결 후 재발견 시)
+```
+
+**주요 기능:**
+
+* 리포트 저장 시 자동으로 프로필 추출 실행
+
+* 기존 취약점과 유사 개념 발견 시 occurrence\_count 증가
+
+* 해결된 취약점 재발견 시 'recurring' 상태로 전환
+
+* 모든 변경 사항은 student\_profile\_history에 기록
+
+* 선생님이 AI 추출 결과를 검토/승인 가능
 
 # **8\. AI 프롬프트 엔지니어링 가이드**
 
@@ -813,69 +1010,89 @@ AI가 다음 항목을 자동으로 탐지하여 경고합니다:
 
 math-learning-platform/
 
-├── app/
+├── src/
 
-│   ├── (auth)/
+│   ├── app/
 
-│   │   ├── login/page.tsx
+│   │   ├── (auth)/
 
-│   │   └── signup/page.tsx
+│   │   │   ├── login/page.tsx
 
-│   ├── admin/
+│   │   │   └── signup/page.tsx
 
-│   │   ├── page.tsx              \# 관리자 대시보드
+│   │   ├── admin/
 
-│   │   ├── students/page.tsx     \# 학생 관리
+│   │   │   ├── page.tsx              \# 관리자 대시보드 (오늘 수업 섹션 포함)
 
-│   │   ├── reports/
+│   │   │   ├── students/page.tsx     \# 학생 관리
 
-│   │   │   ├── page.tsx          \# 리포트 목록
+│   │   │   ├── schedules/page.tsx    \# 수업 일정 관리 (NEW)
 
-│   │   │   └── new/page.tsx      \# 리포트 생성
+│   │   │   ├── class-record/page.tsx \# 수업 기록 (NEW)
 
-│   │   └── parents/page.tsx      \# 학부모 관리
+│   │   │   ├── assignments/page.tsx  \# 숙제 관리 (NEW)
 
-│   ├── parent/
+│   │   │   ├── reports/
 
-│   │   ├── page.tsx              \# 학부모 대시보드
+│   │   │   │   ├── page.tsx          \# 리포트 목록
 
-│   │   └── reports/
+│   │   │   │   ├── create/page.tsx   \# 리포트 타입 선택
 
-│   │       └── \[id\]/page.tsx     \# 리포트 상세
+│   │   │   │   ├── new/page.tsx      \# 시험 분석 리포트 생성
 
-│   ├── api/
+│   │   │   │   ├── monthly/new/page.tsx     \# 월간 리포트 생성
 
-│   │   ├── analyze/route.ts      \# Gemini API (서버사이드)
+│   │   │   │   ├── consolidated/new/page.tsx \# 통합 리포트 생성
 
-│   │   └── reports/route.ts      \# 리포트 CRUD
+│   │   │   │   └── \[id\]/page.tsx    \# 리포트 상세
 
-│   ├── layout.tsx
+│   │   │   └── parents/page.tsx      \# 학부모 관리
 
-│   └── page.tsx                  \# 랜딩 페이지
+│   │   ├── parent/
 
-├── components/
+│   │   │   ├── page.tsx              \# 학부모 대시보드
 
-│   ├── ui/                       \# 공통 UI 컴포넌트
+│   │   │   └── reports/
 
-│   ├── charts/                   \# 차트 컴포넌트
+│   │   │       └── \[id\]/page.tsx     \# 리포트 상세
 
-│   └── reports/                  \# 리포트 관련 컴포넌트
+│   │   ├── api/
 
-├── lib/
+│   │   │   └── analyze/route.ts      \# Gemini API (서버사이드)
 
-│   ├── supabase/
+│   │   ├── layout.tsx
 
-│   │   ├── client.ts             \# 클라이언트 Supabase
+│   │   └── page.tsx                  \# 랜딩 페이지
 
-│   │   └── server.ts             \# 서버 Supabase
+│   │
 
-│   ├── gemini.ts                 \# Gemini API 래퍼
+│   ├── lib/
 
-│   └── utils.ts                  \# 유틸리티 함수
+│   │   ├── supabase/
 
-├── types/
+│   │   │   ├── client.ts             \# 클라이언트 Supabase
 
-│   └── index.ts                  \# TypeScript 타입 정의
+│   │   │   └── server.ts             \# 서버 Supabase
+
+│   │   ├── gemini.ts                 \# Gemini API 래퍼
+
+│   │   └── student-profile-extractor.ts \# 프로필 자동 추출 (NEW)
+
+│   │
+
+│   └── types/
+
+│       └── index.ts                  \# TypeScript 타입 정의
+
+├── .claude/                          \# Claude Code 설정
+
+│   ├── hooks/
+
+│   │   └── session-start.sh
+
+│   ├── commands/
+
+│   └── settings.json
 
 ├── .env.local                    \# 환경 변수 (gitignore)
 
@@ -905,5 +1122,15 @@ math-learning-platform/
 | 분석 정확도 | 60% | 85% | 95% |
 | 학부모 만족도 | TBD | 8/10 | 9/10 |
 | 월 운영 비용 | $0 | \< $5 | \< $10 |
+
+## **12.4 v3.1 업데이트 내역 (2025-12-29)**
+
+| 구분 | 추가/변경 내용 |
+| ----- | ----- |
+| **데이터베이스** | schedules, class\_sessions, assignments, student\_weaknesses, student\_strengths, student\_patterns, student\_profile\_history 7개 테이블 추가 |
+| **선생님 기능** | 수업 일정 관리, 수업 기록, 숙제 관리, 오늘 수업 대시보드 섹션 추가 |
+| **프로필 추출** | 리포트 생성 시 취약점/강점/패턴 자동 추출 기능 추가 |
+| **프레임워크** | Next.js 16.1.0 (Turbopack) 업데이트 |
+| **새 서비스** | student-profile-extractor.ts 추가 |
 
 *— 문서 끝 —*
