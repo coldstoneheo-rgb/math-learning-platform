@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
+import { exportReportToPdf } from '@/lib/pdf-export';
 import type { User, Report, Student, AnalysisData } from '@/types';
 
 interface ReportWithStudent extends Report {
@@ -18,6 +19,7 @@ export default function ParentReportDetailPage() {
   const [user, setUser] = useState<User | null>(null);
   const [report, setReport] = useState<ReportWithStudent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoadReport();
@@ -72,6 +74,29 @@ export default function ParentReportDetailPage() {
     window.print();
   };
 
+  const handleExportPdf = async () => {
+    if (!report) return;
+
+    setExporting(true);
+    try {
+      const success = await exportReportToPdf(
+        'report-content',
+        report.students?.name || '학생',
+        report.test_name || '리포트',
+        report.test_date || new Date().toISOString().split('T')[0]
+      );
+
+      if (!success) {
+        alert('PDF 내보내기에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('PDF 내보내기 오류:', error);
+      alert('PDF 내보내기 중 오류가 발생했습니다.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // report.analysis_data는 다양한 리포트 타입을 지원하지만,
   // 현재 UI는 TestAnalysisData 구조를 기대하므로 타입 단언 사용
   const analysis = (report?.analysis_data as AnalysisData) || null;
@@ -103,16 +128,32 @@ export default function ParentReportDetailPage() {
             </a>
             <h1 className="text-xl font-bold text-gray-900">리포트 상세</h1>
           </div>
-          <button
-            onClick={handlePrint}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            🖨️ 인쇄 / PDF
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportPdf}
+              disabled={exporting}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {exporting ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  PDF 생성 중...
+                </>
+              ) : (
+                <>📄 PDF 저장</>
+              )}
+            </button>
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              🖨️ 인쇄
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main id="report-content" className="container mx-auto px-4 py-8 max-w-4xl">
         {/* 학생 메타프로필 헤더 */}
         {report.students && (
           <MetaHeader
