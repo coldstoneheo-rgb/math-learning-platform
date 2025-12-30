@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfileFromMonthly } from '@/lib/student-profile-extractor';
-import type { Student, User, MonthlyReportData } from '@/types';
+import type { Student, User, MonthlyReportData, MonthlyReportAnalysis } from '@/types';
 
 export default function NewMonthlyReportPage() {
   const router = useRouter();
@@ -15,6 +15,8 @@ export default function NewMonthlyReportPage() {
   const [error, setError] = useState('');
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
+  const [aiAnalysis, setAiAnalysis] = useState<MonthlyReportAnalysis | null>(null);
+  const [generatingAi, setGeneratingAi] = useState(false);
 
   const currentDate = new Date();
   const [formData, setFormData] = useState<MonthlyReportData>({
@@ -150,6 +152,44 @@ export default function NewMonthlyReportPage() {
     }));
   };
 
+  const handleGenerateAi = async () => {
+    setError('');
+
+    if (!selectedStudentId) {
+      setError('AI 분석을 위해 학생을 선택해주세요.');
+      return;
+    }
+
+    setGeneratingAi(true);
+
+    try {
+      const response = await fetch('/api/monthly-report/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: selectedStudentId,
+          year: formData.schedule.year,
+          month: formData.schedule.month,
+          teacherNotes: formData.performanceSummary || formData.classNotes || '월간 종합 평가 요청',
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.analysis) {
+        setAiAnalysis(result.analysis);
+        alert('AI 분석이 생성되었습니다. 저장 시 함께 저장됩니다.');
+      } else {
+        setError(result.error || 'AI 분석 생성에 실패했습니다.');
+      }
+    } catch (err: unknown) {
+      console.error('AI 분석 오류:', err);
+      setError('AI 분석 중 오류가 발생했습니다.');
+    } finally {
+      setGeneratingAi(false);
+    }
+  };
+
   const handleSave = async () => {
     setError('');
 
@@ -173,6 +213,11 @@ export default function NewMonthlyReportPage() {
         reviewProblems: formData.reviewProblems.filter(r => r.source.trim() || r.concept.trim()),
       };
 
+      // AI 분석이 있으면 병합
+      const analysisData = aiAnalysis
+        ? { ...filteredData, aiAnalysis }
+        : filteredData;
+
       const { data: insertedReport, error: insertError } = await supabase
         .from('reports')
         .insert({
@@ -180,7 +225,7 @@ export default function NewMonthlyReportPage() {
           report_type: 'monthly',
           test_name: `${formData.schedule.year}년 ${formData.schedule.month}월 월간 리포트`,
           test_date: `${formData.schedule.year}-${String(formData.schedule.month).padStart(2, '0')}-01`,
-          analysis_data: filteredData,
+          analysis_data: analysisData,
         })
         .select('id')
         .single();
@@ -666,13 +711,159 @@ export default function NewMonthlyReportPage() {
             </div>
           </div>
 
+          {/* AI 분석 섹션 */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">9. AI 분석 (선택)</h2>
+
+            <p className="text-gray-600 text-sm mb-4">
+              DB에 저장된 수업 기록, 시험 결과, 숙제 데이터를 기반으로 AI가 종합 분석을 생성합니다.
+              AI 분석은 선택사항이며, 생성 후 저장하면 리포트에 포함됩니다.
+            </p>
+
+            <button
+              onClick={handleGenerateAi}
+              disabled={generatingAi || !selectedStudentId}
+              className="px-6 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {generatingAi ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  AI 분석 생성 중...
+                </>
+              ) : (
+                <>
+                  <span>🤖</span>
+                  AI 분석 생성
+                </>
+              )}
+            </button>
+
+            {/* AI 분석 결과 미리보기 */}
+            {aiAnalysis && (
+              <div className="mt-6 border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-green-700">✅ AI 분석 생성 완료</h3>
+                  <button
+                    onClick={() => setAiAnalysis(null)}
+                    className="text-sm text-gray-500 hover:text-red-600"
+                  >
+                    분석 삭제
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-sm">
+                  {/* 커리큘럼 진도 */}
+                  {aiAnalysis.curriculumProgress && (
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <h4 className="font-medium text-blue-800 mb-2">📚 커리큘럼 진도</h4>
+                      <p className="text-blue-700">
+                        진도율: {aiAnalysis.curriculumProgress.completionRate || 0}%
+                        {aiAnalysis.curriculumProgress.paceAssessment && ` - ${
+                          aiAnalysis.curriculumProgress.paceAssessment === 'ahead' ? '앞서감' :
+                          aiAnalysis.curriculumProgress.paceAssessment === 'on_track' ? '정상' : '뒤처짐'
+                        }`}
+                      </p>
+                      {aiAnalysis.curriculumProgress.startUnit && aiAnalysis.curriculumProgress.endUnit && (
+                        <p className="text-blue-600 text-xs mt-1">
+                          {aiAnalysis.curriculumProgress.startUnit} → {aiAnalysis.curriculumProgress.endUnit}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 월간 성취 */}
+                  {aiAnalysis.monthlyAchievements && aiAnalysis.monthlyAchievements.length > 0 && (
+                    <div className="p-4 bg-green-50 rounded-lg">
+                      <h4 className="font-medium text-green-800 mb-2">🏆 월간 성취</h4>
+                      <ul className="list-disc list-inside text-green-700">
+                        {aiAnalysis.monthlyAchievements.map((achievement, idx) => (
+                          <li key={idx}>{achievement}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 새로운 도전 */}
+                  {aiAnalysis.newChallenges && aiAnalysis.newChallenges.length > 0 && (
+                    <div className="p-4 bg-yellow-50 rounded-lg">
+                      <h4 className="font-medium text-yellow-800 mb-2">⚠️ 새로운 도전</h4>
+                      <ul className="list-disc list-inside text-yellow-700">
+                        {aiAnalysis.newChallenges.map((challenge, idx) => (
+                          <li key={idx}>{challenge}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 부모님 보고 */}
+                  {aiAnalysis.parentReport && (
+                    <div className="p-4 bg-purple-50 rounded-lg">
+                      <h4 className="font-medium text-purple-800 mb-2">👨‍👩‍👧 부모님 보고</h4>
+                      {aiAnalysis.parentReport.highlights && aiAnalysis.parentReport.highlights.length > 0 && (
+                        <div className="text-purple-700 mb-2">
+                          <strong>하이라이트:</strong>
+                          <ul className="list-disc list-inside ml-2 mt-1">
+                            {aiAnalysis.parentReport.highlights.map((h, idx) => (
+                              <li key={idx}>{h}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {aiAnalysis.parentReport.recommendations && aiAnalysis.parentReport.recommendations.length > 0 && (
+                        <div className="text-purple-700">
+                          <strong>권장사항:</strong>
+                          <ul className="list-disc list-inside ml-2 mt-1">
+                            {aiAnalysis.parentReport.recommendations.map((r, idx) => (
+                              <li key={idx}>{r}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 다음 달 계획 */}
+                  {aiAnalysis.nextMonthPlan && (
+                    <div className="p-4 bg-indigo-50 rounded-lg">
+                      <h4 className="font-medium text-indigo-800 mb-2">📅 다음 달 AI 추천 계획</h4>
+                      {aiAnalysis.nextMonthPlan.mainGoals && (
+                        <p className="text-indigo-700 mb-1">
+                          <strong>주요 목표:</strong>{' '}
+                          {Array.isArray(aiAnalysis.nextMonthPlan.mainGoals)
+                            ? aiAnalysis.nextMonthPlan.mainGoals.join(', ')
+                            : aiAnalysis.nextMonthPlan.mainGoals}
+                        </p>
+                      )}
+                      {aiAnalysis.nextMonthPlan.focusAreas && (
+                        <p className="text-indigo-700">
+                          <strong>집중 영역:</strong>{' '}
+                          {Array.isArray(aiAnalysis.nextMonthPlan.focusAreas)
+                            ? aiAnalysis.nextMonthPlan.focusAreas.join(', ')
+                            : aiAnalysis.nextMonthPlan.focusAreas}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 선생님 메시지 */}
+                  {aiAnalysis.teacherMessage && (
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium text-gray-800 mb-2">💬 AI 생성 메시지</h4>
+                      <p className="text-gray-700">{aiAnalysis.teacherMessage}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* 저장 버튼 */}
           <button
             onClick={handleSave}
             disabled={saving || !selectedStudentId}
             className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {saving ? '저장 중...' : '월간 리포트 저장'}
+            {saving ? '저장 중...' : aiAnalysis ? '월간 리포트 저장 (AI 분석 포함)' : '월간 리포트 저장'}
           </button>
         </div>
       </main>
