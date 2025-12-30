@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfileFromConsolidated } from '@/lib/student-profile-extractor';
-import type { Student, User, Report, MacroAnalysis, ActionablePrescriptionItem, GrowthPrediction, ConsolidatedReportData } from '@/types';
+import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import type { Student, User, Report, MacroAnalysis, ActionablePrescriptionItem, GrowthPrediction, ConsolidatedReportData, AnalysisData } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Pick<Student, 'name' | 'student_id' | 'grade'>;
@@ -238,6 +239,18 @@ export default function NewConsolidatedReportPage() {
           }
         } catch (metaError) {
           console.warn('[Anchor Loop] 메타프로필 API 호출 실패:', metaError);
+        }
+
+        // [Feedback Loop] 전략 추적 및 예측 데이터 등록
+        try {
+          const feedbackResult = await registerReportFeedbackData(
+            insertedReport.id,
+            selectedStudentId as number,
+            consolidatedData as unknown as AnalysisData
+          );
+          console.log('[Feedback Loop] 등록 결과:', feedbackResult);
+        } catch (feedbackError) {
+          console.warn('[Feedback Loop] 등록 실패:', feedbackError);
         }
       }
 

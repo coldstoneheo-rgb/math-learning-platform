@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
-import type { Student, User, WeeklyReportAnalysis, Schedule } from '@/types';
+import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import type { Student, User, WeeklyReportAnalysis, Schedule, AnalysisData } from '@/types';
 
 interface WeeklyFormData {
   period: string;
@@ -395,6 +396,18 @@ export default function NewWeeklyReportPage() {
           }
         } catch (metaError) {
           console.warn('[Anchor Loop] 메타프로필 API 호출 실패:', metaError);
+        }
+
+        // [Feedback Loop] 전략 추적 및 예측 데이터 등록
+        try {
+          const feedbackResult = await registerReportFeedbackData(
+            insertedReport.id,
+            selectedStudentId as number,
+            finalAnalysis as unknown as AnalysisData
+          );
+          console.log('[Feedback Loop] 등록 결과:', feedbackResult);
+        } catch (feedbackError) {
+          console.warn('[Feedback Loop] 등록 실패:', feedbackError);
         }
       }
 

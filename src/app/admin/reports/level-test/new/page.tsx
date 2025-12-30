@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Student, User, LevelTestAnalysis, StudentMetaProfile } from '@/types';
+import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import type { Student, User, LevelTestAnalysis, StudentMetaProfile, AnalysisData } from '@/types';
 
 export default function NewLevelTestPage() {
   const router = useRouter();
@@ -217,6 +218,18 @@ export default function NewLevelTestPage() {
               reportType: 'level_test',
             }),
           });
+
+          // [Feedback Loop] 전략 추적 및 예측 데이터 등록
+          try {
+            const feedbackResult = await registerReportFeedbackData(
+              insertedReport.id,
+              selectedStudentId,
+              analysisResult as unknown as AnalysisData
+            );
+            console.log('[Feedback Loop] 등록 결과:', feedbackResult);
+          } catch (feedbackError) {
+            console.warn('[Feedback Loop] 등록 실패:', feedbackError);
+          }
         } catch (metaError) {
           console.warn('[Level Test] Meta profile API error:', metaError);
         }

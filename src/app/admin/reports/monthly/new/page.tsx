@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { registerReportFeedbackData } from '@/lib/feedback-loop';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
-import type { Student, User, MonthlyReportAnalysis, Report } from '@/types';
+import type { Student, User, MonthlyReportAnalysis, Report, AnalysisData } from '@/types';
 
 interface MonthlyFormData {
   period: string;
@@ -345,6 +346,18 @@ export default function NewMonthlyReportPage() {
           }
         } catch (metaError) {
           console.warn('[Anchor Loop] 메타프로필 API 호출 실패:', metaError);
+        }
+
+        // [Feedback Loop] 전략 추적 및 예측 데이터 등록
+        try {
+          const feedbackResult = await registerReportFeedbackData(
+            insertedReport.id,
+            selectedStudentId,
+            finalAnalysis as unknown as AnalysisData
+          );
+          console.log('[Feedback Loop] 등록 결과:', feedbackResult);
+        } catch (feedbackError) {
+          console.warn('[Feedback Loop] 등록 실패:', feedbackError);
         }
       }
 

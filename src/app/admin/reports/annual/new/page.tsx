@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Student, User, AnnualReportAnalysis } from '@/types';
+import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import type { Student, User, AnnualReportAnalysis, AnalysisData } from '@/types';
 
 interface AnnualFormData {
   year: number;
@@ -196,6 +197,18 @@ export default function NewAnnualReportPage() {
           }
         } catch (metaError) {
           console.warn('[Anchor Loop] 메타프로필 API 호출 실패:', metaError);
+        }
+
+        // [Feedback Loop] 전략 추적 및 예측 데이터 등록
+        try {
+          const feedbackResult = await registerReportFeedbackData(
+            insertedReport.id,
+            selectedStudentId as number,
+            analysisData as unknown as AnalysisData
+          );
+          console.log('[Feedback Loop] 등록 결과:', feedbackResult);
+        } catch (feedbackError) {
+          console.warn('[Feedback Loop] 등록 실패:', feedbackError);
         }
       }
 
