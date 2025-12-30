@@ -270,7 +270,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* 퀵 액션 카드 */}
-        <div className="grid md:grid-cols-6 gap-4 mb-8">
+        <div className="grid md:grid-cols-4 gap-4 mb-4">
           <DashboardCard
             title="학생 관리"
             description="추가, 수정, 삭제"
@@ -295,6 +295,8 @@ export default function AdminDashboard() {
             icon="👨‍👩‍👧"
             href="/admin/parents"
           />
+        </div>
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
           <DashboardCard
             title="리포트 생성"
             description="주간/월간/시험"
@@ -306,6 +308,18 @@ export default function AdminDashboard() {
             description="조회 및 관리"
             icon="📋"
             href="/admin/reports"
+          />
+          <DashboardCard
+            title="전략 관리"
+            description="효과 추적"
+            icon="🎯"
+            href="/admin/strategies"
+          />
+          <DashboardCard
+            title="분석 대시보드"
+            description="성과 및 예측"
+            icon="📈"
+            href="/admin/analytics"
           />
         </div>
 

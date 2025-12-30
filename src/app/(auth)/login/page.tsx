@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import AuthErrorToast from '@/components/common/AuthErrorToast';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -81,6 +82,13 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">학부모 계정은 선생님의 초대를 통해 생성됩니다.</p>
       </div>
+      <Suspense fallback={null}>
+        <AuthErrorToast />
+      </Suspense>
     </div>
   );
+}
+
+export default function LoginPage() {
+  return <LoginForm />;
 }

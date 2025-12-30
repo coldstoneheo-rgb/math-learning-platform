@@ -31,9 +31,50 @@ export async function middleware(request: NextRequest) {
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
   // This refreshes the session if expired - required for Server Components
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  let authErrorMessage: string | null = null;
+
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    user = data?.user ?? null;
+    if (error) {
+      authErrorMessage = error.message;
+    }
+  } catch (error) {
+    console.error('Middleware auth error:', error);
+    authErrorMessage = error instanceof Error ? error.message : 'Unknown auth error';
+  }
+
+  // Refresh Token 에러 처리
+  if (authErrorMessage) {
+    const isRefreshTokenError =
+      authErrorMessage.includes('Refresh Token') ||
+      authErrorMessage.includes('refresh_token') ||
+      authErrorMessage.includes('Invalid Refresh Token') ||
+      authErrorMessage.includes('JWT expired');
+
+    if (isRefreshTokenError) {
+      // 인증 쿠키 삭제
+      const authCookieNames = ['sb-access-token', 'sb-refresh-token'];
+      request.cookies.getAll().forEach(cookie => {
+        if (cookie.name.includes('supabase') || authCookieNames.includes(cookie.name)) {
+          supabaseResponse.cookies.delete(cookie.name);
+        }
+      });
+
+      // 보호된 페이지인 경우 로그인으로 리다이렉트
+      const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
+                         request.nextUrl.pathname.startsWith('/signup');
+      const isPublicPage = request.nextUrl.pathname === '/';
+
+      if (!isAuthPage && !isPublicPage) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        url.searchParams.set('error', 'session_expired');
+        return NextResponse.redirect(url);
+      }
+    }
+  }
 
   // 로그인 페이지나 회원가입 페이지가 아닌 경우 인증 체크
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
