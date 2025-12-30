@@ -275,10 +275,12 @@ export interface TestAnalysisFormData {
   testRange: string;
   totalQuestions: number;
   maxScore: number;
+  points2: number;      // 2점 배점 문항 수
   points3: number;
   points4: number;
   points5: number;
   points6: number;
+  pointsEssay: number;  // 서술형 배점 문항 수
   difficulty?: string;
   questionsByPoint?: { points: string; count: number }[];
   totalScore?: number;

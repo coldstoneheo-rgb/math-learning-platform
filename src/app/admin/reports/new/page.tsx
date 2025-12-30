@@ -1,22 +1,22 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfile } from '@/lib/student-profile-extractor';
+import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
 import type { Student, User, TestAnalysisFormData, AnalysisData } from '@/types';
 
 export default function NewReportPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [user, setUser] = useState<User | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  
+
   // 폼 상태
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
   const [formData, setFormData] = useState<TestAnalysisFormData>({
@@ -25,16 +25,17 @@ export default function NewReportPage() {
     testRange: '',
     totalQuestions: 20,
     maxScore: 100,
+    points2: 0,
     points3: 0,
     points4: 0,
     points5: 0,
     points6: 0,
+    pointsEssay: 0,
   });
-  
-  // 이미지 상태
-  const [images, setImages] = useState<string[]>([]);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  
+
+  // 파일 상태 (MultiFileUpload 사용)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+
   // 분석 결과
   const [analysisResult, setAnalysisResult] = useState<AnalysisData | null>(null);
 
@@ -74,34 +75,15 @@ export default function NewReportPage() {
     setLoading(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const newFiles: File[] = [];
-    const newImages: string[] = [];
-
-    Array.from(files).forEach((file) => {
-      if (file.type.startsWith('image/')) {
-        newFiles.push(file);
-        
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const base64 = event.target?.result as string;
-          // data:image/jpeg;base64, 부분 제거
-          const base64Data = base64.split(',')[1];
-          setImages((prev) => [...prev, base64Data]);
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    setImageFiles((prev) => [...prev, ...newFiles]);
-  };
-
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  // 파일에서 이미지 데이터 추출
+  const extractImagesFromFiles = (): string[] => {
+    return uploadedFiles
+      .filter((f) => f.type === 'image')
+      .map((f) => {
+        // data:image/jpeg;base64, 부분 제거
+        const base64Data = f.data.split(',')[1];
+        return base64Data;
+      });
   };
 
   const handleAnalyze = async () => {
@@ -116,8 +98,8 @@ export default function NewReportPage() {
       setError('시험명을 입력해주세요.');
       return;
     }
-    if (images.length === 0) {
-      setError('시험지 이미지를 업로드해주세요.');
+    if (uploadedFiles.length === 0) {
+      setError('시험지 파일을 업로드해주세요. (이미지, PDF, CSV 지원)');
       return;
     }
 
@@ -130,6 +112,13 @@ export default function NewReportPage() {
     setAnalyzing(true);
 
     try {
+      // 이미지 파일 추출
+      const imageFiles = extractImagesFromFiles();
+
+      // PDF와 CSV 파일 데이터 추출
+      const pdfFiles = uploadedFiles.filter((f) => f.type === 'pdf').map((f) => f.data);
+      const csvFiles = uploadedFiles.filter((f) => f.type === 'csv').map((f) => f.data);
+
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,7 +127,9 @@ export default function NewReportPage() {
           studentId: selectedStudentId,
           reportType: 'test',
           formData,
-          currentImages: images,
+          currentImages: imageFiles,
+          pdfFiles,
+          csvFiles,
         }),
       });
 
@@ -149,9 +140,10 @@ export default function NewReportPage() {
       }
 
       setAnalysisResult(result.analysisData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('분석 오류:', err);
-      setError(err.message || '분석 중 오류가 발생했습니다.');
+      const errorMessage = err instanceof Error ? err.message : '분석 중 오류가 발생했습니다.';
+      setError(errorMessage);
     } finally {
       setAnalyzing(false);
     }
@@ -360,8 +352,8 @@ export default function NewReportPage() {
               {/* 배점 정보 */}
               <div className="mt-4 pt-4 border-t">
                 <label className="block text-sm font-medium text-gray-700 mb-2">배점별 문항 수</label>
-                <div className="grid grid-cols-4 gap-3">
-                  {[3, 4, 5, 6].map((points) => (
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                  {[2, 3, 4, 5, 6].map((points) => (
                     <div key={points}>
                       <label className="block text-xs text-gray-500 mb-1">{points}점</label>
                       <input
@@ -375,60 +367,41 @@ export default function NewReportPage() {
                       />
                     </div>
                   ))}
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">서술형</label>
+                    <input
+                      type="number"
+                      value={formData.pointsEssay}
+                      onChange={(e) =>
+                        setFormData({ ...formData, pointsEssay: Number(e.target.value) })
+                      }
+                      min={0}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-center"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 이미지 업로드 */}
+            {/* 파일 업로드 */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">3. 시험지 이미지</h2>
-              
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-400 transition-colors"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <div className="text-4xl mb-2">📷</div>
-                <p className="text-gray-600">클릭하여 이미지 업로드</p>
-                <p className="text-sm text-gray-400 mt-1">여러 장 선택 가능</p>
-              </div>
-
-              {/* 업로드된 이미지 미리보기 */}
-              {imageFiles.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-3">
-                  {imageFiles.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`시험지 ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ×
-                      </button>
-                      <span className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                        {index + 1}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">3. 시험지 파일</h2>
+              <MultiFileUpload
+                files={uploadedFiles}
+                onFilesChange={setUploadedFiles}
+                acceptedTypes={['image', 'pdf', 'csv']}
+                maxFiles={20}
+                maxSizeMB={10}
+                label=""
+                helpText="시험지 이미지, 성적표 PDF, 또는 점수 CSV 파일을 업로드하세요."
+                required
+              />
             </div>
 
             {/* 분석 버튼 */}
             <button
               onClick={handleAnalyze}
-              disabled={analyzing || !selectedStudentId || images.length === 0}
+              disabled={analyzing || !selectedStudentId || uploadedFiles.length === 0}
               className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {analyzing ? (
