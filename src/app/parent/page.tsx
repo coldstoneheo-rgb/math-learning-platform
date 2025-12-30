@@ -123,12 +123,28 @@ export default function ParentDashboard() {
 
   const getReportTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {
+      level_test: '레벨 테스트',
       test: '시험 분석',
       weekly: '주간 리포트',
       monthly: '월간 리포트',
+      semi_annual: '반기 종합',
+      annual: '연간 종합',
       consolidated: '통합 분석',
     };
     return labels[type] || type;
+  };
+
+  const getReportTypeBadgeColor = (type: string): string => {
+    const colors: Record<string, string> = {
+      level_test: 'bg-red-100 text-red-700',
+      test: 'bg-blue-100 text-blue-700',
+      weekly: 'bg-green-100 text-green-700',
+      monthly: 'bg-purple-100 text-purple-700',
+      semi_annual: 'bg-indigo-100 text-indigo-700',
+      annual: 'bg-amber-100 text-amber-700',
+      consolidated: 'bg-orange-100 text-orange-700',
+    };
+    return colors[type] || 'bg-gray-100 text-gray-700';
   };
 
   // 최근 10개 시험의 점수 추이 계산 (차트용)
@@ -318,6 +334,9 @@ export default function ParentDashboard() {
                   />
                 </div>
 
+                {/* Growth Loop 진행 상황 */}
+                <GrowthLoopStatus reports={selectedChild.reports} />
+
                 {/* 성장 그래프 섹션 */}
                 <GrowthChartSection
                   scoreTrend={getScoreTrend(selectedChild.reports)}
@@ -343,7 +362,7 @@ export default function ParentDashboard() {
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <span className="inline-block px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-700 rounded mb-2">
+                              <span className={`inline-block px-2 py-1 text-xs font-medium rounded mb-2 ${getReportTypeBadgeColor(report.report_type)}`}>
                                 {getReportTypeLabel(report.report_type)}
                               </span>
                               <h4 className="font-medium text-gray-900">
@@ -605,6 +624,127 @@ function GrowthChartSection({ scoreTrend, mathCapability, growthRate }: GrowthCh
               </span>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Growth Loop 진행 상황 컴포넌트
+function GrowthLoopStatus({ reports }: { reports: Report[] }) {
+  const hasLevelTest = reports.some(r => r.report_type === 'level_test');
+  const testCount = reports.filter(r => r.report_type === 'test').length;
+  const weeklyCount = reports.filter(r => r.report_type === 'weekly').length;
+  const monthlyCount = reports.filter(r => r.report_type === 'monthly').length;
+  const semiAnnualCount = reports.filter(r => r.report_type === 'semi_annual').length;
+  const annualCount = reports.filter(r => r.report_type === 'annual').length;
+
+  // 최근 연간 리포트에서 성장 서사 추출
+  const latestAnnual = reports.find(r => r.report_type === 'annual');
+  const annualData = latestAnnual?.analysis_data as Record<string, unknown> | undefined;
+  const growthNarrative = annualData?.growthNarrativeFinal as {
+    headline?: string;
+    transformationSummary?: string;
+    lookingAhead?: string;
+  } | undefined;
+
+  // 최근 반기 리포트에서 장기 비전 추출
+  const latestSemiAnnual = reports.find(r => r.report_type === 'semi_annual');
+  const semiAnnualData = latestSemiAnnual?.analysis_data as Record<string, unknown> | undefined;
+  const longTermVision = semiAnnualData?.longTermVisionUpdate as {
+    yearEndProjection?: string;
+    nextYearOutlook?: string;
+  } | undefined;
+
+  const loopSteps = [
+    { key: 'level_test', label: 'Baseline', icon: '🎯', active: hasLevelTest, count: hasLevelTest ? 1 : 0 },
+    { key: 'test', label: '시험 분석', icon: '📝', active: testCount > 0, count: testCount },
+    { key: 'weekly', label: '주간', icon: '📅', active: weeklyCount > 0, count: weeklyCount },
+    { key: 'monthly', label: '월간', icon: '📆', active: monthlyCount > 0, count: monthlyCount },
+    { key: 'semi_annual', label: '반기', icon: '📈', active: semiAnnualCount > 0, count: semiAnnualCount },
+    { key: 'annual', label: '연간', icon: '📚', active: annualCount > 0, count: annualCount },
+  ];
+
+  const completedSteps = loopSteps.filter(s => s.active).length;
+  const progressPercentage = Math.round((completedSteps / loopSteps.length) * 100);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">성장 여정 (Growth Loop)</h3>
+        <span className="text-sm text-indigo-600 font-medium">
+          {completedSteps}/{loopSteps.length} 단계 완료 ({progressPercentage}%)
+        </span>
+      </div>
+
+      {/* 진행 바 */}
+      <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+        <div
+          className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+          style={{ width: `${progressPercentage}%` }}
+        />
+      </div>
+
+      {/* 단계별 상태 */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+        {loopSteps.map((step, index) => (
+          <div
+            key={step.key}
+            className={`relative text-center p-3 rounded-lg transition-all ${
+              step.active
+                ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200'
+                : 'bg-gray-50 border-2 border-gray-100'
+            }`}
+          >
+            {/* 연결선 */}
+            {index < loopSteps.length - 1 && (
+              <div className={`absolute top-1/2 -right-2 w-4 h-0.5 ${
+                step.active ? 'bg-indigo-300' : 'bg-gray-200'
+              } hidden md:block`} />
+            )}
+
+            <div className="text-2xl mb-1">{step.icon}</div>
+            <div className={`text-xs font-medium ${step.active ? 'text-indigo-700' : 'text-gray-400'}`}>
+              {step.label}
+            </div>
+            {step.count > 0 && (
+              <div className="text-xs text-indigo-500 mt-1">{step.count}건</div>
+            )}
+            {step.active && (
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* 성장 서사 요약 (연간 리포트가 있는 경우) */}
+      {growthNarrative && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-4 mb-4">
+          <h4 className="font-medium text-amber-800 mb-2">📖 {growthNarrative.headline || '성장 스토리'}</h4>
+          <p className="text-sm text-amber-900">{growthNarrative.transformationSummary}</p>
+          {growthNarrative.lookingAhead && (
+            <p className="text-sm text-amber-700 mt-2">🔮 {growthNarrative.lookingAhead}</p>
+          )}
+        </div>
+      )}
+
+      {/* 장기 비전 (반기 리포트가 있는 경우) */}
+      {!growthNarrative && longTermVision && (
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
+          <h4 className="font-medium text-indigo-800 mb-2">🔮 장기 비전</h4>
+          <p className="text-sm text-indigo-900">{longTermVision.yearEndProjection}</p>
+          {longTermVision.nextYearOutlook && (
+            <p className="text-sm text-indigo-700 mt-1">내년 전망: {longTermVision.nextYearOutlook}</p>
+          )}
+        </div>
+      )}
+
+      {/* Baseline 미설정 안내 */}
+      {!hasLevelTest && (
+        <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-red-700">
+          <span className="font-medium">🎯 Baseline 미설정:</span> 레벨 테스트를 통해 학습 출발점을 설정하면 더 정확한 성장 분석이 가능합니다.
         </div>
       )}
     </div>
