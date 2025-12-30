@@ -27,11 +27,10 @@ const REPORT_TYPES = [
   {
     key: 'weekly',
     title: '주간 리포트',
-    description: '한 주간의 학습 내용과 진도를 정리한 리포트 생성',
+    description: '한 주간의 학습 내용과 진도를 정리한 리포트 생성 (AI 분석 지원)',
     icon: '📅',
     href: '/admin/reports/weekly/new',
     color: 'green',
-    disabled: true, // Phase 3에서 구현 예정
   },
   {
     key: 'monthly',
@@ -113,51 +112,54 @@ export default function ReportCreatePage() {
           </div>
 
           <div className="grid gap-4">
-            {REPORT_TYPES.map((type) => (
-              <a
-                key={type.key}
-                href={type.disabled ? undefined : type.href}
-                className={`block bg-white rounded-xl shadow-sm p-6 border-2 transition-all ${
-                  type.disabled
-                    ? 'border-gray-100 opacity-60 cursor-not-allowed'
-                    : 'border-transparent hover:border-indigo-300 hover:shadow-md cursor-pointer'
-                }`}
-                onClick={(e) => type.disabled && e.preventDefault()}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
-                    type.color === 'red' ? 'bg-red-100' :
-                    type.color === 'blue' ? 'bg-blue-100' :
-                    type.color === 'green' ? 'bg-green-100' :
-                    type.color === 'purple' ? 'bg-purple-100' :
-                    'bg-orange-100'
-                  }`}>
-                    {type.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{type.title}</h3>
-                      {'badge' in type && type.badge && (
-                        <span className="px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded font-medium">
-                          {type.badge}
-                        </span>
-                      )}
-                      {type.disabled && (
-                        <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">
-                          준비 중
-                        </span>
-                      )}
+            {REPORT_TYPES.map((type) => {
+              const isDisabled = 'disabled' in type && (type as { disabled?: boolean }).disabled;
+              return (
+                <a
+                  key={type.key}
+                  href={isDisabled ? undefined : type.href}
+                  className={`block bg-white rounded-xl shadow-sm p-6 border-2 transition-all ${
+                    isDisabled
+                      ? 'border-gray-100 opacity-60 cursor-not-allowed'
+                      : 'border-transparent hover:border-indigo-300 hover:shadow-md cursor-pointer'
+                  }`}
+                  onClick={(e) => isDisabled && e.preventDefault()}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                      type.color === 'red' ? 'bg-red-100' :
+                      type.color === 'blue' ? 'bg-blue-100' :
+                      type.color === 'green' ? 'bg-green-100' :
+                      type.color === 'purple' ? 'bg-purple-100' :
+                      'bg-orange-100'
+                    }`}>
+                      {type.icon}
                     </div>
-                    <p className="text-gray-500 text-sm mt-1">{type.description}</p>
-                  </div>
-                  {!type.disabled && (
-                    <div className="text-gray-400">
-                      →
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-gray-900">{type.title}</h3>
+                        {'badge' in type && type.badge && (
+                          <span className="px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded font-medium">
+                            {type.badge}
+                          </span>
+                        )}
+                        {isDisabled && (
+                          <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">
+                            준비 중
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-500 text-sm mt-1">{type.description}</p>
                     </div>
-                  )}
-                </div>
-              </a>
-            ))}
+                    {!isDisabled && (
+                      <div className="text-gray-400">
+                        →
+                      </div>
+                    )}
+                  </div>
+                </a>
+              );
+            })}
           </div>
 
           {/* 향후 추가 예정 안내 */}
