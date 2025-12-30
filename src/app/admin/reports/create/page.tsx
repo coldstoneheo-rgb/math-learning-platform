@@ -8,6 +8,15 @@ import type { User } from '@/types';
 // 리포트 타입 정의
 const REPORT_TYPES = [
   {
+    key: 'level_test',
+    title: '레벨 테스트',
+    description: '신규 학생 진단 테스트 - Baseline(기준점) 설정',
+    icon: '🎯',
+    href: '/admin/reports/level-test/new',
+    color: 'red',
+    badge: '신규 학생',
+  },
+  {
     key: 'test',
     title: '시험 분석',
     description: '시험지 이미지를 분석하여 상세한 학습 진단 리포트 생성',
@@ -22,12 +31,12 @@ const REPORT_TYPES = [
     icon: '📅',
     href: '/admin/reports/weekly/new',
     color: 'green',
-    disabled: true, // 향후 구현 예정
+    disabled: true, // Phase 3에서 구현 예정
   },
   {
     key: 'monthly',
     title: '월간 리포트',
-    description: '한 달간의 학습 성과와 성장을 분석한 리포트 생성',
+    description: '한 달간의 학습 성과와 성장을 분석한 리포트 생성 (AI 분석 지원)',
     icon: '📆',
     href: '/admin/reports/monthly/new',
     color: 'purple',
@@ -117,6 +126,7 @@ export default function ReportCreatePage() {
               >
                 <div className="flex items-start gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                    type.color === 'red' ? 'bg-red-100' :
                     type.color === 'blue' ? 'bg-blue-100' :
                     type.color === 'green' ? 'bg-green-100' :
                     type.color === 'purple' ? 'bg-purple-100' :
@@ -127,6 +137,11 @@ export default function ReportCreatePage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold text-gray-900">{type.title}</h3>
+                      {'badge' in type && type.badge && (
+                        <span className="px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded font-medium">
+                          {type.badge}
+                        </span>
+                      )}
                       {type.disabled && (
                         <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">
                           준비 중
