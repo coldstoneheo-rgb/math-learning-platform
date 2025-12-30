@@ -48,6 +48,24 @@ const REPORT_TYPES = [
     href: '/admin/reports/consolidated/new',
     color: 'orange',
   },
+  {
+    key: 'semi_annual',
+    title: '반기 종합 리포트',
+    description: '6개월간의 학습을 종합 분석 - Macro Loop 점검 (AI 분석 필수)',
+    icon: '📈',
+    href: '/admin/reports/semi-annual/new',
+    color: 'indigo',
+    badge: 'Macro Loop',
+  },
+  {
+    key: 'annual',
+    title: '연간 종합 리포트',
+    description: '1년간의 성장 스토리 - Baseline 대비 성장, 다음 학년 준비 (AI 분석 필수)',
+    icon: '📚',
+    href: '/admin/reports/annual/new',
+    color: 'amber',
+    badge: 'Growth Story',
+  },
 ];
 
 export default function ReportCreatePage() {
@@ -131,7 +149,10 @@ export default function ReportCreatePage() {
                       type.color === 'blue' ? 'bg-blue-100' :
                       type.color === 'green' ? 'bg-green-100' :
                       type.color === 'purple' ? 'bg-purple-100' :
-                      'bg-orange-100'
+                      type.color === 'orange' ? 'bg-orange-100' :
+                      type.color === 'indigo' ? 'bg-indigo-100' :
+                      type.color === 'amber' ? 'bg-amber-100' :
+                      'bg-gray-100'
                     }`}>
                       {type.icon}
                     </div>
@@ -139,7 +160,12 @@ export default function ReportCreatePage() {
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold text-gray-900">{type.title}</h3>
                         {'badge' in type && type.badge && (
-                          <span className="px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded font-medium">
+                          <span className={`px-2 py-0.5 text-xs rounded font-medium ${
+                            type.key === 'level_test' ? 'bg-red-100 text-red-600' :
+                            type.key === 'semi_annual' ? 'bg-indigo-100 text-indigo-600' :
+                            type.key === 'annual' ? 'bg-amber-100 text-amber-600' :
+                            'bg-blue-100 text-blue-600'
+                          }`}>
                             {type.badge}
                           </span>
                         )}
@@ -162,10 +188,10 @@ export default function ReportCreatePage() {
             })}
           </div>
 
-          {/* 향후 추가 예정 안내 */}
-          <div className="mt-8 bg-indigo-50 rounded-xl p-4 text-center">
-            <p className="text-sm text-indigo-700">
-              <span className="font-medium">향후 추가 예정:</span> 6개월 분석, 연간 분석, 기간 지정 분석
+          {/* Growth Loop 시스템 안내 */}
+          <div className="mt-8 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4">
+            <p className="text-sm text-indigo-700 text-center">
+              <span className="font-medium">Growth Loop 시스템:</span> 레벨 테스트 → 주간/월간(Micro Loop) → 반기/연간(Macro Loop)으로 학생의 성장을 연속 추적합니다.
             </p>
           </div>
         </div>
