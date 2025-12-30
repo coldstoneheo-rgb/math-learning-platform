@@ -72,7 +72,9 @@ export default function ParentReportDetailPage() {
     window.print();
   };
 
-  const analysis: AnalysisData | null = report?.analysis_data || null;
+  // report.analysis_data는 다양한 리포트 타입을 지원하지만,
+  // 현재 UI는 TestAnalysisData 구조를 기대하므로 타입 단언 사용
+  const analysis = (report?.analysis_data as AnalysisData) || null;
 
   if (loading) {
     return (

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
-import type { User, Report, Student, AnalysisData, FutureVisionExtended } from '@/types';
+import type { User, Report, Student, AnalysisData, AnyAnalysisData } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
@@ -68,7 +68,9 @@ export default function ReportDetailPage() {
     return `고${grade - 9}`;
   };
 
-  const analysis: AnalysisData | null = report?.analysis_data || null;
+  // report.analysis_data는 다양한 리포트 타입을 지원하지만,
+  // 현재 UI는 TestAnalysisData 구조를 기대하므로 타입 단언 사용
+  const analysis = (report?.analysis_data as AnalysisData) || null;
 
   if (loading) {
     return (

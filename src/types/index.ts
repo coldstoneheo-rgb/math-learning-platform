@@ -140,7 +140,11 @@ export interface GrowthPrediction {
   assumptions: string[];
 }
 
-export interface AnalysisData {
+/**
+ * TestAnalysisData - 시험 분석 리포트 데이터 (기본 형태)
+ * report_type: 'test' 또는 'level_test'에 사용
+ */
+export interface TestAnalysisData {
   testInfo: TestInfo;
   testResults: TestResults;
   resultAnalysis: ResultAnalysis;
@@ -154,6 +158,48 @@ export interface AnalysisData {
   trendComment?: string;
 }
 
+/**
+ * AnalysisData - 레거시 호환용 (TestAnalysisData와 동일)
+ * @deprecated 새 코드에서는 AnyAnalysisData 또는 구체적 타입 사용 권장
+ */
+export interface AnalysisData extends TestAnalysisData {}
+
+/**
+ * AnyAnalysisData - 모든 리포트 타입의 분석 데이터 Union
+ * 타입 가드를 사용하여 구체적인 타입으로 좁힐 수 있음
+ */
+export type AnyAnalysisData =
+  | ({ _type: 'level_test' } & LevelTestAnalysis)
+  | ({ _type: 'test' } & TestAnalysisData)
+  | ({ _type: 'weekly' } & WeeklyReportAnalysis)
+  | ({ _type: 'monthly' } & MonthlyReportAnalysis)
+  | ({ _type: 'semi_annual' } & SemiAnnualReportAnalysis)
+  | ({ _type: 'annual' } & AnnualReportAnalysis)
+  | ({ _type?: undefined } & TestAnalysisData); // 레거시 데이터 호환
+
+/**
+ * 타입 가드 함수들
+ */
+export function isLevelTestAnalysis(data: AnyAnalysisData): data is { _type: 'level_test' } & LevelTestAnalysis {
+  return '_type' in data && data._type === 'level_test';
+}
+
+export function isWeeklyAnalysis(data: AnyAnalysisData): data is { _type: 'weekly' } & WeeklyReportAnalysis {
+  return '_type' in data && data._type === 'weekly';
+}
+
+export function isMonthlyAnalysis(data: AnyAnalysisData): data is { _type: 'monthly' } & MonthlyReportAnalysis {
+  return '_type' in data && data._type === 'monthly';
+}
+
+export function isSemiAnnualAnalysis(data: AnyAnalysisData): data is { _type: 'semi_annual' } & SemiAnnualReportAnalysis {
+  return '_type' in data && data._type === 'semi_annual';
+}
+
+export function isAnnualAnalysis(data: AnyAnalysisData): data is { _type: 'annual' } & AnnualReportAnalysis {
+  return '_type' in data && data._type === 'annual';
+}
+
 export interface Report {
   id: number;
   student_id: number;
@@ -164,7 +210,9 @@ export interface Report {
   max_score?: number;
   rank?: number;
   total_students?: number;
-  analysis_data: AnalysisData;
+  // analysis_data는 report_type에 따라 다른 구조를 가짐
+  // 레거시 호환성을 위해 AnalysisData | AnyAnalysisData 사용
+  analysis_data: AnalysisData | AnyAnalysisData;
   created_at: string;
 }
 

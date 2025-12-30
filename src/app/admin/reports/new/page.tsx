@@ -194,6 +194,29 @@ export default function NewReportPage() {
         if (!profileResult.success) {
           console.warn('학생 프로필 업데이트 실패:', profileResult.error);
         }
+
+        // [Anchor Loop] 메타프로필(5대 핵심 지표) 업데이트
+        try {
+          const metaResponse = await fetch('/api/meta-profile/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              studentId: selectedStudentId,
+              reportId: insertedReport.id,
+              analysisData: analysisResult,
+              reportType: 'test',
+            }),
+          });
+
+          const metaResult = await metaResponse.json();
+          if (metaResult.success) {
+            console.log('[Anchor Loop] 메타프로필 업데이트 완료:', metaResult.message);
+          } else {
+            console.warn('[Anchor Loop] 메타프로필 업데이트 실패:', metaResult.error);
+          }
+        } catch (metaError) {
+          console.warn('[Anchor Loop] 메타프로필 API 호출 실패:', metaError);
+        }
       }
 
       alert('리포트가 저장되었습니다.');
