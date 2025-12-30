@@ -1,13 +1,13 @@
   
 **수학 학습 분석 플랫폼**
 
-Product Requirements Document v3.1
+Product Requirements Document v3.2
 
 Vercel \+ Supabase 기반 웹 플랫폼 구축
 
-문서 버전: 3.1 (Updated)
+문서 버전: 3.2 (Growth Loop System)
 
-작성일: 2025년 12월 (최종 업데이트: 2025-12-29)
+작성일: 2025년 12월 (최종 업데이트: 2025-12-30)
 
 대상 사용자: 50명 (학생 25명 \+ 학부모 25명)
 
@@ -680,11 +680,18 @@ Vercel 대시보드에서 환경 변수를 설정합니다:
 
 * 자녀 이름 및 기본 정보 표시
 
+* **Growth Loop 진행 상황 (NEW):** ✨
+  * 6단계 진행률 시각화 (Baseline → 시험 → 주간 → 월간 → 반기 → 연간)
+  * 각 단계별 리포트 수 표시
+  * Baseline 미설정 경고 표시
+  * 성장 서사 요약 (연간/반기 리포트에서 추출)
+  * 장기 비전 요약
+
 * 성장 현황 그래프 (최근 5회 시험 점수 추이)
 
 * 3개월/6개월 후 예상 점수
 
-* 최근 리포트 목록 (제목, 날짜, 간략 요약)
+* 최근 리포트 목록 (제목, 날짜, 타입별 배지, 간략 요약)
 
 * 이번 주 학습 계획 체크리스트
 
@@ -702,14 +709,33 @@ Vercel 대시보드에서 환경 변수를 설정합니다:
 
 * PDF 다운로드 버튼
 
-## **7.3 리포트 타입별 기능**
+## **7.3 리포트 타입별 기능 (Growth Loop System)**
 
-| 타입 | 포함 내용 | 생성 주기 |
-| ----- | ----- | ----- |
-| **시험 분석** | 5가지 관점 분석, 문항별 정오답, SWOT, 개선 전략 | 시험 후 즉시 |
-| **주간** | 주간 학습 내용, 달성도, 다음 주 계획 | 매주 금요일 |
-| **월간** | 월간 성장 추이, 습관 패턴, 종합 평가 | 매월 마지막 주 |
-| **통합** | 장기 성장 곡선, 미래 예측, 종합 컨설팅 | 학기말 / 요청시 |
+**Growth Loop 시스템**은 학생의 장기적 성장을 추적하고 피드백하는 순환 학습 시스템입니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    GROWTH LOOP SYSTEM                           │
+├─────────────────────────────────────────────────────────────────┤
+│  BASELINE (레벨 테스트) → MICRO LOOP (주간/월간/시험)            │
+│        ↑                         ↓                              │
+│        └──── MACRO LOOP (반기/연간) ←───────────┘               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| 타입 | Loop | 포함 내용 | 생성 주기 |
+| ----- | ----- | ----- | ----- |
+| **레벨 테스트** | Baseline | 신규 학생 진단, 메타프로필 초기화, 기준점 설정 | 신규 등록 시 |
+| **시험 분석** | Micro | 5가지 관점 분석, 문항별 정오답, SWOT, 개선 전략 | 시험 후 즉시 |
+| **주간** | Micro | 주간 학습 내용, 달성도, 다음 주 계획, AI 분석 | 매주 금요일 |
+| **월간** | Micro | 월간 성장 추이, 습관 패턴, 종합 평가, AI 분석 | 매월 마지막 주 |
+| **반기 종합** | Macro | 6개월 성장 궤적, 취약점 해결 현황, 메타프로필 진화 | 6개월마다 |
+| **연간 종합** | Macro | 성장 스토리, Baseline 대비 분석, 다음 학년 준비 | 연말 |
+| **통합** | - | 장기 성장 곡선, 미래 예측, 종합 컨설팅 | 학기말 / 요청시 |
+
+**Anchor Loop (메타프로필 자동 업데이트):**
+- 모든 리포트 저장 시 `/api/meta-profile/update` API 자동 호출
+- 5개 핵심 지표 추적: Baseline, ErrorSignature, AbsorptionRate, SolvingStamina, MetaCognitionLevel
 
 ## **7.4 학생 프로필 자동 추출 (NEW)**
 
@@ -1036,11 +1062,19 @@ math-learning-platform/
 
 │   │   │   │   ├── page.tsx          \# 리포트 목록
 
-│   │   │   │   ├── create/page.tsx   \# 리포트 타입 선택
+│   │   │   │   ├── create/page.tsx   \# 리포트 타입 선택 (Growth Loop 메뉴)
 
 │   │   │   │   ├── new/page.tsx      \# 시험 분석 리포트 생성
 
-│   │   │   │   ├── monthly/new/page.tsx     \# 월간 리포트 생성
+│   │   │   │   ├── level-test/new/page.tsx   \# 레벨 테스트 (Baseline) ✨
+
+│   │   │   │   ├── weekly/new/page.tsx       \# 주간 리포트 (Micro Loop) ✨
+
+│   │   │   │   ├── monthly/new/page.tsx      \# 월간 리포트 (Micro Loop)
+
+│   │   │   │   ├── semi-annual/new/page.tsx  \# 반기 리포트 (Macro Loop) ✨
+
+│   │   │   │   ├── annual/new/page.tsx       \# 연간 리포트 (Macro Loop) ✨
 
 │   │   │   │   ├── consolidated/new/page.tsx \# 통합 리포트 생성
 
@@ -1058,7 +1092,19 @@ math-learning-platform/
 
 │   │   ├── api/
 
-│   │   │   └── analyze/route.ts      \# Gemini API (서버사이드)
+│   │   │   ├── analyze/route.ts      \# Gemini API (시험 분석)
+
+│   │   │   ├── level-test/analyze/route.ts   \# 레벨 테스트 API ✨
+
+│   │   │   ├── weekly-report/generate/route.ts   \# 주간 리포트 API ✨
+
+│   │   │   ├── monthly-report/generate/route.ts  \# 월간 리포트 API ✨
+
+│   │   │   ├── semi-annual-report/generate/route.ts \# 반기 리포트 API ✨
+
+│   │   │   ├── annual-report/generate/route.ts   \# 연간 리포트 API ✨
+
+│   │   │   └── meta-profile/update/route.ts  \# Anchor Loop API ✨
 
 │   │   ├── layout.tsx
 
@@ -1132,5 +1178,17 @@ math-learning-platform/
 | **프로필 추출** | 리포트 생성 시 취약점/강점/패턴 자동 추출 기능 추가 |
 | **프레임워크** | Next.js 16.1.0 (Turbopack) 업데이트 |
 | **새 서비스** | student-profile-extractor.ts 추가 |
+
+## **12.5 v3.2 업데이트 내역 (2025-12-30) - Growth Loop System** ✨
+
+| 구분 | 추가/변경 내용 |
+| ----- | ----- |
+| **Growth Loop System** | 6단계 리포트 순환 시스템 구축 (Baseline → Micro Loop → Macro Loop) |
+| **새 리포트 타입** | level\_test (Baseline), weekly (Micro), semi\_annual (Macro), annual (Macro) 4개 추가 |
+| **Anchor Loop** | 리포트 저장 시 메타프로필 자동 업데이트 (`/api/meta-profile/update`) |
+| **새 페이지** | level-test/new, weekly/new, semi-annual/new, annual/new 4개 페이지 추가 |
+| **새 API** | level-test/analyze, weekly-report/generate, semi-annual-report/generate, annual-report/generate, meta-profile/update 5개 API 추가 |
+| **학부모 대시보드** | Growth Loop 진행 상황 시각화, 성장 서사 요약, Baseline 경고 기능 추가 |
+| **StudentMetaProfile** | 5개 핵심 지표 (Baseline, ErrorSignature, AbsorptionRate, SolvingStamina, MetaCognitionLevel) |
 
 *— 문서 끝 —*

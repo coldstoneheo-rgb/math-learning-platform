@@ -26,8 +26,17 @@ This document provides comprehensive guidance for AI assistants working with the
 
 ### Key Features
 - Student management with role-based access (Teacher, Parent, Student)
-- Four report types: Weekly, Monthly, Test Analysis, and Consolidated
+- **Growth Loop System (6 Report Types):**
+  - **Level Test (Baseline)** - 신규 학생 진단, 기준점 설정
+  - **Test Analysis** - 시험지 AI 분석, 5가지 관점 심층 분석
+  - **Weekly Report (Micro Loop)** - 주간 학습 정리, 목표 피드백
+  - **Monthly Report (Micro Loop)** - 월간 성장 분석, AI 분석 통합
+  - **Semi-Annual Report (Macro Loop)** - 6개월 성장 궤적, 메타프로필 진화
+  - **Annual Report (Macro Loop)** - 1년 성장 스토리, Baseline 대비 분석
 - AI-powered test paper analysis with 5-perspective deep analysis
+- **Anchor Loop System:**
+  - 리포트 저장 시 자동 메타프로필 업데이트
+  - 5개 핵심 지표 추적 (Baseline, ErrorSignature, AbsorptionRate, SolvingStamina, MetaCognitionLevel)
 - **Class Management System:**
   - Schedule management (weekly class schedules)
   - Class session recording (learning keywords, understanding/attention levels)
@@ -36,6 +45,10 @@ This document provides comprehensive guidance for AI assistants working with the
   - Automatic weakness/strength/pattern extraction from all report types
   - Status tracking (active → improving → resolved → recurring)
   - Profile history for audit trail
+- **Parent Dashboard with Growth Loop Visualization:**
+  - 성장 여정 진행률 표시 (6단계)
+  - 성장 서사 요약 (연간/반기 리포트)
+  - Baseline 미설정 경고
 - Data visualization with charts (Recharts)
 - PDF export functionality
 - Cloud-first architecture with Supabase
@@ -179,17 +192,27 @@ math-learning-platform/
 │   │   │   ├── assignments/page.tsx  # Assignment management (NEW)
 │   │   │   ├── reports/
 │   │   │   │   ├── page.tsx          # Report list
-│   │   │   │   ├── create/page.tsx   # Report type selection
+│   │   │   │   ├── create/page.tsx   # Report type selection (Growth Loop menu)
 │   │   │   │   ├── new/page.tsx      # Test analysis creation
-│   │   │   │   ├── monthly/new/page.tsx      # Monthly report
+│   │   │   │   ├── level-test/new/page.tsx   # Level Test (Baseline) ✨
+│   │   │   │   ├── weekly/new/page.tsx       # Weekly report (Micro Loop) ✨
+│   │   │   │   ├── monthly/new/page.tsx      # Monthly report (Micro Loop)
+│   │   │   │   ├── semi-annual/new/page.tsx  # Semi-annual report (Macro Loop) ✨
+│   │   │   │   ├── annual/new/page.tsx       # Annual report (Macro Loop) ✨
 │   │   │   │   ├── consolidated/new/page.tsx # Consolidated report
 │   │   │   │   └── [id]/page.tsx     # Report detail
 │   │   │   └── parents/page.tsx      # Parent management
 │   │   ├── parent/                   # Parent dashboard
-│   │   │   ├── page.tsx              # Parent main
+│   │   │   ├── page.tsx              # Parent main (with Growth Loop status) ✨
 │   │   │   └── reports/[id]/page.tsx # Report view
 │   │   ├── api/
-│   │   │   └── analyze/route.ts      # Gemini API (Server-side)
+│   │   │   ├── analyze/route.ts      # Gemini API (Test Analysis)
+│   │   │   ├── level-test/analyze/route.ts   # Level Test API ✨
+│   │   │   ├── weekly-report/generate/route.ts   # Weekly Report API ✨
+│   │   │   ├── monthly-report/generate/route.ts  # Monthly Report API ✨
+│   │   │   ├── semi-annual-report/generate/route.ts # Semi-Annual API ✨
+│   │   │   ├── annual-report/generate/route.ts   # Annual Report API ✨
+│   │   │   └── meta-profile/update/route.ts  # Anchor Loop API ✨
 │   │   ├── layout.tsx
 │   │   └── page.tsx                  # Landing page
 │   │
@@ -268,7 +291,8 @@ interface Student {
 
 ### Report Types
 ```typescript
-type ReportType = 'test' | 'weekly' | 'monthly' | 'consolidated';
+// Growth Loop 시스템: 6개 리포트 타입
+type ReportType = 'level_test' | 'test' | 'weekly' | 'monthly' | 'semi_annual' | 'annual' | 'consolidated';
 
 interface Report {
   id: number;
@@ -283,6 +307,15 @@ interface Report {
   analysis_data: AnalysisData;  // JSONB column
   created_at: string;
 }
+
+// 리포트 타입별 설명
+// - level_test: Baseline 설정 (신규 학생)
+// - test: 시험 분석 (AI 5관점 분석)
+// - weekly: 주간 리포트 (Micro Loop)
+// - monthly: 월간 리포트 (Micro Loop + AI)
+// - semi_annual: 반기 리포트 (Macro Loop)
+// - annual: 연간 리포트 (Macro Loop + Growth Story)
+// - consolidated: 통합 분석
 ```
 
 ### Analysis Data (JSONB in analysis_data column)
@@ -638,6 +671,94 @@ new weakness → active → improving → resolved
                        recurring (if detected again after resolved)
 ```
 
+### 5. Growth Loop System (NEW) ✨
+
+성장 서사 및 순환 학습 시스템. 학생의 장기적 성장을 추적하고 피드백합니다.
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    GROWTH LOOP SYSTEM                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌───────────┐                                                 │
+│  │ BASELINE  │ ← Level Test (신규 학생)                        │
+│  │ (기준점)   │   → StudentMetaProfile 초기화                   │
+│  └─────┬─────┘                                                 │
+│        │                                                       │
+│        ▼                                                       │
+│  ┌─────────────────────────────────────────────────────┐       │
+│  │              MICRO LOOP (주간/월간)                  │       │
+│  │  ┌──────┐     ┌───────┐     ┌───────┐              │       │
+│  │  │Weekly│ ──▶ │Monthly│ ──▶ │ Test  │ ──▶ ...      │       │
+│  │  │Report│     │Report │     │Report │              │       │
+│  │  └──────┘     └───────┘     └───────┘              │       │
+│  │      ↑            ↑             ↑                   │       │
+│  │      └────────────┴─────────────┘                   │       │
+│  │         Anchor Loop (메타프로필 업데이트)            │       │
+│  └─────────────────────────────────────────────────────┘       │
+│        │                                                       │
+│        ▼  (6개월마다)                                          │
+│  ┌─────────────────────────────────────────────────────┐       │
+│  │              MACRO LOOP (반기/연간)                  │       │
+│  │  ┌──────────┐     ┌──────────┐                      │       │
+│  │  │Semi-Annual│ ──▶ │ Annual  │                      │       │
+│  │  │  Report   │     │ Report  │                      │       │
+│  │  └──────────┘     └──────────┘                      │       │
+│  │       │                │                            │       │
+│  │       └────────────────┘                            │       │
+│  │       Growth Story (성장 서사 생성)                  │       │
+│  └─────────────────────────────────────────────────────┘       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Report Types & Purpose:**
+
+| Type | Korean | Loop | Purpose |
+|------|--------|------|---------|
+| `level_test` | 레벨 테스트 | Baseline | 신규 학생 진단, 메타프로필 초기화 |
+| `test` | 시험 분석 | Micro | AI 5관점 분석, 실행 전략 제시 |
+| `weekly` | 주간 리포트 | Micro | 주간 목표 피드백, 연속성 점수 |
+| `monthly` | 월간 리포트 | Micro | 월간 종합, AI 분석 통합 |
+| `semi_annual` | 반기 리포트 | Macro | 6개월 성장 궤적, 취약점 해결 현황 |
+| `annual` | 연간 리포트 | Macro | 성장 스토리, Baseline 대비 분석 |
+
+**Anchor Loop (메타프로필 자동 업데이트):**
+```typescript
+// 모든 리포트 저장 후 자동 호출
+await fetch('/api/meta-profile/update', {
+  method: 'POST',
+  body: JSON.stringify({
+    studentId,
+    reportId,
+    analysisData,
+    reportType,  // 리포트 타입에 따라 업데이트 로직 분기
+  }),
+});
+```
+
+**StudentMetaProfile (5개 핵심 지표):**
+```typescript
+interface StudentMetaProfile {
+  baseline: Baseline;                    // 초기 기준점
+  errorSignature: ErrorSignature;        // 오류 패턴
+  absorptionRate: AbsorptionRate;        // 학습 흡수율
+  solvingStamina: SolvingStamina;        // 풀이 지구력
+  metaCognitionLevel: MetaCognitionLevel; // 메타인지 수준
+}
+```
+
+**API Routes:**
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/level-test/analyze` | POST | Baseline 설정, 메타프로필 초기화 |
+| `/api/weekly-report/generate` | POST | 주간 리포트 AI 생성 |
+| `/api/monthly-report/generate` | POST | 월간 리포트 AI 생성 |
+| `/api/semi-annual-report/generate` | POST | 반기 종합 AI 분석 |
+| `/api/annual-report/generate` | POST | 연간 종합 AI 분석 |
+| `/api/meta-profile/update` | POST | Anchor Loop 실행 |
+
 ---
 
 ## Development Workflow
@@ -939,12 +1060,24 @@ npm run build
 - [ ] PDF export (if implemented)
 - [ ] Responsive design on mobile
 - [ ] Error handling (invalid inputs, API failures)
-- [ ] **Class Management (NEW):**
+- [ ] **Growth Loop System (NEW):** ✨
+  - [ ] Level Test: Baseline 설정, 메타프로필 초기화
+  - [ ] Weekly Report: AI 분석, Micro Loop 피드백
+  - [ ] Monthly Report: AI 분석 통합
+  - [ ] Semi-Annual Report: 6개월 성장 분석
+  - [ ] Annual Report: 성장 스토리 생성
+  - [ ] Anchor Loop: 리포트 저장 후 메타프로필 업데이트 확인
+- [ ] **Parent Dashboard (NEW):** ✨
+  - [ ] Growth Loop 진행 상황 표시
+  - [ ] 성장 서사 요약 표시 (연간/반기)
+  - [ ] Baseline 미설정 경고 표시
+  - [ ] 리포트 타입별 배지 색상 확인
+- [ ] **Class Management:**
   - [ ] Create/edit/delete class schedules
   - [ ] Record class sessions with learning keywords
   - [ ] Add/complete/delete assignments
   - [ ] View today's class section on dashboard
-- [ ] **Profile Extraction (NEW):**
+- [ ] **Profile Extraction:**
   - [ ] Verify weaknesses extracted after report creation
   - [ ] Check weakness status transitions
   - [ ] View student's active weaknesses on dashboard
@@ -1037,6 +1170,6 @@ git push -u origin claude/branch-name
 
 ---
 
-**Last Updated:** 2025-12-29
+**Last Updated:** 2025-12-30
 **Platform:** Next.js 16.1.0 + Supabase + Vercel
 **For questions, refer to PRD and other documentation files.**
