@@ -1484,3 +1484,140 @@ export interface AnalysisContextData {
     accuracy: number;
   };
 }
+
+// ============================================
+// Phase 3.1: 학습 계획 체크리스트
+// ============================================
+
+/**
+ * StudyPlanStatus - 학습 계획 상태
+ */
+export type StudyPlanStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+
+/**
+ * StudyTaskStatus - 학습 항목 상태
+ */
+export type StudyTaskStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+
+/**
+ * StudyTaskPriority - 학습 항목 우선순위
+ */
+export type StudyTaskPriority = 'high' | 'medium' | 'low';
+
+/**
+ * StudyTaskCategory - 학습 항목 카테고리
+ */
+export type StudyTaskCategory =
+  | 'concept_review'    // 개념 복습
+  | 'problem_solving'   // 문제 풀이
+  | 'workbook'          // 교재 진도
+  | 'test_prep'         // 시험 대비
+  | 'weakness_practice' // 취약점 연습
+  | 'enrichment'        // 심화 학습
+  | 'custom';           // 기타
+
+/**
+ * StudyPlan - 학습 계획
+ * 주간/월간 학습 계획을 관리
+ */
+export interface StudyPlan {
+  id: number;
+  student_id: number;
+  // 계획 기본 정보
+  title: string;
+  description?: string;
+  period_type: 'weekly' | 'monthly' | 'custom';
+  start_date: string;
+  end_date: string;
+  // 상태
+  status: StudyPlanStatus;
+  // 연관 정보
+  report_id?: number;           // 리포트에서 생성된 경우
+  created_by: 'teacher' | 'ai'; // 생성자
+  // 메타 정보
+  total_tasks: number;
+  completed_tasks: number;
+  progress_percentage: number;
+  // 타임스탬프
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  // JOIN 결과
+  students?: Student;
+  study_tasks?: StudyTask[];
+}
+
+export type StudyPlanInput = Omit<
+  StudyPlan,
+  'id' | 'created_at' | 'updated_at' | 'completed_at' | 'students' | 'study_tasks' |
+  'total_tasks' | 'completed_tasks' | 'progress_percentage'
+>;
+
+/**
+ * StudyTask - 학습 항목 (체크리스트 아이템)
+ */
+export interface StudyTask {
+  id: number;
+  study_plan_id: number;
+  student_id: number;
+  // 항목 정보
+  title: string;
+  description?: string;
+  category: StudyTaskCategory;
+  priority: StudyTaskPriority;
+  // 학습 자료 정보
+  source?: string;        // 교재명
+  page_range?: string;    // 페이지 범위
+  problem_numbers?: string; // 문제 번호
+  estimated_minutes?: number; // 예상 소요 시간
+  // 상태
+  status: StudyTaskStatus;
+  order_index: number;    // 순서
+  // 완료 정보
+  completed_at?: string;
+  completed_by?: 'student' | 'parent' | 'teacher';
+  completion_note?: string;
+  actual_minutes?: number;  // 실제 소요 시간
+  difficulty_feedback?: 'easy' | 'appropriate' | 'hard'; // 난이도 피드백
+  // 타임스탬프
+  created_at: string;
+  updated_at: string;
+}
+
+export type StudyTaskInput = Omit<
+  StudyTask,
+  'id' | 'created_at' | 'updated_at' | 'completed_at'
+>;
+
+/**
+ * StudyTaskUpdate - 학습 항목 업데이트 데이터
+ */
+export interface StudyTaskUpdate {
+  status?: StudyTaskStatus;
+  completion_note?: string;
+  actual_minutes?: number;
+  difficulty_feedback?: 'easy' | 'appropriate' | 'hard';
+}
+
+/**
+ * StudyPlanSummary - 학습 계획 요약 (목록 표시용)
+ */
+export interface StudyPlanSummary {
+  id: number;
+  title: string;
+  period_type: 'weekly' | 'monthly' | 'custom';
+  start_date: string;
+  end_date: string;
+  status: StudyPlanStatus;
+  progress_percentage: number;
+  total_tasks: number;
+  completed_tasks: number;
+  student_name?: string;
+}
+
+/**
+ * StudyPlanWithTasks - 학습 계획과 항목 전체
+ */
+export interface StudyPlanWithTasks extends StudyPlan {
+  tasks: StudyTask[];
+}
