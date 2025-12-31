@@ -24,22 +24,23 @@ const sentryWebpackPluginOptions = {
   authToken: process.env.SENTRY_AUTH_TOKEN,
 
   // 소스맵 업로드 (프로덕션 빌드에서만)
-  silent: true, // 빌드 로그에서 Sentry 출력 숨김
+  silent: true,
 
   // 소스맵 설정
-  hideSourceMaps: true, // 클라이언트에서 소스맵 숨김
-
-  // 릴리즈 자동 생성
-  automaticVercelMonitors: true,
+  hideSourceMaps: true,
 
   // 터널링 (CORS 우회 - 광고 차단기 대응)
   tunnelRoute: "/monitoring",
 
-  // Vercel Edge 호환성
-  disableLogger: true,
-
   // 번들 크기 분석 비활성화
   widenClientFileUpload: true,
+
+  // Webpack 설정 (새 형식)
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+  },
 };
 
 // Sentry DSN이 설정된 경우에만 Sentry 래핑
