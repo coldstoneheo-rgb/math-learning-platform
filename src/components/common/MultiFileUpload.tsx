@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useState, useRef } from 'react';
+import imageCompression from 'browser-image-compression';
 
 export interface UploadedFile {
   id: string;
@@ -56,6 +57,7 @@ export default function MultiFileUpload({
 }: MultiFileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const acceptString = acceptedTypes
@@ -82,6 +84,24 @@ export default function MultiFileUpload({
         return null;
       }
 
+      // 이미지 압축 처리
+      let processedFile = file;
+      if (fileType === 'image') {
+        try {
+          const compressionOptions = {
+            maxSizeMB: 1,              // 최대 1MB로 압축
+            maxWidthOrHeight: 1920,    // 최대 해상도
+            useWebWorker: true,
+            fileType: 'image/jpeg' as const,
+            initialQuality: 0.8,
+          };
+          processedFile = await imageCompression(file, compressionOptions);
+          console.log(`[이미지 압축] ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
+        } catch (compressionError) {
+          console.warn('이미지 압축 실패, 원본 사용:', compressionError);
+        }
+      }
+
       return new Promise((resolve) => {
         const reader = new FileReader();
 
@@ -96,8 +116,8 @@ export default function MultiFileUpload({
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             name: file.name,
             type: fileType,
-            mimeType: file.type,
-            size: file.size,
+            mimeType: processedFile.type,
+            size: processedFile.size,
             data: result as string,
           };
 
@@ -112,9 +132,9 @@ export default function MultiFileUpload({
         reader.onerror = () => resolve(null);
 
         if (fileType === 'csv') {
-          reader.readAsText(file);
+          reader.readAsText(processedFile);
         } else {
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(processedFile);
         }
       });
     },
@@ -132,15 +152,25 @@ export default function MultiFileUpload({
       }
 
       const filesToProcess = Array.from(fileList).slice(0, remainingSlots);
-      const processedFiles = await Promise.all(
-        filesToProcess.map((file) => processFile(file))
-      );
+      const hasImages = filesToProcess.some((f) => f.type.startsWith('image/'));
 
-      const validFiles = processedFiles.filter(
-        (f): f is UploadedFile => f !== null
-      );
-      if (validFiles.length > 0) {
-        onFilesChange([...files, ...validFiles]);
+      if (hasImages) {
+        setIsCompressing(true);
+      }
+
+      try {
+        const processedFiles = await Promise.all(
+          filesToProcess.map((file) => processFile(file))
+        );
+
+        const validFiles = processedFiles.filter(
+          (f): f is UploadedFile => f !== null
+        );
+        if (validFiles.length > 0) {
+          onFilesChange([...files, ...validFiles]);
+        }
+      } finally {
+        setIsCompressing(false);
       }
     },
     [files, maxFiles, onFilesChange, processFile]
@@ -239,11 +269,15 @@ export default function MultiFileUpload({
         />
 
         <div className="text-4xl mb-3">
-          {isDragging ? '📥' : '📁'}
+          {isCompressing ? '⏳' : isDragging ? '📥' : '📁'}
         </div>
 
         <p className="text-gray-600 text-center">
-          {isDragging ? (
+          {isCompressing ? (
+            <span className="text-indigo-600 font-medium">
+              이미지 압축 중...
+            </span>
+          ) : isDragging ? (
             <span className="text-indigo-600 font-medium">
               파일을 여기에 놓으세요
             </span>

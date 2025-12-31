@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { analyzeLevelTest } from '@/lib/gemini';
+import { applyRateLimit } from '@/lib/rate-limiter';
+import { levelTestRequestSchema, validateRequest } from '@/lib/validations';
 import type { LevelTestAnalysis } from '@/types';
+
+// Route Segment Config: 2분 타임아웃 (Vercel Pro/Enterprise)
+export const maxDuration = 120;
 
 interface AnalyzeLevelTestRequest {
   studentId: number;
@@ -37,6 +42,15 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<AnalyzeLevelTestResponse>> {
   try {
+    // 0. Rate Limiting: AI 분석은 분당 5회 제한
+    const rateLimitResult = applyRateLimit(request, 'AI_ANALYSIS');
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { success: false, error: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      );
+    }
+
     // 1. 인증 확인
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -62,16 +76,16 @@ export async function POST(
       );
     }
 
-    // 2. 요청 데이터 파싱
-    const body: AnalyzeLevelTestRequest = await request.json();
-    const { studentId, testImages, additionalInfo } = body;
-
-    if (!studentId || !testImages || testImages.length === 0) {
+    // 2. 입력 데이터 검증 (Zod)
+    const rawBody = await request.json();
+    const validation = validateRequest(levelTestRequestSchema, rawBody);
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: '학생 ID와 테스트 이미지가 필요합니다.' },
+        { success: false, error: validation.error },
         { status: 400 }
       );
     }
+    const { studentId, testImages, additionalInfo } = validation.data;
 
     // 3. 학생 정보 조회
     const { data: student, error: studentError } = await supabase

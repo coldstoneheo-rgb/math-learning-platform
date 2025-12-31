@@ -2,10 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { analyzeTestPaperWithContext, GeminiApiError, GeminiParseError } from '@/lib/gemini';
 import { buildAnalysisContext } from '@/lib/context-builder';
-import type { AnalyzeApiRequest, AnalyzeApiResponse, ReportType } from '@/types';
+import { applyRateLimit } from '@/lib/rate-limiter';
+import { analyzeRequestSchema, validateRequest } from '@/lib/validations';
+import type { AnalyzeApiResponse, ReportType, TestAnalysisFormData } from '@/types';
+
+// Route Segment Config: 2분 타임아웃 (Vercel Pro/Enterprise)
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeApiResponse>> {
   try {
+    // Rate Limiting: AI 분석은 분당 5회 제한
+    const rateLimitResult = applyRateLimit(request, 'AI_ANALYSIS');
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { success: false, error: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -27,11 +41,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
       return NextResponse.json({ success: false, error: '선생님만 분석을 실행할 수 있습니다.' }, { status: 403 });
     }
 
-    const body: AnalyzeApiRequest = await request.json();
-
-    if (!body.studentName || !body.formData || !body.currentImages?.length) {
-      return NextResponse.json({ success: false, error: '필수 정보가 누락되었습니다.' }, { status: 400 });
+    // 입력 데이터 검증 (Zod)
+    const rawBody = await request.json();
+    const validation = validateRequest(analyzeRequestSchema, rawBody);
+    if (!validation.success) {
+      return NextResponse.json({ success: false, error: validation.error }, { status: 400 });
     }
+    const body = validation.data;
 
     // 학생 ID가 있으면 컨텍스트 빌드
     let context = undefined;
@@ -43,7 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
     // 컨텍스트를 포함한 분석 실행
     const analysisData = await analyzeTestPaperWithContext(
       body.studentName,
-      body.formData,
+      body.formData as TestAnalysisFormData,
       body.currentImages,
       body.pastImages || [],
       body.reportType || 'test',

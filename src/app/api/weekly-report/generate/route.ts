@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateWeeklyReport, WeeklyReportInput } from '@/lib/gemini';
 import { buildAnalysisContext } from '@/lib/context-builder';
+import { applyRateLimit } from '@/lib/rate-limiter';
+import { weeklyReportRequestSchema, validateRequest } from '@/lib/validations';
 import type { WeeklyReportAnalysis } from '@/types';
+
+// Route Segment Config: 2분 타임아웃 (Vercel Pro/Enterprise)
+export const maxDuration = 120;
 
 interface GenerateWeeklyReportRequest {
   studentId: number;
@@ -30,6 +35,15 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<GenerateWeeklyReportResponse>> {
   try {
+    // 0. Rate Limiting: AI 분석은 분당 5회 제한
+    const rateLimitResult = applyRateLimit(request, 'AI_ANALYSIS');
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { success: false, error: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      );
+    }
+
     // 1. 인증 확인
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -55,16 +69,16 @@ export async function POST(
       );
     }
 
-    // 2. 요청 데이터 파싱
-    const body: GenerateWeeklyReportRequest = await request.json();
-    const { studentId, year, weekNumber, startDate, endDate, teacherNotes } = body;
-
-    if (!studentId || !year || !weekNumber || !startDate || !endDate) {
+    // 2. 입력 데이터 검증 (Zod)
+    const rawBody = await request.json();
+    const validation = validateRequest(weeklyReportRequestSchema, rawBody);
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: '학생 ID, 연도, 주차, 시작일, 종료일이 필요합니다.' },
+        { success: false, error: validation.error },
         { status: 400 }
       );
     }
+    const { studentId, year, weekNumber, startDate, endDate, teacherNotes } = validation.data;
 
     // 3. 학생 정보 조회
     const { data: student, error: studentError } = await supabase
