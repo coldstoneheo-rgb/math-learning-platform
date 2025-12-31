@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
 import type { Student, User, LevelTestAnalysis, StudentMetaProfile, AnalysisData } from '@/types';
 
 export default function NewLevelTestPage() {
@@ -16,7 +17,7 @@ export default function NewLevelTestPage() {
   const [error, setError] = useState('');
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
-  const [images, setImages] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState({
     previousExperience: '',
     parentExpectations: '',
@@ -60,22 +61,15 @@ export default function NewLevelTestPage() {
     setLoading(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        setImages(prev => [...prev, base64]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+  // 업로드된 파일에서 이미지 base64 추출
+  const getImageBase64List = (): string[] => {
+    return uploadedFiles
+      .filter(f => f.type === 'image')
+      .map(f => {
+        // data:image/jpeg;base64,xxxx 형식에서 base64 부분만 추출
+        const base64Data = f.data.split(',')[1] || f.data;
+        return base64Data;
+      });
   };
 
   const handleAnalyze = async () => {
@@ -86,7 +80,8 @@ export default function NewLevelTestPage() {
       return;
     }
 
-    if (images.length === 0) {
+    const imageFiles = uploadedFiles.filter(f => f.type === 'image');
+    if (imageFiles.length === 0) {
       setError('테스트 이미지를 업로드해주세요.');
       return;
     }
@@ -94,6 +89,7 @@ export default function NewLevelTestPage() {
     setAnalyzing(true);
 
     try {
+      const images = getImageBase64List();
       const response = await fetch('/api/level-test/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -378,57 +374,29 @@ export default function NewLevelTestPage() {
             </div>
           </div>
 
-          {/* 테스트 이미지 업로드 */}
+          {/* 테스트 파일 업로드 */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              3. 테스트 이미지 업로드 <span className="text-red-500">*</span>
+              3. 테스트 파일 업로드 <span className="text-red-500">*</span>
             </h2>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-                id="image-upload"
-              />
-              <label
-                htmlFor="image-upload"
-                className="cursor-pointer flex flex-col items-center"
-              >
-                <span className="text-4xl mb-2">📷</span>
-                <span className="text-gray-600">레벨 테스트 답안지 이미지를 업로드하세요</span>
-                <span className="text-sm text-gray-400 mt-1">여러 장 업로드 가능</span>
-              </label>
-            </div>
-
-            {images.length > 0 && (
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                {images.map((img, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={`data:image/jpeg;base64,${img}`}
-                      alt={`테스트 이미지 ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border"
-                    />
-                    <button
-                      onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-sm hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <MultiFileUpload
+              files={uploadedFiles}
+              onFilesChange={setUploadedFiles}
+              acceptedTypes={['image', 'pdf']}
+              maxFiles={20}
+              maxSizeMB={10}
+              label="레벨 테스트 답안지"
+              helpText="이미지(JPG, PNG) 또는 PDF 파일을 드래그하거나 클릭하여 업로드하세요. 이미지는 자동 압축됩니다."
+              required
+            />
           </div>
 
           {/* 분석 버튼 */}
           {!analysisResult && (
             <button
               onClick={handleAnalyze}
-              disabled={analyzing || !selectedStudentId || images.length === 0}
+              disabled={analyzing || !selectedStudentId || uploadedFiles.filter(f => f.type === 'image').length === 0}
               className="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {analyzing ? (
