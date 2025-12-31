@@ -12,6 +12,7 @@ import type {
   SemiAnnualReportAnalysis,
   AnnualReportAnalysis,
 } from '@/types';
+import { routeModel, createRoutingLog, type ModelRoutingContext } from './model-router';
 
 export class GeminiApiError extends Error {
   constructor(message: string, public readonly cause?: unknown) {
@@ -491,6 +492,14 @@ export async function analyzeTestPaper(
 
 /**
  * 컨텍스트와 리포트 타입을 지원하는 시험 분석 함수
+ *
+ * @param studentName - 학생 이름
+ * @param formData - 시험 정보
+ * @param currentImages - 현재 시험 이미지들 (base64)
+ * @param pastImages - 과거 시험 이미지들 (base64)
+ * @param reportType - 리포트 유형
+ * @param context - 분석 컨텍스트 데이터
+ * @param studentGrade - 학년 (1-12, 모델 라우팅에 사용)
  */
 export async function analyzeTestPaperWithContext(
   studentName: string,
@@ -498,9 +507,22 @@ export async function analyzeTestPaperWithContext(
   currentImages: string[],
   pastImages: string[] = [],
   reportType: ReportType = 'test',
-  context?: AnalysisContextData
+  context?: AnalysisContextData,
+  studentGrade?: number
 ): Promise<AnalysisData> {
   const ai = getGeminiClient();
+
+  // ===== 모델 라우팅 (Hybrid Routing) =====
+  const routingContext: ModelRoutingContext = {
+    reportType,
+    studentGrade,
+    testName: formData.testName,
+  };
+  const selectedModel = routeModel(routingContext);
+
+  // 라우팅 로그 (디버깅/모니터링용)
+  const routingLog = createRoutingLog(routingContext);
+  console.log('[Model Routing]', JSON.stringify(routingLog));
 
   const imageParts = currentImages.map(base64 => ({
     inlineData: { data: base64, mimeType: 'image/jpeg' }
@@ -555,7 +577,7 @@ ${context ? '위에 제공된 컨텍스트 데이터를 적극 활용하여 연�
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: systemPrompt }] },
         { role: 'model', parts: [{ text: '네, 이해했습니다. 성장 서사 관점에서 5가지 관점의 심층 분석과 5요소 개선 전략을 포함하여 분석하겠습니다. 컨텍스트 데이터가 있다면 이전 분석과의 연속성을 유지하겠습니다.' }] },
@@ -587,6 +609,7 @@ ${context ? '위에 제공된 컨텍스트 데이터를 적극 활용하여 연�
 
 /**
  * 레벨 테스트 분석 (신규 학생 Baseline 설정)
+ * High-Stakes: Pro 모델 사용
  */
 export async function analyzeLevelTest(
   studentName: string,
@@ -599,6 +622,10 @@ export async function analyzeLevelTest(
   }
 ): Promise<LevelTestAnalysis> {
   const ai = getGeminiClient();
+
+  // ===== 모델 라우팅: level_test = Pro 모델 =====
+  const selectedModel = routeModel({ reportType: 'level_test', studentGrade: grade });
+  console.log('[Model Routing] level_test ->', selectedModel);
 
   const imageParts = testImages.map(base64 => ({
     inlineData: { data: base64, mimeType: 'image/jpeg' }
@@ -640,7 +667,7 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: LEVEL_TEST_PROMPT }] },
         { role: 'model', parts: [{ text: '네, 레벨 테스트 분석을 시작합니다. Baseline 설정에 집중하여 학생의 현재 상태를 종합적으로 진단하겠습니다.' }] },
@@ -689,6 +716,10 @@ export async function generateWeeklyReport(
   context?: AnalysisContextData
 ): Promise<WeeklyReportAnalysis> {
   const ai = getGeminiClient();
+
+  // ===== 모델 라우팅: weekly = Flash 모델 =====
+  const selectedModel = routeModel({ reportType: 'weekly' });
+  console.log('[Model Routing] weekly ->', selectedModel);
 
   const contextPrompt = buildContextPrompt(context);
 
@@ -749,7 +780,7 @@ ${input.teacherNotes}
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: WEEKLY_REPORT_PROMPT }] },
         { role: 'model', parts: [{ text: '네, 주간 리포트를 생성합니다. Micro Loop 관점에서 지난주와의 연속성을 유지하며 분석하겠습니다.' }] },
@@ -809,6 +840,10 @@ export async function generateMonthlyReport(
   context?: AnalysisContextData
 ): Promise<MonthlyReportAnalysis> {
   const ai = getGeminiClient();
+
+  // ===== 모델 라우팅: monthly = Flash 모델 =====
+  const selectedModel = routeModel({ reportType: 'monthly' });
+  console.log('[Model Routing] monthly ->', selectedModel);
 
   const contextPrompt = buildContextPrompt(context);
 
@@ -884,7 +919,7 @@ ${input.teacherNotes}
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: MONTHLY_REPORT_PROMPT }] },
         { role: 'model', parts: [{ text: '네, 월간 리포트를 생성합니다. 주간 리포트들을 종합하고 Micro Loop 관점에서 한 달간의 성장을 분석하겠습니다.' }] },
@@ -935,6 +970,10 @@ export async function generateSemiAnnualReport(
   context?: AnalysisContextData
 ): Promise<SemiAnnualReportAnalysis> {
   const ai = getGeminiClient();
+
+  // ===== 모델 라우팅: semi_annual = Pro 모델 (High-Stakes) =====
+  const selectedModel = routeModel({ reportType: 'semi_annual' });
+  console.log('[Model Routing] semi_annual ->', selectedModel);
 
   const contextPrompt = buildContextPrompt(context);
 
@@ -1003,7 +1042,7 @@ ${input.metaProfile ? `
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: SEMI_ANNUAL_REPORT_PROMPT }] },
         { role: 'model', parts: [{ text: '네, 반기 리포트를 생성합니다. Macro Loop 관점에서 6개월간의 성장 궤적을 종합 분석하겠습니다.' }] },
@@ -1059,6 +1098,10 @@ export async function generateAnnualReport(
   context?: AnalysisContextData
 ): Promise<AnnualReportAnalysis> {
   const ai = getGeminiClient();
+
+  // ===== 모델 라우팅: annual = Pro 모델 (High-Stakes) =====
+  const selectedModel = routeModel({ reportType: 'annual' });
+  console.log('[Model Routing] annual ->', selectedModel);
 
   const contextPrompt = buildContextPrompt(context);
 
@@ -1136,7 +1179,7 @@ ${input.metaProfile ? `
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: ANNUAL_REPORT_PROMPT }] },
         { role: 'model', parts: [{ text: '네, 연간 리포트를 생성합니다. 1년간의 성장 스토리를 완성하고 다음 학년을 위한 준비 상태를 종합 평가하겠습니다.' }] },
@@ -1164,6 +1207,7 @@ ${input.metaProfile ? `
 
 /**
  * 시험 분석 결과를 기반으로 메타프로필 업데이트 제안 생성
+ * 메타프로필 업데이트는 리포트 타입에 따라 모델 선택
  */
 export async function generateMetaProfileUpdate(
   currentProfile: StudentMetaProfile | null,
@@ -1171,6 +1215,10 @@ export async function generateMetaProfileUpdate(
   reportType: ReportType
 ): Promise<Partial<StudentMetaProfile>> {
   const ai = getGeminiClient();
+
+  // ===== 모델 라우팅: 리포트 타입에 따라 모델 선택 =====
+  const selectedModel = routeModel({ reportType });
+  console.log('[Model Routing] metaProfileUpdate ->', selectedModel);
 
   const userPrompt = `
 ## 메타프로필 업데이트 요청
@@ -1193,7 +1241,7 @@ ${JSON.stringify(analysisData, null, 2)}
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: userPrompt }] }
       ],
