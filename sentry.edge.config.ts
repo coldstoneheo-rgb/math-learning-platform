@@ -1,51 +1,20 @@
-/**
- * Sentry Edge Configuration
- *
- * Edge Runtime (Middleware 등) 에러 추적 설정
- */
+// This file configures the initialization of Sentry for edge features (middleware, edge routes, and so on).
+// The config you add here will be used whenever one of the edge features is loaded.
+// Note that this config is unrelated to the Vercel Edge Runtime and is also required when running locally.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: "https://b85b3a92c288438c9ea2818a2b6b8f31@o4510628173250560.ingest.us.sentry.io/4510628179869696",
 
-  // 환경별 설정
-  environment: process.env.NODE_ENV,
+  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
+  tracesSampleRate: 1,
 
-  // Edge는 경량 설정
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  // Enable logs to be sent to Sentry
+  enableLogs: true,
 
-  // 디버그 모드 비활성화 (Edge에서는 로깅 제한)
-  debug: false,
-
-  // 릴리즈 버전 추적
-  release: process.env.npm_package_version,
-
-  // 민감한 데이터 필터링
-  beforeSend(event) {
-    if (process.env.NODE_ENV === 'development') {
-      return null;
-    }
-
-    // 인증 헤더 제거
-    if (event.request?.headers) {
-      const headers = event.request.headers as Record<string, string>;
-      if (headers.authorization) {
-        headers.authorization = '[REDACTED]';
-      }
-      if (headers.cookie) {
-        headers.cookie = '[REDACTED]';
-      }
-    }
-
-    return event;
-  },
-
-  // 태그 추가
-  initialScope: {
-    tags: {
-      app: 'math-learning-platform',
-      side: 'edge',
-    },
-  },
+  // Enable sending user PII (Personally Identifiable Information)
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
+  sendDefaultPii: true,
 });
