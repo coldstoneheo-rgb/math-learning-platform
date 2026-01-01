@@ -611,10 +611,15 @@ ${context ? '위에 제공된 컨텍스트 데이터를 적극 활용하여 연�
  * 레벨 테스트 분석 (신규 학생 Baseline 설정)
  * High-Stakes: Pro 모델 사용
  */
+interface FileData {
+  data: string;
+  mimeType: string;
+}
+
 export async function analyzeLevelTest(
   studentName: string,
   grade: number,
-  testImages: string[],
+  testFiles: FileData[],  // { data, mimeType }[] 형식 (이미지 + PDF 지원)
   additionalInfo?: {
     school?: string;
     previousExperience?: string;
@@ -627,8 +632,9 @@ export async function analyzeLevelTest(
   const selectedModel = routeModel({ reportType: 'level_test', studentGrade: grade });
   console.log('[Model Routing] level_test ->', selectedModel);
 
-  const imageParts = testImages.map(base64 => ({
-    inlineData: { data: base64, mimeType: 'image/jpeg' }
+  // 파일별로 올바른 MIME 타입 적용
+  const fileParts = testFiles.map(file => ({
+    inlineData: { data: file.data, mimeType: file.mimeType }
   }));
 
   const userPrompt = `
@@ -671,7 +677,7 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
       contents: [
         { role: 'user', parts: [{ text: LEVEL_TEST_PROMPT }] },
         { role: 'model', parts: [{ text: '네, 레벨 테스트 분석을 시작합니다. Baseline 설정에 집중하여 학생의 현재 상태를 종합적으로 진단하겠습니다.' }] },
-        { role: 'user', parts: [{ text: userPrompt }, ...imageParts] }
+        { role: 'user', parts: [{ text: userPrompt }, ...fileParts] }
       ],
       config: {
         responseMimeType: 'application/json',
