@@ -207,21 +207,23 @@ export default function ParentsPage() {
     if (!confirm(`"${parent.name}" 학부모 계정을 삭제하시겠습니까?`)) return;
 
     try {
-      const supabase = createClient();
+      // API Route를 통해 삭제 (service_role 사용)
+      const response = await fetch('/api/auth/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: parent.id }),
+      });
 
-      // users 테이블에서 삭제
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', parent.id);
-
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '삭제 실패');
+      }
 
       setSuccessMessage('학부모 계정이 삭제되었습니다.');
       await loadParents();
     } catch (err: any) {
       console.error('삭제 오류:', err);
-      alert('삭제 중 오류가 발생했습니다.');
+      alert(err.message || '삭제 중 오류가 발생했습니다.');
     }
   };
 
