@@ -45,7 +45,23 @@ export default function SignupPage() {
       }
 
       if (data.user) {
-        await supabase.from('users').update({ name: formData.name, role: formData.role }).eq('id', data.user.id);
+        // API Route를 통해 users 테이블에 레코드 생성 (service_role 사용)
+        const createUserResponse = await fetch('/api/auth/create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: data.user.id,
+            email: formData.email,
+            name: formData.name,
+            role: formData.role,
+          }),
+        });
+
+        if (!createUserResponse.ok) {
+          const errorData = await createUserResponse.json();
+          throw new Error(errorData.error || 'Failed to create user profile');
+        }
+
         setSuccess(true);
         if (!data.session) setTimeout(() => router.push('/login'), 3000);
         else router.push(formData.role === 'teacher' ? '/admin' : '/parent');

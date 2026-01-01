@@ -123,17 +123,22 @@ export default function ParentsPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('계정 생성 실패');
 
-      // 2. users 테이블에 정보 저장 (upsert: 트리거가 이미 생성했을 수 있음)
-      const { error: userError } = await supabase
-        .from('users')
-        .upsert({
-          id: authData.user.id,
+      // 2. API Route를 통해 users 테이블에 레코드 생성 (service_role 사용)
+      const createUserResponse = await fetch('/api/auth/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: authData.user.id,
           email: formData.email,
           name: formData.name,
           role: 'parent',
-        }, { onConflict: 'id' });
+        }),
+      });
 
-      if (userError) throw userError;
+      if (!createUserResponse.ok) {
+        const errorData = await createUserResponse.json();
+        throw new Error(errorData.error || 'Failed to create user profile');
+      }
 
       setSuccessMessage(`학부모 계정이 생성되었습니다. (${formData.email})`);
       await loadParents();

@@ -155,19 +155,21 @@ CREATE POLICY "Parents can view children's achievements"
     );
 
 -- 정책: 학생은 본인 배지 조회 가능
-CREATE POLICY "Students can view own achievements"
-    ON student_achievements
-    FOR SELECT
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM students s
-            JOIN users u ON s.user_id = u.id
-            WHERE s.id = student_achievements.student_id
-            AND u.id = auth.uid()
-            AND u.role = 'student'
-        )
-    );
+-- 주의: 현재 students 테이블에 user_id 컬럼이 없으므로,
+-- 학생 로그인 기능 구현 시 별도 마이그레이션 필요
+-- CREATE POLICY "Students can view own achievements"
+--     ON student_achievements
+--     FOR SELECT
+--     TO authenticated
+--     USING (
+--         EXISTS (
+--             SELECT 1 FROM students s
+--             JOIN users u ON s.user_id = u.id
+--             WHERE s.id = student_achievements.student_id
+--             AND u.id = auth.uid()
+--             AND u.role = 'student'
+--         )
+--     );
 
 -- ============================================
 -- 5. 기본 배지 데이터 삽입
