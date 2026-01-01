@@ -61,15 +61,20 @@ export default function NewLevelTestPage() {
     setLoading(false);
   };
 
-  // 업로드된 파일에서 이미지 base64 추출
-  const getImageBase64List = (): string[] => {
+  // 업로드된 파일에서 이미지/PDF base64 추출
+  const getFileBase64List = (): string[] => {
     return uploadedFiles
-      .filter(f => f.type === 'image')
+      .filter(f => f.type === 'image' || f.type === 'pdf')
       .map(f => {
-        // data:image/jpeg;base64,xxxx 형식에서 base64 부분만 추출
+        // data:image/jpeg;base64,xxxx 또는 data:application/pdf;base64,xxxx 형식에서 base64 부분만 추출
         const base64Data = f.data.split(',')[1] || f.data;
         return base64Data;
       });
+  };
+
+  // 분석 가능한 파일이 있는지 확인
+  const hasAnalyzableFiles = (): boolean => {
+    return uploadedFiles.some(f => f.type === 'image' || f.type === 'pdf');
   };
 
   const handleAnalyze = async () => {
@@ -80,16 +85,15 @@ export default function NewLevelTestPage() {
       return;
     }
 
-    const imageFiles = uploadedFiles.filter(f => f.type === 'image');
-    if (imageFiles.length === 0) {
-      setError('테스트 이미지를 업로드해주세요.');
+    if (!hasAnalyzableFiles()) {
+      setError('테스트 이미지 또는 PDF를 업로드해주세요.');
       return;
     }
 
     setAnalyzing(true);
 
     try {
-      const images = getImageBase64List();
+      const images = getFileBase64List();
       const response = await fetch('/api/level-test/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -396,7 +400,7 @@ export default function NewLevelTestPage() {
           {!analysisResult && (
             <button
               onClick={handleAnalyze}
-              disabled={analyzing || !selectedStudentId || uploadedFiles.filter(f => f.type === 'image').length === 0}
+              disabled={analyzing || !selectedStudentId || !hasAnalyzableFiles()}
               className="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {analyzing ? (
