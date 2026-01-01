@@ -8,9 +8,14 @@ import type { LevelTestAnalysis } from '@/types';
 // Route Segment Config: 2분 타임아웃 (Vercel Pro/Enterprise)
 export const maxDuration = 120;
 
+interface FileData {
+  data: string;
+  mimeType: string;
+}
+
 interface AnalyzeLevelTestRequest {
   studentId: number;
-  testImages: string[]; // base64 encoded images
+  testFiles: FileData[]; // base64 encoded files with mimeType
   additionalInfo?: {
     school?: string;
     previousExperience?: string;
@@ -85,7 +90,7 @@ export async function POST(
         { status: 400 }
       );
     }
-    const { studentId, testImages, additionalInfo } = validation.data;
+    const { studentId, testFiles, additionalInfo } = validation.data;
 
     // 3. 학생 정보 조회
     const { data: student, error: studentError } = await supabase
@@ -114,7 +119,7 @@ export async function POST(
     const analysis = await analyzeLevelTest(
       student.name,
       student.grade,
-      testImages,
+      testFiles,  // { data, mimeType }[] 형식 전달
       {
         school: additionalInfo?.school || student.school || undefined,
         previousExperience: additionalInfo?.previousExperience,

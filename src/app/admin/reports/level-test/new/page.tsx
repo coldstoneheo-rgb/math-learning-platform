@@ -61,14 +61,16 @@ export default function NewLevelTestPage() {
     setLoading(false);
   };
 
-  // 업로드된 파일에서 이미지/PDF base64 추출
-  const getFileBase64List = (): string[] => {
+  // 업로드된 파일에서 이미지/PDF base64와 MIME 타입 추출
+  const getFileDataList = (): { data: string; mimeType: string }[] => {
     return uploadedFiles
       .filter(f => f.type === 'image' || f.type === 'pdf')
       .map(f => {
         // data:image/jpeg;base64,xxxx 또는 data:application/pdf;base64,xxxx 형식에서 base64 부분만 추출
         const base64Data = f.data.split(',')[1] || f.data;
-        return base64Data;
+        // MIME 타입 결정
+        const mimeType = f.type === 'pdf' ? 'application/pdf' : 'image/jpeg';
+        return { data: base64Data, mimeType };
       });
   };
 
@@ -93,13 +95,13 @@ export default function NewLevelTestPage() {
     setAnalyzing(true);
 
     try {
-      const images = getFileBase64List();
+      const testFiles = getFileDataList();
       const response = await fetch('/api/level-test/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: selectedStudentId,
-          testImages: images,
+          testFiles: testFiles,  // { data, mimeType }[] 형식으로 전송
           additionalInfo: {
             previousExperience: additionalInfo.previousExperience || undefined,
             parentExpectations: additionalInfo.parentExpectations || undefined,

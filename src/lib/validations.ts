@@ -49,6 +49,20 @@ export const imageArraySchema = z.array(base64ImageSchema)
   .min(1, '최소 1개의 이미지가 필요합니다')
   .max(20, '최대 20개의 이미지만 허용됩니다');
 
+/** 파일 데이터 (이미지 또는 PDF) */
+export const fileDataSchema = z.object({
+  data: z.string().refine(
+    (val) => val.length * 0.75 < 10 * 1024 * 1024, // 10MB
+    { message: '파일 크기가 너무 큽니다 (최대 10MB)' }
+  ),
+  mimeType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']),
+});
+
+/** 파일 배열 (최대 20개) */
+export const fileArraySchema = z.array(fileDataSchema)
+  .min(1, '최소 1개의 파일이 필요합니다')
+  .max(20, '최대 20개의 파일만 허용됩니다');
+
 // ===== 시험 분석 API 스키마 =====
 
 export const testFormDataSchema = z.object({
@@ -86,7 +100,7 @@ export const analyzeRequestSchema = z.object({
 
 export const levelTestRequestSchema = z.object({
   studentId: positiveIntSchema,
-  testImages: imageArraySchema,
+  testFiles: fileArraySchema,  // { data, mimeType }[] 형식 (이미지 + PDF 지원)
   additionalInfo: z.object({
     school: z.string().max(100).optional(),
     previousExperience: z.string().max(1000).optional(),
