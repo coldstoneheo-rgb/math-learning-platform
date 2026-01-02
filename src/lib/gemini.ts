@@ -656,17 +656,96 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
 
 응답은 LevelTestAnalysis 스키마를 따라주세요.`;
 
+  // Gemini 3는 스키마 검증이 엄격함 - 모든 object/array에 상세 정의 필요
   const levelTestSchema = {
     type: 'object',
     properties: {
-      testInfo: { type: 'object' },
-      testResults: { type: 'object' },
-      domainDiagnosis: { type: 'array' },
-      gradeLevelAssessment: { type: 'object' },
-      prerequisiteGaps: { type: 'array' },
-      learningStyleDiagnosis: { type: 'object' },
-      initialBaseline: { type: 'object' },
-      suggestedCurriculum: { type: 'array' },
+      testInfo: {
+        type: 'object',
+        properties: {
+          testName: { type: 'string' },
+          testDate: { type: 'string' },
+          totalQuestions: { type: 'number' },
+          maxScore: { type: 'number' },
+          testRange: { type: 'string' }
+        }
+      },
+      testResults: {
+        type: 'object',
+        properties: {
+          totalScore: { type: 'number' },
+          maxScore: { type: 'number' },
+          scorePercentage: { type: 'number' },
+          correctCount: { type: 'number' },
+          incorrectCount: { type: 'number' }
+        }
+      },
+      domainDiagnosis: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            domain: { type: 'string' },
+            score: { type: 'number' },
+            maxScore: { type: 'number' },
+            level: { type: 'string' },
+            analysis: { type: 'string' }
+          }
+        }
+      },
+      gradeLevelAssessment: {
+        type: 'object',
+        properties: {
+          currentGrade: { type: 'number' },
+          assessedLevel: { type: 'string' },
+          gradeEquivalent: { type: 'number' },
+          percentile: { type: 'number' },
+          analysis: { type: 'string' }
+        }
+      },
+      prerequisiteGaps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            concept: { type: 'string' },
+            expectedGrade: { type: 'number' },
+            severity: { type: 'string' },
+            recommendation: { type: 'string' }
+          }
+        }
+      },
+      learningStyleDiagnosis: {
+        type: 'object',
+        properties: {
+          primaryStyle: { type: 'string' },
+          secondaryStyle: { type: 'string' },
+          characteristics: { type: 'string' },
+          recommendations: { type: 'string' }
+        }
+      },
+      initialBaseline: {
+        type: 'object',
+        properties: {
+          overallLevel: { type: 'string' },
+          strengths: { type: 'string' },
+          weaknesses: { type: 'string' },
+          errorPatterns: { type: 'string' },
+          learningPotential: { type: 'string' }
+        }
+      },
+      suggestedCurriculum: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            month: { type: 'number' },
+            focus: { type: 'string' },
+            goals: { type: 'string' },
+            materials: { type: 'string' }
+          }
+        }
+      },
       parentBriefing: { type: 'string' }
     }
   };
