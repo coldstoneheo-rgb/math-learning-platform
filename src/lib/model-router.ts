@@ -44,8 +44,8 @@ interface ModelConfig {
  */
 function getModelConfig(): ModelConfig {
   return {
-    proModel: process.env.GEMINI_MODEL_PRO || 'gemini-1.5-pro',
-    flashModel: process.env.GEMINI_MODEL_FLASH || 'gemini-1.5-flash',
+    proModel: process.env.GEMINI_MODEL_PRO || 'gemini-2.5-pro',
+    flashModel: process.env.GEMINI_MODEL_FLASH || 'gemini-2.5-flash',
     testDefaultModel: (process.env.GEMINI_TEST_DEFAULT_MODEL || 'flash') as ModelTier,
     proGradeThreshold: parseInt(process.env.GEMINI_PRO_GRADE_THRESHOLD || '10', 10),
     proTestTypes: (process.env.GEMINI_PRO_TEST_TYPES || '모의고사,수능,기말고사,중간고사')
