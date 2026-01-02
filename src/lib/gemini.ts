@@ -672,6 +672,9 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
   };
 
   try {
+    console.log(`[Gemini] Calling model: ${selectedModel}`);
+    console.log(`[Gemini] Files count: ${fileParts.length}`);
+
     const response = await ai.models.generateContent({
       model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
@@ -685,11 +688,18 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
       }
     });
 
+    console.log('[Gemini] Response received');
     const text = response.text;
     if (!text) throw new GeminiApiError('Gemini API 응답이 비어있습니다.');
 
     return JSON.parse(text) as LevelTestAnalysis;
   } catch (error) {
+    console.error('[Gemini] Error in analyzeLevelTest:', error);
+    console.error('[Gemini] Error type:', error?.constructor?.name);
+    if (error instanceof Error) {
+      console.error('[Gemini] Error message:', error.message);
+      console.error('[Gemini] Error stack:', error.stack);
+    }
     if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
     throw new GeminiApiError('레벨 테스트 분석 중 오류가 발생했습니다.', error);
   }

@@ -114,25 +114,36 @@ export async function POST(
     }
 
     console.log(`[Level Test] Analyzing for ${student.name} (Grade ${student.grade})`);
+    console.log(`[Level Test] Files: ${testFiles.length} files, types: ${testFiles.map(f => f.mimeType).join(', ')}`);
 
     // 4. AI 분석 실행
-    const analysis = await analyzeLevelTest(
-      student.name,
-      student.grade,
-      testFiles,  // { data, mimeType }[] 형식 전달
-      {
-        school: additionalInfo?.school || student.school || undefined,
-        previousExperience: additionalInfo?.previousExperience,
-        parentExpectations: additionalInfo?.parentExpectations,
+    try {
+      const analysis = await analyzeLevelTest(
+        student.name,
+        student.grade,
+        testFiles,  // { data, mimeType }[] 형식 전달
+        {
+          school: additionalInfo?.school || student.school || undefined,
+          previousExperience: additionalInfo?.previousExperience,
+          parentExpectations: additionalInfo?.parentExpectations,
+        }
+      );
+
+      console.log('[Level Test] Analysis completed successfully');
+
+      return NextResponse.json({
+        success: true,
+        analysis,
+      });
+    } catch (aiError) {
+      console.error('[Level Test] AI Analysis error:', aiError);
+      console.error('[Level Test] Error name:', aiError instanceof Error ? aiError.name : 'Unknown');
+      console.error('[Level Test] Error message:', aiError instanceof Error ? aiError.message : String(aiError));
+      if (aiError instanceof Error && 'cause' in aiError) {
+        console.error('[Level Test] Error cause:', (aiError as { cause?: unknown }).cause);
       }
-    );
-
-    console.log('[Level Test] Analysis completed successfully');
-
-    return NextResponse.json({
-      success: true,
-      analysis,
-    });
+      throw aiError;
+    }
 
   } catch (error) {
     console.error('[Level Test] API error:', error);
