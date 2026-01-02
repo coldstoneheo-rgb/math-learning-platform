@@ -109,7 +109,22 @@ export default function NewLevelTestPage() {
         }),
       });
 
+      // 응답이 JSON인지 먼저 확인
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response:', textResponse);
+        if (response.status === 504) {
+          throw new Error('분석 시간이 초과되었습니다. 파일 크기를 줄여 다시 시도해주세요.');
+        }
+        throw new Error(`서버 오류가 발생했습니다. (${response.status})`);
+      }
+
       const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || `서버 오류 (${response.status})`);
+      }
 
       if (result.success && result.analysis) {
         setAnalysisResult(result.analysis);
@@ -118,7 +133,7 @@ export default function NewLevelTestPage() {
       }
     } catch (err) {
       console.error('분석 오류:', err);
-      setError('분석 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '분석 중 오류가 발생했습니다.');
     } finally {
       setAnalyzing(false);
     }
