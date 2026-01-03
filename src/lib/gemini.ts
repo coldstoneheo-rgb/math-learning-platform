@@ -662,6 +662,8 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
 6. 맞춤 커리큘럼 제안 (6개월)
 7. 부모님 브리핑
 
+**중요: 모든 'analysis' 필드는 간결하고 요약된 형태로 작성하세요. 토큰 제한으로 인한 응답 잘림을 방지하기 위해 긴 단락 대신 핵심만 전달하세요. 각 분석 항목은 2-3문장 이내로 작성하세요.**
+
 응답은 LevelTestAnalysis 스키마를 따라주세요.`;
 
   // Gemini 3는 스키마 검증이 엄격함 - 모든 object/array에 상세 정의 필요
@@ -779,7 +781,8 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
     const text = response.text;
     if (!text) throw new GeminiApiError('Gemini API 응답이 비어있습니다.');
 
-    return JSON.parse(text) as LevelTestAnalysis;
+    console.log('[Gemini] Response length:', text.length);
+    return cleanAndParseJSON<LevelTestAnalysis>(text);
   } catch (error) {
     console.error('[Gemini] Error in analyzeLevelTest:', error);
     console.error('[Gemini] Error type:', error?.constructor?.name);
@@ -1361,5 +1364,34 @@ ${JSON.stringify(analysisData, null, 2)}
     // 메타프로필 업데이트 실패 시 빈 객체 반환 (치명적 오류 아님)
     console.error('메타프로필 업데이트 생성 실패');
     return {};
+  }
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Helper function to extract and parse JSON from AI response.
+ * Handles Markdown code blocks and provides better error logging for truncated responses.
+ */
+function cleanAndParseJSON<T>(text: string): T {
+  // 1. Remove Markdown code blocks (```json ... ```)
+  let cleanText = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+
+  // 2. Trim whitespace
+  cleanText = cleanText.trim();
+
+  try {
+    return JSON.parse(cleanText) as T;
+  } catch (error) {
+    // Log detailed info for debugging truncation issues
+    console.error('[Gemini Parse Error] Failed to parse JSON.');
+    console.error('[Gemini Parse Error] Text length:', cleanText.length);
+    console.error('[Gemini Parse Error] Last 100 chars:', cleanText.slice(-100));
+    throw new GeminiParseError(
+      `JSON 파싱 실패 (응답 길이: ${cleanText.length}자). 응답이 잘렸을 수 있습니다.`,
+      cleanText
+    );
   }
 }
