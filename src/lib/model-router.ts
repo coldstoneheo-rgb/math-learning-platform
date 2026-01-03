@@ -44,9 +44,8 @@ interface ModelConfig {
  */
 function getModelConfig(): ModelConfig {
   return {
-    // Gemini 3 preview는 아직 느림 - 안정적인 2.0 버전 사용
-    proModel: process.env.GEMINI_MODEL_PRO || 'gemini-2.0-pro-exp',
-    flashModel: process.env.GEMINI_MODEL_FLASH || 'gemini-2.0-flash-exp',
+    proModel: process.env.GEMINI_MODEL_PRO || 'gemini-2.5-pro',
+    flashModel: process.env.GEMINI_MODEL_FLASH || 'gemini-2.5-flash',
     testDefaultModel: (process.env.GEMINI_TEST_DEFAULT_MODEL || 'flash') as ModelTier,
     proGradeThreshold: parseInt(process.env.GEMINI_PRO_GRADE_THRESHOLD || '10', 10),
     proTestTypes: (process.env.GEMINI_PRO_TEST_TYPES || '모의고사,수능,기말고사,중간고사')
