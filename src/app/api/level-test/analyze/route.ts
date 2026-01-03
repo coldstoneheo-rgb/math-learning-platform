@@ -8,14 +8,9 @@ import type { LevelTestAnalysis } from '@/types';
 // Route Segment Config: 2분 타임아웃 (Vercel Pro/Enterprise)
 export const maxDuration = 120;
 
-interface FileData {
-  data: string;
-  mimeType: string;
-}
-
 interface AnalyzeLevelTestRequest {
   studentId: number;
-  testFiles: FileData[]; // base64 encoded files with mimeType
+  testImages: string[]; // base64 encoded images (시험 분석과 동일한 형식)
   additionalInfo?: {
     school?: string;
     previousExperience?: string;
@@ -90,7 +85,7 @@ export async function POST(
         { status: 400 }
       );
     }
-    const { studentId, testFiles, additionalInfo } = validation.data;
+    const { studentId, testImages, additionalInfo } = validation.data;
 
     // 3. 학생 정보 조회
     const { data: student, error: studentError } = await supabase
@@ -114,14 +109,14 @@ export async function POST(
     }
 
     console.log(`[Level Test] Analyzing for ${student.name} (Grade ${student.grade})`);
-    console.log(`[Level Test] Files: ${testFiles.length} files, types: ${testFiles.map(f => f.mimeType).join(', ')}`);
+    console.log(`[Level Test] Images: ${testImages.length} images`);
 
-    // 4. AI 분석 실행
+    // 4. AI 분석 실행 (시험 분석과 동일한 이미지 형식)
     try {
       const analysis = await analyzeLevelTest(
         student.name,
         student.grade,
-        testFiles,  // { data, mimeType }[] 형식 전달
+        testImages,  // base64 이미지 배열 (시험 분석과 동일)
         {
           school: additionalInfo?.school || student.school || undefined,
           previousExperience: additionalInfo?.previousExperience,

@@ -619,7 +619,7 @@ interface FileData {
 export async function analyzeLevelTest(
   studentName: string,
   grade: number,
-  testFiles: FileData[],  // { data, mimeType }[] 형식 (이미지 + PDF 지원)
+  testImages: string[],  // base64 이미지 배열 (시험 분석과 동일한 형식)
   additionalInfo?: {
     school?: string;
     previousExperience?: string;
@@ -628,13 +628,13 @@ export async function analyzeLevelTest(
 ): Promise<LevelTestAnalysis> {
   const ai = getGeminiClient();
 
-  // ===== 모델 라우팅: level_test = Pro 모델 =====
+  // ===== 모델 라우팅: level_test = Flash 모델 (타임아웃 방지) =====
   const selectedModel = routeModel({ reportType: 'level_test', studentGrade: grade });
   console.log('[Model Routing] level_test ->', selectedModel);
 
-  // 파일별로 올바른 MIME 타입 적용
-  const fileParts = testFiles.map(file => ({
-    inlineData: { data: file.data, mimeType: file.mimeType }
+  // 시험 분석과 동일하게 이미지만 지원 (image/jpeg 고정)
+  const imageParts = testImages.map(base64 => ({
+    inlineData: { data: base64, mimeType: 'image/jpeg' }
   }));
 
   const userPrompt = `
@@ -752,14 +752,14 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
 
   try {
     console.log(`[Gemini] Calling model: ${selectedModel}`);
-    console.log(`[Gemini] Files count: ${fileParts.length}`);
+    console.log(`[Gemini] Images count: ${imageParts.length}`);
 
     const response = await ai.models.generateContent({
       model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: LEVEL_TEST_PROMPT }] },
         { role: 'model', parts: [{ text: '네, 레벨 테스트 분석을 시작합니다. Baseline 설정에 집중하여 학생의 현재 상태를 종합적으로 진단하겠습니다.' }] },
-        { role: 'user', parts: [{ text: userPrompt }, ...fileParts] }
+        { role: 'user', parts: [{ text: userPrompt }, ...imageParts] }
       ],
       config: {
         responseMimeType: 'application/json',

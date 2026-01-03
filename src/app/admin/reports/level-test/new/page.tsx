@@ -61,22 +61,19 @@ export default function NewLevelTestPage() {
     setLoading(false);
   };
 
-  // 업로드된 파일에서 이미지/PDF base64와 MIME 타입 추출
-  const getFileDataList = (): { data: string; mimeType: string }[] => {
+  // 업로드된 이미지에서 base64 추출 (시험 분석과 동일한 형식)
+  const getImageBase64List = (): string[] => {
     return uploadedFiles
-      .filter(f => f.type === 'image' || f.type === 'pdf')
+      .filter(f => f.type === 'image')
       .map(f => {
-        // data:image/jpeg;base64,xxxx 또는 data:application/pdf;base64,xxxx 형식에서 base64 부분만 추출
-        const base64Data = f.data.split(',')[1] || f.data;
-        // MIME 타입 결정
-        const mimeType = f.type === 'pdf' ? 'application/pdf' : 'image/jpeg';
-        return { data: base64Data, mimeType };
+        // data:image/jpeg;base64,xxxx 형식에서 base64 부분만 추출
+        return f.data.split(',')[1] || f.data;
       });
   };
 
-  // 분석 가능한 파일이 있는지 확인
-  const hasAnalyzableFiles = (): boolean => {
-    return uploadedFiles.some(f => f.type === 'image' || f.type === 'pdf');
+  // 분석 가능한 이미지가 있는지 확인
+  const hasAnalyzableImages = (): boolean => {
+    return uploadedFiles.some(f => f.type === 'image');
   };
 
   const handleAnalyze = async () => {
@@ -87,21 +84,21 @@ export default function NewLevelTestPage() {
       return;
     }
 
-    if (!hasAnalyzableFiles()) {
-      setError('테스트 이미지 또는 PDF를 업로드해주세요.');
+    if (!hasAnalyzableImages()) {
+      setError('테스트 이미지를 업로드해주세요. (PDF는 이미지로 변환 후 업로드)');
       return;
     }
 
     setAnalyzing(true);
 
     try {
-      const testFiles = getFileDataList();
+      const testImages = getImageBase64List();
       const response = await fetch('/api/level-test/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: selectedStudentId,
-          testFiles: testFiles,  // { data, mimeType }[] 형식으로 전송
+          testImages: testImages,  // base64 이미지 배열 (시험 분석과 동일)
           additionalInfo: {
             previousExperience: additionalInfo.previousExperience || undefined,
             parentExpectations: additionalInfo.parentExpectations || undefined,
@@ -417,7 +414,7 @@ export default function NewLevelTestPage() {
           {!analysisResult && (
             <button
               onClick={handleAnalyze}
-              disabled={analyzing || !selectedStudentId || !hasAnalyzableFiles()}
+              disabled={analyzing || !selectedStudentId || !hasAnalyzableImages()}
               className="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {analyzing ? (
