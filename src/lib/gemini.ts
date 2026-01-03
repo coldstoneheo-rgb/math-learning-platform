@@ -30,6 +30,14 @@ export class GeminiParseError extends Error {
 
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY;
+
+  // 디버깅: API 키 로딩 확인 (마스킹 처리)
+  if (apiKey) {
+    console.log(`[Gemini] API Key loaded: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)} (length: ${apiKey.length})`);
+  } else {
+    console.log('[Gemini] API Key is NOT loaded');
+  }
+
   if (!apiKey) {
     throw new GeminiApiError('GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.');
   }
