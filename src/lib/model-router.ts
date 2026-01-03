@@ -56,11 +56,11 @@ function getModelConfig(): ModelConfig {
 }
 
 // High-Stakes 리포트 타입 목록 (Pro 모델 사용)
-// Note: level_test는 PDF 분석 시 타임아웃 이슈로 Flash 사용
-const HIGH_STAKES_REPORT_TYPES: ReportType[] = ['semi_annual', 'annual'];
+// level_test: Baseline 설정의 중요성을 감안하여 Pro 모델 사용
+const HIGH_STAKES_REPORT_TYPES: ReportType[] = ['level_test', 'semi_annual', 'annual'];
 
 // Flash 전용 리포트 타입 목록
-const FLASH_ONLY_REPORT_TYPES: ReportType[] = ['weekly', 'monthly', 'consolidated', 'level_test'];
+const FLASH_ONLY_REPORT_TYPES: ReportType[] = ['weekly', 'monthly', 'consolidated'];
 
 /**
  * High-Stakes 리포트인지 판단

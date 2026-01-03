@@ -164,20 +164,49 @@ export default function NewLevelTestPage() {
       if (insertError) throw insertError;
 
       // 2. [Anchor Loop] 메타프로필 Baseline 설정
-      if (insertedReport?.id && analysisResult.initialBaseline) {
+      if (insertedReport?.id) {
         try {
+          const now = new Date().toISOString();
+
+          // Baseline 데이터 구성 (TypeScript Baseline 타입에 맞게)
+          const baseline = {
+            assessmentDate: now,
+            levelTestReportId: insertedReport.id,
+            initialLevel: {
+              grade: analysisResult.gradeLevelAssessment?.assessedLevel || student?.grade || 7,
+              percentile: analysisResult.domainDiagnosis?.reduce((sum, d) => sum + (d.percentile || 0), 0) /
+                         (analysisResult.domainDiagnosis?.length || 1) || 50,
+              evaluatedAt: now,
+            },
+            domainScores: analysisResult.domainDiagnosis?.map(d => ({
+              domain: d.domain,
+              score: d.score,
+              maxScore: d.maxScore,
+              percentile: d.percentile,
+            })) || [],
+            initialStrengths: analysisResult.initialBaseline?.strengths
+              ? [analysisResult.initialBaseline.strengths]
+              : [],
+            initialWeaknesses: analysisResult.initialBaseline?.weaknesses
+              ? [analysisResult.initialBaseline.weaknesses]
+              : [],
+            initialLearningStyle: analysisResult.learningStyleDiagnosis?.style || 'mixed',
+          };
+
           // 직접 학생의 meta_profile 업데이트 (Baseline 설정)
           const newMetaProfile: Partial<StudentMetaProfile> = {
-            baseline: analysisResult.initialBaseline,
+            baseline,
             errorSignature: {
-              primaryErrorTypes: [],
-              signaturePatterns: [],
+              primaryErrorTypes: [], // 초기값 - 시험 분석 후 업데이트됨
+              signaturePatterns: analysisResult.initialBaseline?.errorPatterns
+                ? [analysisResult.initialBaseline.errorPatterns]
+                : [],
               domainVulnerability: analysisResult.domainDiagnosis?.map(d => ({
                 domain: d.domain,
-                vulnerabilityScore: 100 - d.percentile,
-                lastAssessed: new Date().toISOString(),
+                vulnerabilityScore: 100 - (d.percentile || 50),
+                lastAssessed: now,
               })) || [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: now,
             },
             absorptionRate: {
               overallScore: 50, // 초기값
@@ -186,7 +215,7 @@ export default function NewLevelTestPage() {
                            analysisResult.learningStyleDiagnosis?.style === 'logical' ? 'slow-but-deep' : 'steady-grower',
               optimalConditions: analysisResult.learningStyleDiagnosis?.recommendations || [],
               recentTrend: [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: now,
             },
             solvingStamina: {
               overallScore: 50, // 초기값
@@ -194,7 +223,7 @@ export default function NewLevelTestPage() {
               accuracyBySequence: [],
               fatiguePattern: 'consistent',
               recoveryStrategies: [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: now,
             },
             metaCognitionLevel: {
               overallScore: 50, // 초기값
@@ -206,7 +235,7 @@ export default function NewLevelTestPage() {
               },
               developmentStage: 'developing',
               improvementAreas: [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: now,
             },
           };
 

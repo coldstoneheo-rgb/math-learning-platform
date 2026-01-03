@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
-import type { User, Report, Student, AnalysisData, AnyAnalysisData } from '@/types';
+import type { User, Report, Student, AnalysisData, LevelTestAnalysis } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
@@ -93,9 +93,11 @@ export default function ReportDetailPage() {
     }
   };
 
-  // report.analysis_data는 다양한 리포트 타입을 지원하지만,
-  // 현재 UI는 TestAnalysisData 구조를 기대하므로 타입 단언 사용
+  // report.analysis_data는 다양한 리포트 타입을 지원
   const analysis = (report?.analysis_data as AnalysisData) || null;
+  const levelTestAnalysis = report?.report_type === 'level_test'
+    ? (report?.analysis_data as LevelTestAnalysis)
+    : null;
 
   if (loading) {
     return (
@@ -105,7 +107,7 @@ export default function ReportDetailPage() {
     );
   }
 
-  if (!report || !analysis) {
+  if (!report || (!analysis && !levelTestAnalysis)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500">리포트를 찾을 수 없습니다.</p>
@@ -187,10 +189,214 @@ export default function ReportDetailPage() {
           </div>
         </div>
 
+        {/* ===== 레벨 테스트 전용 뷰 ===== */}
+        {report.report_type === 'level_test' && levelTestAnalysis && (
+          <>
+            {/* 학년 수준 평가 */}
+            {levelTestAnalysis.gradeLevelAssessment && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 학년 수준 평가</h3>
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-500">현재 학년</div>
+                    <div className="text-2xl font-bold text-gray-700">
+                      {getGradeLabel(levelTestAnalysis.gradeLevelAssessment.currentGrade)}
+                    </div>
+                  </div>
+                  <div className="text-3xl">→</div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-500">평가된 수준</div>
+                    <div className={`text-2xl font-bold ${
+                      levelTestAnalysis.gradeLevelAssessment.gap >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {getGradeLabel(levelTestAnalysis.gradeLevelAssessment.assessedLevel)}
+                      {levelTestAnalysis.gradeLevelAssessment.gap !== 0 && (
+                        <span className="text-sm ml-1">
+                          ({levelTestAnalysis.gradeLevelAssessment.gap > 0 ? '+' : ''}
+                          {levelTestAnalysis.gradeLevelAssessment.gap}학년)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-4 text-gray-600">{levelTestAnalysis.gradeLevelAssessment.explanation}</p>
+              </div>
+            )}
+
+            {/* 영역별 진단 */}
+            {levelTestAnalysis.domainDiagnosis && levelTestAnalysis.domainDiagnosis.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 영역별 진단</h3>
+                <div className="space-y-3">
+                  {levelTestAnalysis.domainDiagnosis.map((domain, idx) => (
+                    <div key={idx} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium">{domain.domain}</span>
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-indigo-600">
+                            {domain.score}/{domain.maxScore}
+                          </span>
+                          <span className="text-sm text-gray-500 ml-2">
+                            ({domain.gradeEquivalent})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-500 rounded-full"
+                          style={{ width: `${domain.percentile}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 text-sm text-gray-600">{domain.diagnosis}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 선수학습 결손 */}
+            {levelTestAnalysis.prerequisiteGaps && levelTestAnalysis.prerequisiteGaps.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">⚠️ 선수학습 결손</h3>
+                <div className="space-y-3">
+                  {levelTestAnalysis.prerequisiteGaps.map((gap, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-lg ${
+                        gap.priority === 'critical' ? 'bg-red-50 border border-red-200' :
+                        gap.priority === 'important' ? 'bg-yellow-50 border border-yellow-200' :
+                        'bg-blue-50 border border-blue-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-1 text-xs rounded font-medium ${
+                          gap.priority === 'critical' ? 'bg-red-100 text-red-700' :
+                          gap.priority === 'important' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {gap.priority === 'critical' ? '긴급' : gap.priority === 'important' ? '중요' : '보완'}
+                        </span>
+                        <span className="font-medium">{gap.concept}</span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        기대 수준: {gap.expectedLevel} → 실제 수준: {gap.actualLevel}
+                      </p>
+                      <p className="text-sm text-gray-700 mt-1">💡 {gap.remedyPlan}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 학습 성향 */}
+            {levelTestAnalysis.learningStyleDiagnosis && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🧠 학습 성향</h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className={`px-4 py-2 rounded-lg font-medium ${
+                    levelTestAnalysis.learningStyleDiagnosis.style === 'visual' ? 'bg-purple-100 text-purple-700' :
+                    levelTestAnalysis.learningStyleDiagnosis.style === 'verbal' ? 'bg-blue-100 text-blue-700' :
+                    levelTestAnalysis.learningStyleDiagnosis.style === 'logical' ? 'bg-green-100 text-green-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {levelTestAnalysis.learningStyleDiagnosis.style === 'visual' ? '👁️ 시각형' :
+                     levelTestAnalysis.learningStyleDiagnosis.style === 'verbal' ? '💬 언어형' :
+                     levelTestAnalysis.learningStyleDiagnosis.style === 'logical' ? '🧮 논리형' : '🔀 복합형'}
+                  </div>
+                  <span className="text-gray-500">
+                    신뢰도: {levelTestAnalysis.learningStyleDiagnosis.confidence}%
+                  </span>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-700 mb-2">특성</h4>
+                    <ul className="text-sm text-gray-600 list-disc list-inside">
+                      {levelTestAnalysis.learningStyleDiagnosis.characteristics?.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="p-3 bg-indigo-50 rounded-lg">
+                    <h4 className="font-medium text-indigo-700 mb-2">권장 학습법</h4>
+                    <ul className="text-sm text-indigo-600 list-disc list-inside">
+                      {levelTestAnalysis.learningStyleDiagnosis.recommendations?.map((r, i) => (
+                        <li key={i}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 초기 Baseline */}
+            {levelTestAnalysis.initialBaseline && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 Baseline 설정</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <h4 className="font-medium text-green-800 mb-2">💪 강점</h4>
+                    <p className="text-green-700 text-sm">{levelTestAnalysis.initialBaseline.strengths}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg">
+                    <h4 className="font-medium text-red-800 mb-2">⚠️ 약점</h4>
+                    <p className="text-red-700 text-sm">{levelTestAnalysis.initialBaseline.weaknesses}</p>
+                  </div>
+                </div>
+                {levelTestAnalysis.initialBaseline.errorPatterns && (
+                  <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
+                    <h4 className="font-medium text-yellow-800 mb-2">🔍 오류 패턴</h4>
+                    <p className="text-yellow-700 text-sm">{levelTestAnalysis.initialBaseline.errorPatterns}</p>
+                  </div>
+                )}
+                {levelTestAnalysis.initialBaseline.learningPotential && (
+                  <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
+                    <h4 className="font-medium text-indigo-800 mb-2">✨ 학습 잠재력</h4>
+                    <p className="text-indigo-700 text-sm">{levelTestAnalysis.initialBaseline.learningPotential}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 커리큘럼 제안 */}
+            {levelTestAnalysis.suggestedCurriculum && levelTestAnalysis.suggestedCurriculum.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📚 맞춤 커리큘럼</h3>
+                <div className="space-y-4">
+                  {levelTestAnalysis.suggestedCurriculum.map((phase, idx) => (
+                    <div key={idx} className="border-l-4 border-indigo-500 pl-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-indigo-600">{phase.phase}</span>
+                        <span className="text-sm text-gray-500">({phase.duration})</span>
+                      </div>
+                      <p className="text-gray-700 font-medium">{phase.focus}</p>
+                      <ul className="mt-1 text-sm text-gray-600">
+                        {phase.goals?.map((goal, i) => (
+                          <li key={i}>• {goal}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 부모님 브리핑 */}
+            {levelTestAnalysis.parentBriefing && (
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-sm p-6 mb-6 text-white">
+                <h3 className="text-lg font-semibold mb-3">👨‍👩‍👧 학부모님께 전달할 내용</h3>
+                <p className="leading-relaxed">{levelTestAnalysis.parentBriefing}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ===== 일반 시험 분석 뷰 ===== */}
+        {report.report_type !== 'level_test' && analysis && (
+        <>
         {/* 종합 분석 */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 종합 분석</h3>
-          
+
           {analysis.macroAnalysis?.oneLineSummary && (
             <div className="mb-4 p-4 bg-indigo-50 rounded-lg">
               <p className="text-indigo-800 font-medium">{analysis.macroAnalysis.oneLineSummary}</p>
@@ -378,6 +584,8 @@ export default function ReportDetailPage() {
             </div>
           )}
         </div>
+        </>
+        )}
       </main>
     </div>
   );

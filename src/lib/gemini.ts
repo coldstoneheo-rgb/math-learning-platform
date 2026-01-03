@@ -698,8 +698,9 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
             domain: { type: 'string' },
             score: { type: 'number' },
             maxScore: { type: 'number' },
-            level: { type: 'string' },
-            analysis: { type: 'string' }
+            percentile: { type: 'number' },
+            gradeEquivalent: { type: 'string' },
+            diagnosis: { type: 'string' }
           }
         }
       },
@@ -707,10 +708,9 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
         type: 'object',
         properties: {
           currentGrade: { type: 'number' },
-          assessedLevel: { type: 'string' },
-          gradeEquivalent: { type: 'number' },
-          percentile: { type: 'number' },
-          analysis: { type: 'string' }
+          assessedLevel: { type: 'number' },
+          gap: { type: 'number' },
+          explanation: { type: 'string' }
         }
       },
       prerequisiteGaps: {
@@ -719,19 +719,20 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
           type: 'object',
           properties: {
             concept: { type: 'string' },
-            expectedGrade: { type: 'number' },
-            severity: { type: 'string' },
-            recommendation: { type: 'string' }
+            expectedLevel: { type: 'string' },
+            actualLevel: { type: 'string' },
+            priority: { type: 'string', enum: ['critical', 'important', 'minor'] },
+            remedyPlan: { type: 'string' }
           }
         }
       },
       learningStyleDiagnosis: {
         type: 'object',
         properties: {
-          primaryStyle: { type: 'string' },
-          secondaryStyle: { type: 'string' },
-          characteristics: { type: 'string' },
-          recommendations: { type: 'string' }
+          style: { type: 'string', enum: ['visual', 'verbal', 'logical', 'mixed'] },
+          confidence: { type: 'number' },
+          characteristics: { type: 'array', items: { type: 'string' } },
+          recommendations: { type: 'array', items: { type: 'string' } }
         }
       },
       initialBaseline: {
@@ -749,10 +750,10 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
         items: {
           type: 'object',
           properties: {
-            month: { type: 'number' },
+            phase: { type: 'string' },
+            duration: { type: 'string' },
             focus: { type: 'string' },
-            goals: { type: 'string' },
-            materials: { type: 'string' }
+            goals: { type: 'array', items: { type: 'string' } }
           }
         }
       },

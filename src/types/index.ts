@@ -836,8 +836,14 @@ export interface LevelTestAnalysis {
     characteristics: string[];
     recommendations: string[];
   };
-  // 초기 Baseline 설정
-  initialBaseline: Baseline;
+  // 초기 Baseline 설정 (AI가 반환하는 간소화된 형식)
+  initialBaseline: {
+    overallLevel: string;
+    strengths: string;
+    weaknesses: string;
+    errorPatterns: string;
+    learningPotential: string;
+  };
   // 맞춤 커리큘럼 제안
   suggestedCurriculum: {
     phase: string;
