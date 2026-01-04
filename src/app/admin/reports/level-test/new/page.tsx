@@ -194,13 +194,34 @@ export default function NewLevelTestPage() {
           };
 
           // 직접 학생의 meta_profile 업데이트 (Baseline 설정)
+          // detailedErrorPatterns를 primaryErrorTypes 형식으로 변환
+          const primaryErrorTypes = (analysisResult.initialBaseline?.detailedErrorPatterns || []).map(ep => ({
+            type: ep.type,
+            frequency: ep.frequency,
+            recentTrend: 'stable' as const, // 초기값은 stable
+          }));
+
+          // 오답이 있는지 점수로 판단
+          const scorePercent = analysisResult.testResults?.totalScore && analysisResult.testResults?.maxScore
+            ? (analysisResult.testResults.totalScore / analysisResult.testResults.maxScore) * 100
+            : 100;
+          const hasErrors = scorePercent < 100;
+
           const newMetaProfile: Partial<StudentMetaProfile> = {
             baseline,
             errorSignature: {
-              primaryErrorTypes: [], // 초기값 - 시험 분석 후 업데이트됨
-              signaturePatterns: analysisResult.initialBaseline?.errorPatterns
-                ? [analysisResult.initialBaseline.errorPatterns]
-                : [],
+              primaryErrorTypes: primaryErrorTypes.length > 0 ? primaryErrorTypes : [
+                // AI가 패턴을 못 찾았으면 점수 기반으로 추론
+                ...(hasErrors ? [{
+                  type: '기타/부주의' as const,
+                  frequency: Math.round(100 - scorePercent),
+                  recentTrend: 'stable' as const,
+                }] : [])
+              ],
+              signaturePatterns: [
+                ...(analysisResult.initialBaseline?.errorPatterns ? [analysisResult.initialBaseline.errorPatterns] : []),
+                ...(analysisResult.initialBaseline?.detailedErrorPatterns?.map(ep => ep.description) || []),
+              ].filter(Boolean),
               domainVulnerability: analysisResult.domainDiagnosis?.map(d => ({
                 domain: d.domain,
                 vulnerabilityScore: 100 - (d.percentile || 50),

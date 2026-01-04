@@ -843,6 +843,12 @@ export interface LevelTestAnalysis {
     weaknesses: string;
     errorPatterns: string;
     learningPotential: string;
+    // 구조화된 오류 패턴 (primaryErrorTypes용)
+    detailedErrorPatterns?: {
+      type: '개념 오류' | '절차 오류' | '계산 오류' | '문제 오독' | '기타/부주의';
+      frequency: number;
+      description: string;
+    }[];
   };
   // 맞춤 커리큘럼 제안
   suggestedCurriculum: {

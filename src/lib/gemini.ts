@@ -71,6 +71,17 @@ const LEVEL_TEST_PROMPT = `${BASE_SYSTEM_PROMPT}
 5. **초기 오류 서명 추출**: 이 학생 고유의 오류 패턴 식별
 6. **맞춤 커리큘럼 제안**: 향후 6개월 학습 로드맵
 
+### 오류 패턴 분석 (중요!)
+답안지에서 오답을 찾아 아래 5가지 유형으로 분류하세요:
+- **개념 오류**: 수학 개념 자체를 잘못 이해함 (예: 분배법칙 미적용)
+- **절차 오류**: 풀이 순서나 방법이 틀림 (예: 이항 순서 오류)
+- **계산 오류**: 단순 연산 실수 (예: 7+8=14)
+- **문제 오독**: 문제 조건을 잘못 해석함 (예: "이상" vs "초과" 혼동)
+- **기타/부주의**: 풀이 누락, 답만 적음 등
+
+오답이 있다면 반드시 detailedErrorPatterns 배열에 각 유형별 빈도(%)를 포함하세요.
+오답이 없어도 답안 작성 습관에서 발견되는 잠재적 오류 패턴을 분석하세요.
+
 ### 출력 특징
 - 부정적 표현 최소화, 성장 가능성 강조
 - 부모님 보고용 요약 포함
@@ -742,7 +753,19 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
           strengths: { type: 'string' },
           weaknesses: { type: 'string' },
           errorPatterns: { type: 'string' },
-          learningPotential: { type: 'string' }
+          learningPotential: { type: 'string' },
+          // 구조화된 오류 패턴 (primaryErrorTypes용)
+          detailedErrorPatterns: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: { type: 'string', enum: ['개념 오류', '절차 오류', '계산 오류', '문제 오독', '기타/부주의'] },
+                frequency: { type: 'number' },
+                description: { type: 'string' }
+              }
+            }
+          }
         }
       },
       suggestedCurriculum: {

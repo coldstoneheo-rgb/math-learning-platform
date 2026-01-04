@@ -112,12 +112,14 @@ export default function MetaHeader({
     },
     {
       key: 'errorPatterns',
-      label: '파악된 오류 패턴',
-      value: metaProfile.errorSignature?.signaturePatterns?.length ?? 0,
+      label: '파악된 오류 유형',
+      value: metaProfile.errorSignature?.primaryErrorTypes?.length ?? 0,
       icon: '🎯',
       color: 'orange',
-      description: `${metaProfile.errorSignature?.primaryErrorTypes?.length ?? 0}개 유형 분석됨`,
-      tooltip: '반복적으로 나타나는 실수 유형',
+      description: metaProfile.errorSignature?.primaryErrorTypes?.length
+        ? metaProfile.errorSignature.primaryErrorTypes.map(e => e.type).slice(0, 2).join(', ')
+        : '분석 대기',
+      tooltip: '반복적으로 나타나는 실수 유형 (개념 오류, 계산 오류 등)',
       isCount: true,
     },
   ];
@@ -174,7 +176,11 @@ export default function MetaHeader({
         <div className="text-right">
           <p className="text-xs text-gray-400">마지막 업데이트</p>
           <p className="text-sm text-gray-600">
-            {formatDate(metaProfile.lastUpdated)}
+            {formatDate(
+              metaProfile.lastUpdated ||
+              metaProfile.errorSignature?.lastUpdated ||
+              metaProfile.baseline?.assessmentDate
+            )}
           </p>
         </div>
       </div>
