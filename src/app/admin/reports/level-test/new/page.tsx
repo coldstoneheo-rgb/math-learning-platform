@@ -237,6 +237,8 @@ export default function NewLevelTestPage() {
               improvementAreas: [],
               lastUpdated: now,
             },
+            lastUpdated: now,
+            version: '1.0',
           };
 
           const { error: updateError } = await supabase

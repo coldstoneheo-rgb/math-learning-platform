@@ -176,14 +176,29 @@ export default function ReportDetailPage() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-4xl font-bold text-indigo-600">
-                {report.total_score}
-                <span className="text-lg text-gray-400">/{report.max_score}</span>
-              </div>
-              {report.rank && report.total_students && (
-                <div className="text-sm text-gray-500 mt-1">
-                  {report.total_students}명 중 {report.rank}등
-                </div>
+              {report.report_type === 'level_test' ? (
+                <>
+                  <div className="text-sm text-gray-500 mb-1">진단 점수</div>
+                  <div className="text-4xl font-bold text-indigo-600">
+                    {report.total_score ?? 0}
+                    <span className="text-lg text-gray-400">/{report.max_score ?? 100}점</span>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    ({Math.round(((report.total_score ?? 0) / (report.max_score || 100)) * 100)}% 정답률)
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-4xl font-bold text-indigo-600">
+                    {report.total_score ?? '-'}
+                    <span className="text-lg text-gray-400">/{report.max_score ?? '-'}</span>
+                  </div>
+                  {report.rank && report.total_students && (
+                    <div className="text-sm text-gray-500 mt-1">
+                      {report.total_students}명 중 {report.rank}등
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
