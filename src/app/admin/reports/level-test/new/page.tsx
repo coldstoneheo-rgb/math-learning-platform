@@ -17,6 +17,7 @@ export default function NewLevelTestPage() {
   const [error, setError] = useState('');
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
+  const [testDate, setTestDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState({
     previousExperience: '',
@@ -153,7 +154,7 @@ export default function NewLevelTestPage() {
           student_id: selectedStudentId,
           report_type: 'level_test',
           test_name: `${student?.name} 레벨 테스트`,
-          test_date: new Date().toISOString().split('T')[0],
+          test_date: testDate,  // 선택한 날짜 사용
           total_score: analysisResult.testResults?.totalScore || 0,
           max_score: analysisResult.testResults?.maxScore || 100,
           analysis_data: analysisResult,
@@ -167,16 +168,17 @@ export default function NewLevelTestPage() {
       if (insertedReport?.id) {
         try {
           const now = new Date().toISOString();
+          const testDateISO = new Date(testDate).toISOString();
 
           // Baseline 데이터 구성 (TypeScript Baseline 타입에 맞게)
           const baseline = {
-            assessmentDate: now,
+            assessmentDate: testDateISO,  // 선택한 테스트 날짜 사용
             levelTestReportId: insertedReport.id,
             initialLevel: {
               grade: analysisResult.gradeLevelAssessment?.assessedLevel || student?.grade || 7,
               percentile: analysisResult.domainDiagnosis?.reduce((sum, d) => sum + (d.percentile || 0), 0) /
                          (analysisResult.domainDiagnosis?.length || 1) || 50,
-              evaluatedAt: now,
+              evaluatedAt: testDateISO,  // 선택한 테스트 날짜 사용
             },
             domainScores: analysisResult.domainDiagnosis?.map(d => ({
               domain: d.domain,
@@ -405,9 +407,26 @@ export default function NewLevelTestPage() {
             )}
           </div>
 
+          {/* 테스트 날짜 선택 */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              2. 테스트 날짜 <span className="text-red-500">*</span>
+            </h2>
+            <p className="text-sm text-gray-500 mb-3">
+              레벨 테스트를 실시한 날짜를 선택하세요. 과거 날짜도 선택 가능합니다.
+            </p>
+            <input
+              type="date"
+              value={testDate}
+              onChange={(e) => setTestDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
           {/* 추가 정보 */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">2. 추가 정보 (선택)</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">3. 추가 정보 (선택)</h2>
 
             <div className="space-y-4">
               <div>
@@ -447,7 +466,7 @@ export default function NewLevelTestPage() {
           {/* 테스트 파일 업로드 */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              3. 테스트 파일 업로드 <span className="text-red-500">*</span>
+              4. 테스트 파일 업로드 <span className="text-red-500">*</span>
             </h2>
 
             <MultiFileUpload
@@ -486,6 +505,96 @@ export default function NewLevelTestPage() {
           {/* 분석 결과 */}
           {analysisResult && (
             <div className="space-y-6">
+              {/* 분석 완료 헤더 */}
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">✅</span>
+                  <div>
+                    <h3 className="font-semibold text-green-800">AI 분석 완료</h3>
+                    <p className="text-sm text-green-600">아래 결과를 확인 후 저장 버튼을 눌러주세요.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 테스트 점수 요약 */}
+              {analysisResult.testResults && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 테스트 점수</h3>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-4xl font-bold text-indigo-600">
+                        {analysisResult.testResults.totalScore}
+                        <span className="text-xl text-gray-400">/{analysisResult.testResults.maxScore}점</span>
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        정답률 {Math.round((analysisResult.testResults.totalScore / analysisResult.testResults.maxScore) * 100)}%
+                      </div>
+                    </div>
+                    <div className="text-right text-sm text-gray-500">
+                      테스트 일자: {testDate}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 오류 패턴 분석 */}
+              {(analysisResult.initialBaseline?.detailedErrorPatterns?.length || analysisResult.initialBaseline?.errorPatterns) && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 파악된 오류 패턴</h3>
+
+                  {analysisResult.initialBaseline?.detailedErrorPatterns && analysisResult.initialBaseline.detailedErrorPatterns.length > 0 ? (
+                    <div className="space-y-3">
+                      {analysisResult.initialBaseline.detailedErrorPatterns.map((pattern, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2 py-1 text-xs font-medium rounded ${
+                              pattern.type === '개념 오류' ? 'bg-red-100 text-red-700' :
+                              pattern.type === '절차 오류' ? 'bg-yellow-100 text-yellow-700' :
+                              pattern.type === '계산 오류' ? 'bg-blue-100 text-blue-700' :
+                              pattern.type === '문제 오독' ? 'bg-purple-100 text-purple-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {pattern.type}
+                            </span>
+                            <span className="text-gray-700">{pattern.description}</span>
+                          </div>
+                          <span className="text-sm font-medium text-orange-600">{pattern.frequency}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : analysisResult.initialBaseline?.errorPatterns ? (
+                    <p className="text-gray-600 p-3 bg-gray-50 rounded-lg">
+                      {analysisResult.initialBaseline.errorPatterns}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+
+              {/* 초기 진단 요약 */}
+              {analysisResult.initialBaseline && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 초기 진단 요약 (Baseline)</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-green-50 rounded-lg">
+                      <h4 className="font-medium text-green-700 mb-2">💪 강점</h4>
+                      <p className="text-sm text-green-600">{analysisResult.initialBaseline.strengths || '분석 중...'}</p>
+                    </div>
+                    <div className="p-4 bg-red-50 rounded-lg">
+                      <h4 className="font-medium text-red-700 mb-2">📌 개선 필요</h4>
+                      <p className="text-sm text-red-600">{analysisResult.initialBaseline.weaknesses || '분석 중...'}</p>
+                    </div>
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <h4 className="font-medium text-blue-700 mb-2">📊 현재 수준</h4>
+                      <p className="text-sm text-blue-600">{analysisResult.initialBaseline.overallLevel || '분석 중...'}</p>
+                    </div>
+                    <div className="p-4 bg-purple-50 rounded-lg">
+                      <h4 className="font-medium text-purple-700 mb-2">🚀 성장 잠재력</h4>
+                      <p className="text-sm text-purple-600">{analysisResult.initialBaseline.learningPotential || '분석 중...'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 학년 수준 평가 */}
               {analysisResult.gradeLevelAssessment && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
