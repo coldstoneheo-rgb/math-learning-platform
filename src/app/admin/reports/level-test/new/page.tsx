@@ -517,83 +517,90 @@ export default function NewLevelTestPage() {
               </div>
 
               {/* 테스트 점수 요약 */}
-              {analysisResult.testResults && (
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 테스트 점수</h3>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-4xl font-bold text-indigo-600">
-                        {analysisResult.testResults.totalScore}
-                        <span className="text-xl text-gray-400">/{analysisResult.testResults.maxScore}점</span>
-                      </div>
-                      <div className="text-sm text-gray-500 mt-1">
-                        정답률 {Math.round((analysisResult.testResults.totalScore / analysisResult.testResults.maxScore) * 100)}%
-                      </div>
-                    </div>
-                    <div className="text-right text-sm text-gray-500">
-                      테스트 일자: {testDate}
-                    </div>
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 테스트 점수</h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    {(() => {
+                      const totalScore = analysisResult.testResults?.totalScore ?? 0;
+                      const maxScore = analysisResult.testResults?.maxScore || 100;
+                      const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+                      return (
+                        <>
+                          <div className="text-4xl font-bold text-indigo-600">
+                            {totalScore}
+                            <span className="text-xl text-gray-400">/{maxScore}점</span>
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            정답률 {percentage}%
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="text-right text-sm text-gray-500">
+                    테스트 일자: {testDate}
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* 오류 패턴 분석 */}
-              {(analysisResult.initialBaseline?.detailedErrorPatterns?.length || analysisResult.initialBaseline?.errorPatterns) && (
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 파악된 오류 패턴</h3>
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 파악된 오류 패턴</h3>
 
-                  {analysisResult.initialBaseline?.detailedErrorPatterns && analysisResult.initialBaseline.detailedErrorPatterns.length > 0 ? (
-                    <div className="space-y-3">
-                      {analysisResult.initialBaseline.detailedErrorPatterns.map((pattern, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <span className={`px-2 py-1 text-xs font-medium rounded ${
-                              pattern.type === '개념 오류' ? 'bg-red-100 text-red-700' :
-                              pattern.type === '절차 오류' ? 'bg-yellow-100 text-yellow-700' :
-                              pattern.type === '계산 오류' ? 'bg-blue-100 text-blue-700' :
-                              pattern.type === '문제 오독' ? 'bg-purple-100 text-purple-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {pattern.type}
-                            </span>
-                            <span className="text-gray-700">{pattern.description}</span>
-                          </div>
-                          <span className="text-sm font-medium text-orange-600">{pattern.frequency}%</span>
+                {analysisResult.initialBaseline?.detailedErrorPatterns && analysisResult.initialBaseline.detailedErrorPatterns.length > 0 ? (
+                  <div className="space-y-3">
+                    {analysisResult.initialBaseline.detailedErrorPatterns.map((pattern, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                            pattern.type === '개념 오류' ? 'bg-red-100 text-red-700' :
+                            pattern.type === '절차 오류' ? 'bg-yellow-100 text-yellow-700' :
+                            pattern.type === '계산 오류' ? 'bg-blue-100 text-blue-700' :
+                            pattern.type === '문제 오독' ? 'bg-purple-100 text-purple-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {pattern.type}
+                          </span>
+                          <span className="text-gray-700">{pattern.description}</span>
                         </div>
-                      ))}
-                    </div>
-                  ) : analysisResult.initialBaseline?.errorPatterns ? (
-                    <p className="text-gray-600 p-3 bg-gray-50 rounded-lg">
-                      {analysisResult.initialBaseline.errorPatterns}
-                    </p>
-                  ) : null}
-                </div>
-              )}
+                        <span className="text-sm font-medium text-orange-600">{pattern.frequency}%</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : analysisResult.initialBaseline?.errorPatterns ? (
+                  <p className="text-gray-600 p-3 bg-gray-50 rounded-lg">
+                    {analysisResult.initialBaseline.errorPatterns}
+                  </p>
+                ) : (
+                  <p className="text-gray-400 p-3 bg-gray-50 rounded-lg italic">
+                    오답이 없거나 오류 패턴이 감지되지 않았습니다.
+                  </p>
+                )}
+              </div>
 
               {/* 초기 진단 요약 */}
-              {analysisResult.initialBaseline && (
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 초기 진단 요약 (Baseline)</h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <h4 className="font-medium text-green-700 mb-2">💪 강점</h4>
-                      <p className="text-sm text-green-600">{analysisResult.initialBaseline.strengths || '분석 중...'}</p>
-                    </div>
-                    <div className="p-4 bg-red-50 rounded-lg">
-                      <h4 className="font-medium text-red-700 mb-2">📌 개선 필요</h4>
-                      <p className="text-sm text-red-600">{analysisResult.initialBaseline.weaknesses || '분석 중...'}</p>
-                    </div>
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-medium text-blue-700 mb-2">📊 현재 수준</h4>
-                      <p className="text-sm text-blue-600">{analysisResult.initialBaseline.overallLevel || '분석 중...'}</p>
-                    </div>
-                    <div className="p-4 bg-purple-50 rounded-lg">
-                      <h4 className="font-medium text-purple-700 mb-2">🚀 성장 잠재력</h4>
-                      <p className="text-sm text-purple-600">{analysisResult.initialBaseline.learningPotential || '분석 중...'}</p>
-                    </div>
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 초기 진단 요약 (Baseline)</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <h4 className="font-medium text-green-700 mb-2">💪 강점</h4>
+                    <p className="text-sm text-green-600">{analysisResult.initialBaseline?.strengths || '분석 결과 없음'}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg">
+                    <h4 className="font-medium text-red-700 mb-2">📌 개선 필요</h4>
+                    <p className="text-sm text-red-600">{analysisResult.initialBaseline?.weaknesses || '분석 결과 없음'}</p>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-700 mb-2">📊 현재 수준</h4>
+                    <p className="text-sm text-blue-600">{analysisResult.initialBaseline?.overallLevel || '분석 결과 없음'}</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <h4 className="font-medium text-purple-700 mb-2">🚀 성장 잠재력</h4>
+                    <p className="text-sm text-purple-600">{analysisResult.initialBaseline?.learningPotential || '분석 결과 없음'}</p>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* 학년 수준 평가 */}
               {analysisResult.gradeLevelAssessment && (
