@@ -141,6 +141,95 @@ export interface GrowthPrediction {
 }
 
 /**
+ * MetaCognitionAnalysis - 시험 풀이에서 관찰된 메타인지 분석
+ * AI가 시험지 이미지에서 추론한 학생의 메타인지 능력
+ */
+export interface MetaCognitionAnalysis {
+  // 전체 메타인지 점수 (AI 추정)
+  overallScore: number; // 0-100
+
+  // 오답 인식 능력 (풀이 과정에서 오류를 발견하고 수정한 흔적)
+  errorRecognition: {
+    score: number;
+    evidence: string[]; // "2번 문제에서 계산 오류를 발견하고 수정한 흔적"
+    analysis: string;
+  };
+
+  // 전략 선택 능력 (문제 유형에 맞는 풀이법 선택)
+  strategySelection: {
+    score: number;
+    optimalCount: number;
+    suboptimalCount: number;
+    analysis: string;
+  };
+
+  // 시간 관리 추정 (풀이 완성도, 문제별 시간 배분)
+  timeManagement: {
+    score: number;
+    completedProblems: number;
+    totalProblems: number;
+    analysis: string;
+  };
+
+  // 자기 점검 습관 (검산, 재확인 흔적)
+  selfChecking: {
+    score: number;
+    evidence: string[];
+    analysis: string;
+  };
+
+  // 메타인지 발달 단계
+  developmentStage: 'beginner' | 'developing' | 'competent' | 'proficient' | 'expert';
+
+  // 세부 개선 권장사항
+  recommendations: string[];
+}
+
+/**
+ * StaminaAnalysis - 시험 풀이 지구력 분석
+ * 단일 시험에서 관찰된 집중력과 지구력 패턴
+ */
+export interface StaminaAnalysis {
+  // 전체 지구력 점수 (0-100)
+  overallScore: number;
+
+  // 문제 순서별 정확도 분포
+  accuracyBySequence: {
+    range: string; // e.g., "1-5", "6-10"
+    correctCount: number;
+    totalCount: number;
+    accuracy: number;
+  }[];
+
+  // 피로도 패턴 분석
+  fatiguePattern: {
+    type: 'consistent' | 'early-fatigue' | 'mid-dip' | 'late-fatigue' | 'improving';
+    description: string;
+    peakPerformanceRange?: string; // 가장 잘한 구간
+    lowPerformanceRange?: string; // 가장 못한 구간
+  };
+
+  // 시간 배분 분석 (추정)
+  timeDistribution: {
+    estimatedTotalTime?: number; // 분
+    estimatedTimePerProblem?: number; // 분
+    rushedProblems?: string[]; // 급하게 푼 것 같은 문제
+    overthoughtProblems?: string[]; // 너무 오래 고민한 것 같은 문제
+    analysis: string;
+  };
+
+  // 집중력 유지 분석
+  focusAnalysis: {
+    score: number;
+    signs: string[]; // 집중/비집중 징후
+    analysis: string;
+  };
+
+  // 권장사항
+  recommendations: string[];
+}
+
+/**
  * TestAnalysisData - 시험 분석 리포트 데이터 (기본 형태)
  * report_type: 'test' 또는 'level_test'에 사용
  */
@@ -156,6 +245,10 @@ export interface TestAnalysisData {
   riskFactors?: RiskFactor[];
   growthPredictions?: GrowthPrediction[];
   trendComment?: string;
+  // 메타인지 분석 (시험 풀이에서 관찰된 메타인지 능력)
+  metaCognitionAnalysis?: MetaCognitionAnalysis;
+  // 지구력 분석 (시험 풀이 집중력 및 시간 배분)
+  staminaAnalysis?: StaminaAnalysis;
 }
 
 /**

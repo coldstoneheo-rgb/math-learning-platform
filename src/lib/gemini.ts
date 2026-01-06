@@ -377,6 +377,63 @@ const SYSTEM_PROMPT = `당신은 학생의 수학 학습을 종합적으로 컨�
 4️⃣ 문제 해석 능력: 문제의 조건을 정확히 파악했는가?
 5️⃣ 풀이 습관 관찰: 풀이 과정을 단계적으로 기록했는가?
 
+## 메타인지 분석 (필수)
+시험지의 풀이 과정을 관찰하여 학생의 메타인지 능력을 분석하세요:
+
+1️⃣ 오답 인식 능력 (errorRecognition)
+   - 풀이 중 잘못을 발견하고 수정한 흔적 (지우개 자국, 수정 표시 등)
+   - 답을 고친 경우, 올바른 방향으로 수정했는지 여부
+   - 증거가 없으면 빈 배열, 있으면 구체적 사례 기술
+
+2️⃣ 전략 선택 능력 (strategySelection)
+   - 문제 유형에 맞는 효율적인 풀이법을 선택했는지
+   - 최적 풀이 vs 비효율적 풀이 (차선 풀이) 개수 분석
+   - 더 좋은 전략이 있었는지 분석
+
+3️⃣ 시간 관리 (timeManagement)
+   - 모든 문제를 풀었는지, 미완성 문제가 있는지
+   - 풀이 완성도 (계산만 하고 답을 안 쓴 경우 등)
+   - 어려운 문제에 너무 많은 시간을 쓴 흔적
+
+4️⃣ 자기 점검 습관 (selfChecking)
+   - 검산 흔적 (= 사용, 대입 확인 등)
+   - 답에 밑줄 치거나 강조한 흔적
+   - 문제 조건 체크 표시
+
+5️⃣ 발달 단계 (developmentStage)
+   - beginner: 메타인지 흔적 거의 없음
+   - developing: 가끔 수정하거나 검산함
+   - competent: 정기적으로 점검하지만 일관성 부족
+   - proficient: 체계적으로 점검하고 수정함
+   - expert: 높은 정확도로 자기 점검 및 전략 조정
+
+## 지구력 분석 (staminaAnalysis) - 필수
+시험 전체에 걸친 집중력과 지구력 패턴을 분석하세요:
+
+1️⃣ 문제 순서별 정확도 (accuracyBySequence)
+   - 문제를 5개 단위로 나눠서 정확도 분석 (예: 1-5번, 6-10번, 11-15번...)
+   - 각 구간별 맞은 문제 수, 전체 문제 수, 정확도(%) 계산
+
+2️⃣ 피로도 패턴 (fatiguePattern)
+   - consistent: 시험 전체에 걸쳐 일관된 성과
+   - early-fatigue: 초반은 좋으나 후반 급격히 하락
+   - mid-dip: 중반에 슬럼프, 후반 회복
+   - late-fatigue: 후반부로 갈수록 점점 하락
+   - improving: 후반으로 갈수록 오히려 향상
+   - peakPerformanceRange: 가장 높은 정확도 구간
+   - lowPerformanceRange: 가장 낮은 정확도 구간
+
+3️⃣ 시간 배분 분석 (timeDistribution)
+   - 풀이 흔적에서 시간 배분 추정
+   - 급하게 푼 문제 (rushedProblems): 풀이가 너무 간단하거나 불완전
+   - 오래 고민한 문제 (overthoughtProblems): 많은 수정, 여러 시도 흔적
+
+4️⃣ 집중력 분석 (focusAnalysis)
+   - 풀이 글씨체 변화 (흐트러짐, 크기 변화)
+   - 빈 공간이나 낙서 흔적
+   - 문제 건너뛰기 패턴
+   - signs: 관찰된 집중/비집중 징후 목록
+
 ## 개선 전략 5요소 (모든 전략에 필수 포함)
 - 무엇을: 구체적 교재, 자료
 - 어디서: 페이지, 챕터
@@ -484,7 +541,95 @@ const ANALYSIS_SCHEMA = {
     learningHabits: { type: 'array', items: { type: 'object', properties: { type: { type: 'string', enum: ['good', 'bad'] }, description: { type: 'string' }, frequency: { type: 'string', enum: ['always', 'often', 'sometimes'] } } } },
     riskFactors: { type: 'array', items: { type: 'object', properties: { factor: { type: 'string' }, severity: { type: 'string', enum: ['high', 'medium', 'low'] }, recommendation: { type: 'string' } } } },
     growthPredictions: { type: 'array', items: { type: 'object', properties: { timeframe: { type: 'string' }, predictedScore: { type: 'number' }, confidenceLevel: { type: 'number' }, assumptions: { type: 'array', items: { type: 'string' } } } } },
-    trendComment: { type: 'string' }
+    trendComment: { type: 'string' },
+    metaCognitionAnalysis: {
+      type: 'object',
+      properties: {
+        overallScore: { type: 'number' },
+        errorRecognition: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            evidence: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' }
+          }
+        },
+        strategySelection: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            optimalCount: { type: 'number' },
+            suboptimalCount: { type: 'number' },
+            analysis: { type: 'string' }
+          }
+        },
+        timeManagement: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            completedProblems: { type: 'number' },
+            totalProblems: { type: 'number' },
+            analysis: { type: 'string' }
+          }
+        },
+        selfChecking: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            evidence: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' }
+          }
+        },
+        developmentStage: { type: 'string', enum: ['beginner', 'developing', 'competent', 'proficient', 'expert'] },
+        recommendations: { type: 'array', items: { type: 'string' } }
+      }
+    },
+    staminaAnalysis: {
+      type: 'object',
+      properties: {
+        overallScore: { type: 'number' },
+        accuracyBySequence: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              range: { type: 'string' },
+              correctCount: { type: 'number' },
+              totalCount: { type: 'number' },
+              accuracy: { type: 'number' }
+            }
+          }
+        },
+        fatiguePattern: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', enum: ['consistent', 'early-fatigue', 'mid-dip', 'late-fatigue', 'improving'] },
+            description: { type: 'string' },
+            peakPerformanceRange: { type: 'string' },
+            lowPerformanceRange: { type: 'string' }
+          }
+        },
+        timeDistribution: {
+          type: 'object',
+          properties: {
+            estimatedTotalTime: { type: 'number' },
+            estimatedTimePerProblem: { type: 'number' },
+            rushedProblems: { type: 'array', items: { type: 'string' } },
+            overthoughtProblems: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' }
+          }
+        },
+        focusAnalysis: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            signs: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' }
+          }
+        },
+        recommendations: { type: 'array', items: { type: 'string' } }
+      }
+    }
   },
   required: ['testInfo', 'testResults', 'detailedAnalysis', 'macroAnalysis', 'actionablePrescription']
 };

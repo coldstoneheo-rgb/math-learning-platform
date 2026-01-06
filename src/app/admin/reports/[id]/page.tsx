@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { MetaHeader, VisionFooter } from '@/components/report';
+import { MetaHeader, VisionFooter, GrowthTrajectoryChart, ErrorPatternTrend } from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
 import type { User, Report, Student, AnalysisData, LevelTestAnalysis } from '@/types';
 
@@ -475,6 +475,317 @@ export default function ReportDetailPage() {
           </div>
         )}
 
+        {/* 오류 패턴 추이 - 학생 메타 프로필에서 가져옴 */}
+        {report.students?.meta_profile?.errorSignature && (
+          <ErrorPatternTrend
+            primaryErrorTypes={report.students.meta_profile.errorSignature.primaryErrorTypes}
+            signaturePatterns={report.students.meta_profile.errorSignature.signaturePatterns}
+            domainVulnerability={report.students.meta_profile.errorSignature.domainVulnerability}
+            lastUpdated={report.students.meta_profile.errorSignature.lastUpdated}
+          />
+        )}
+
+        {/* 메타인지 분석 */}
+        {analysis.metaCognitionAnalysis && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">🧠 메타인지 분석</h3>
+
+            {/* 전체 점수 및 발달 단계 */}
+            <div className="flex items-center justify-between mb-6 p-4 bg-purple-50 rounded-lg">
+              <div>
+                <div className="text-sm text-purple-600 mb-1">전체 메타인지 점수</div>
+                <div className="text-3xl font-bold text-purple-700">
+                  {analysis.metaCognitionAnalysis.overallScore}
+                  <span className="text-lg font-normal text-purple-400">/100</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500 mb-1">발달 단계</div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  analysis.metaCognitionAnalysis.developmentStage === 'expert' ? 'bg-green-100 text-green-700' :
+                  analysis.metaCognitionAnalysis.developmentStage === 'proficient' ? 'bg-blue-100 text-blue-700' :
+                  analysis.metaCognitionAnalysis.developmentStage === 'competent' ? 'bg-indigo-100 text-indigo-700' :
+                  analysis.metaCognitionAnalysis.developmentStage === 'developing' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {analysis.metaCognitionAnalysis.developmentStage === 'expert' ? '전문가 수준' :
+                   analysis.metaCognitionAnalysis.developmentStage === 'proficient' ? '숙달 단계' :
+                   analysis.metaCognitionAnalysis.developmentStage === 'competent' ? '유능 단계' :
+                   analysis.metaCognitionAnalysis.developmentStage === 'developing' ? '발달 중' :
+                   '초기 단계'}
+                </span>
+              </div>
+            </div>
+
+            {/* 4가지 세부 영역 */}
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              {/* 오답 인식 능력 */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-700">🔍 오답 인식 능력</span>
+                  <span className="text-lg font-bold text-indigo-600">
+                    {analysis.metaCognitionAnalysis.errorRecognition?.score ?? 0}점
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-indigo-500 rounded-full"
+                    style={{ width: `${analysis.metaCognitionAnalysis.errorRecognition?.score ?? 0}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600">{analysis.metaCognitionAnalysis.errorRecognition?.analysis}</p>
+                {analysis.metaCognitionAnalysis.errorRecognition?.evidence &&
+                 analysis.metaCognitionAnalysis.errorRecognition.evidence.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs text-gray-500 mb-1">관찰된 증거:</div>
+                    <ul className="text-xs text-gray-600 list-disc list-inside">
+                      {analysis.metaCognitionAnalysis.errorRecognition.evidence.map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* 전략 선택 능력 */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-700">🎯 전략 선택 능력</span>
+                  <span className="text-lg font-bold text-green-600">
+                    {analysis.metaCognitionAnalysis.strategySelection?.score ?? 0}점
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-green-500 rounded-full"
+                    style={{ width: `${analysis.metaCognitionAnalysis.strategySelection?.score ?? 0}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600">{analysis.metaCognitionAnalysis.strategySelection?.analysis}</p>
+                <div className="mt-2 flex gap-4 text-xs">
+                  <span className="text-green-600">
+                    최적 풀이: {analysis.metaCognitionAnalysis.strategySelection?.optimalCount ?? 0}개
+                  </span>
+                  <span className="text-yellow-600">
+                    차선 풀이: {analysis.metaCognitionAnalysis.strategySelection?.suboptimalCount ?? 0}개
+                  </span>
+                </div>
+              </div>
+
+              {/* 시간 관리 */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-700">⏱️ 시간 관리</span>
+                  <span className="text-lg font-bold text-orange-600">
+                    {analysis.metaCognitionAnalysis.timeManagement?.score ?? 0}점
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-orange-500 rounded-full"
+                    style={{ width: `${analysis.metaCognitionAnalysis.timeManagement?.score ?? 0}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600">{analysis.metaCognitionAnalysis.timeManagement?.analysis}</p>
+                <div className="mt-2 text-xs text-gray-500">
+                  완료: {analysis.metaCognitionAnalysis.timeManagement?.completedProblems ?? 0}/{analysis.metaCognitionAnalysis.timeManagement?.totalProblems ?? 0}문제
+                </div>
+              </div>
+
+              {/* 자기 점검 습관 */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-700">✅ 자기 점검 습관</span>
+                  <span className="text-lg font-bold text-purple-600">
+                    {analysis.metaCognitionAnalysis.selfChecking?.score ?? 0}점
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-purple-500 rounded-full"
+                    style={{ width: `${analysis.metaCognitionAnalysis.selfChecking?.score ?? 0}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600">{analysis.metaCognitionAnalysis.selfChecking?.analysis}</p>
+                {analysis.metaCognitionAnalysis.selfChecking?.evidence &&
+                 analysis.metaCognitionAnalysis.selfChecking.evidence.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs text-gray-500 mb-1">관찰된 증거:</div>
+                    <ul className="text-xs text-gray-600 list-disc list-inside">
+                      {analysis.metaCognitionAnalysis.selfChecking.evidence.map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 개선 권장사항 */}
+            {analysis.metaCognitionAnalysis.recommendations &&
+             analysis.metaCognitionAnalysis.recommendations.length > 0 && (
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="font-medium text-blue-800 mb-2">💡 메타인지 향상 권장사항</div>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  {analysis.metaCognitionAnalysis.recommendations.map((rec, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-blue-500">•</span>
+                      {rec}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 지구력 분석 */}
+        {analysis.staminaAnalysis && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">💪 지구력 분석</h3>
+
+            {/* 전체 점수 및 피로도 패턴 */}
+            <div className="flex items-center justify-between mb-6 p-4 bg-green-50 rounded-lg">
+              <div>
+                <div className="text-sm text-green-600 mb-1">전체 지구력 점수</div>
+                <div className="text-3xl font-bold text-green-700">
+                  {analysis.staminaAnalysis.overallScore}
+                  <span className="text-lg font-normal text-green-400">/100</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500 mb-1">피로도 패턴</div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  analysis.staminaAnalysis.fatiguePattern?.type === 'consistent' ? 'bg-green-100 text-green-700' :
+                  analysis.staminaAnalysis.fatiguePattern?.type === 'improving' ? 'bg-blue-100 text-blue-700' :
+                  analysis.staminaAnalysis.fatiguePattern?.type === 'mid-dip' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-orange-100 text-orange-700'
+                }`}>
+                  {analysis.staminaAnalysis.fatiguePattern?.type === 'consistent' ? '일관 유지' :
+                   analysis.staminaAnalysis.fatiguePattern?.type === 'improving' ? '후반 향상' :
+                   analysis.staminaAnalysis.fatiguePattern?.type === 'early-fatigue' ? '초반 집중형' :
+                   analysis.staminaAnalysis.fatiguePattern?.type === 'mid-dip' ? '중반 슬럼프' :
+                   analysis.staminaAnalysis.fatiguePattern?.type === 'late-fatigue' ? '후반 피로' :
+                   '분석 중'}
+                </span>
+              </div>
+            </div>
+
+            {/* 피로도 패턴 설명 */}
+            {analysis.staminaAnalysis.fatiguePattern?.description && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-700">{analysis.staminaAnalysis.fatiguePattern.description}</p>
+                <div className="flex gap-4 mt-2 text-xs">
+                  {analysis.staminaAnalysis.fatiguePattern.peakPerformanceRange && (
+                    <span className="text-green-600">
+                      🔥 최고 구간: {analysis.staminaAnalysis.fatiguePattern.peakPerformanceRange}
+                    </span>
+                  )}
+                  {analysis.staminaAnalysis.fatiguePattern.lowPerformanceRange && (
+                    <span className="text-orange-600">
+                      📉 저조 구간: {analysis.staminaAnalysis.fatiguePattern.lowPerformanceRange}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 구간별 정확도 그래프 */}
+            {analysis.staminaAnalysis.accuracyBySequence &&
+             analysis.staminaAnalysis.accuracyBySequence.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">📊 구간별 정확도</h4>
+                <div className="space-y-2">
+                  {analysis.staminaAnalysis.accuracyBySequence.map((seq, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-500 w-20">{seq.range}번</span>
+                      <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            seq.accuracy >= 80 ? 'bg-green-500' :
+                            seq.accuracy >= 60 ? 'bg-yellow-500' :
+                            seq.accuracy >= 40 ? 'bg-orange-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${seq.accuracy}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium w-16 text-right">
+                        {seq.correctCount}/{seq.totalCount} ({seq.accuracy}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 시간 배분 & 집중력 */}
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              {/* 시간 배분 */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h4 className="font-medium text-gray-700 mb-2">⏱️ 시간 배분 분석</h4>
+                <p className="text-sm text-gray-600 mb-3">{analysis.staminaAnalysis.timeDistribution?.analysis}</p>
+                {(analysis.staminaAnalysis.timeDistribution?.rushedProblems?.length ?? 0) > 0 && (
+                  <div className="text-xs text-orange-600 mb-1">
+                    ⚡ 급하게 푼 문제: {analysis.staminaAnalysis.timeDistribution?.rushedProblems?.join(', ')}
+                  </div>
+                )}
+                {(analysis.staminaAnalysis.timeDistribution?.overthoughtProblems?.length ?? 0) > 0 && (
+                  <div className="text-xs text-blue-600">
+                    🤔 오래 고민한 문제: {analysis.staminaAnalysis.timeDistribution?.overthoughtProblems?.join(', ')}
+                  </div>
+                )}
+              </div>
+
+              {/* 집중력 */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-gray-700">🎯 집중력 유지</h4>
+                  <span className="text-lg font-bold text-indigo-600">
+                    {analysis.staminaAnalysis.focusAnalysis?.score ?? 0}점
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-indigo-500 rounded-full"
+                    style={{ width: `${analysis.staminaAnalysis.focusAnalysis?.score ?? 0}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600">{analysis.staminaAnalysis.focusAnalysis?.analysis}</p>
+                {analysis.staminaAnalysis.focusAnalysis?.signs &&
+                 analysis.staminaAnalysis.focusAnalysis.signs.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs text-gray-500 mb-1">관찰된 징후:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {analysis.staminaAnalysis.focusAnalysis.signs.map((sign, i) => (
+                        <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                          {sign}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 권장사항 */}
+            {analysis.staminaAnalysis.recommendations &&
+             analysis.staminaAnalysis.recommendations.length > 0 && (
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="font-medium text-green-800 mb-2">💡 지구력 향상 권장사항</div>
+                <ul className="text-sm text-green-700 space-y-1">
+                  {analysis.staminaAnalysis.recommendations.map((rec, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-green-500">•</span>
+                      {rec}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 개선 전략 */}
         {analysis.actionablePrescription && analysis.actionablePrescription.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -512,6 +823,20 @@ export default function ReportDetailPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* 성장 궤적 그래프 */}
+        {(analysis.resultAnalysis?.gradeTrend || analysis.growthPredictions) && (
+          <GrowthTrajectoryChart
+            scoreHistory={analysis.resultAnalysis?.gradeTrend}
+            predictions={analysis.growthPredictions}
+            currentScore={report.total_score ?? undefined}
+            targetScore={analysis.resultAnalysis?.gradeTrend && analysis.resultAnalysis.gradeTrend.length > 0
+              ? Math.round(analysis.resultAnalysis.gradeTrend[analysis.resultAnalysis.gradeTrend.length - 1].score * 1.1)
+              : undefined
+            }
+            title="성장 궤적"
+          />
         )}
 
         {/* 미래 비전 - VisionFooter 컴포넌트 사용 */}
