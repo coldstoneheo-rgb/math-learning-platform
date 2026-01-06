@@ -8,3 +8,8 @@ export { default as MetaHeader } from './MetaHeader';
 export { default as VisionFooter } from './VisionFooter';
 export { default as GrowthTrajectoryChart } from './GrowthTrajectoryChart';
 export { default as ErrorPatternTrend } from './ErrorPatternTrend';
+export {
+  default as GrowthLoopIndicator,
+  BaselineReferenceCard,
+  VisionDistanceFooter,
+} from './GrowthLoopIndicator';

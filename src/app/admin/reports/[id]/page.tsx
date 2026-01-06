@@ -3,9 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { MetaHeader, VisionFooter, GrowthTrajectoryChart, ErrorPatternTrend } from '@/components/report';
+import {
+  MetaHeader,
+  VisionFooter,
+  GrowthTrajectoryChart,
+  ErrorPatternTrend,
+  GrowthLoopIndicator,
+  BaselineReferenceCard,
+  VisionDistanceFooter,
+} from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
-import type { User, Report, Student, AnalysisData, LevelTestAnalysis } from '@/types';
+import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
@@ -98,6 +106,18 @@ export default function ReportDetailPage() {
   const levelTestAnalysis = report?.report_type === 'level_test'
     ? (report?.analysis_data as LevelTestAnalysis)
     : null;
+  const weeklyAnalysis = report?.report_type === 'weekly'
+    ? (report?.analysis_data as WeeklyReportAnalysis)
+    : null;
+  const monthlyAnalysis = report?.report_type === 'monthly'
+    ? (report?.analysis_data as MonthlyReportAnalysis)
+    : null;
+  const semiAnnualAnalysis = report?.report_type === 'semi_annual'
+    ? (report?.analysis_data as SemiAnnualReportAnalysis)
+    : null;
+  const annualAnalysis = report?.report_type === 'annual'
+    ? (report?.analysis_data as AnnualReportAnalysis)
+    : null;
 
   if (loading) {
     return (
@@ -159,6 +179,25 @@ export default function ReportDetailPage() {
             metaProfile={report.students.meta_profile}
             studentName={report.students.name}
             studentGrade={report.students.grade}
+          />
+        )}
+
+        {/* Growth Loop 위치 표시 */}
+        <GrowthLoopIndicator
+          reportType={report.report_type as 'level_test' | 'test' | 'weekly' | 'monthly' | 'semi_annual' | 'annual' | 'consolidated'}
+          baselineDate={report.students?.meta_profile?.baseline?.assessmentDate}
+          hasBaseline={!!report.students?.meta_profile?.baseline?.assessmentDate || report.report_type === 'level_test'}
+        />
+
+        {/* Baseline 대비 현재 위치 (레벨 테스트 제외) */}
+        {report.report_type !== 'level_test' && report.students && (
+          <BaselineReferenceCard
+            baselineScore={report.students?.meta_profile?.baseline?.initialLevel?.percentile
+              ? Math.round(report.students.meta_profile.baseline.initialLevel.percentile)
+              : undefined}
+            currentScore={report.total_score ?? undefined}
+            baselineDate={report.students?.meta_profile?.baseline?.assessmentDate}
+            studentName={report.students.name}
           />
         )}
 
@@ -402,11 +441,21 @@ export default function ReportDetailPage() {
                 <p className="leading-relaxed">{levelTestAnalysis.parentBriefing}</p>
               </div>
             )}
+
+            {/* 목표까지의 거리 (Vision Distance) */}
+            {report.students && (
+              <VisionDistanceFooter
+                currentScore={report.total_score ?? undefined}
+                targetScore={90}
+                studentName={report.students.name}
+                reportType="level_test"
+              />
+            )}
           </>
         )}
 
-        {/* ===== 일반 시험 분석 뷰 ===== */}
-        {report.report_type !== 'level_test' && analysis && (
+        {/* ===== 일반 시험 분석 뷰 (test 타입만) ===== */}
+        {report.report_type === 'test' && analysis && (
         <>
         {/* 종합 분석 */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -924,7 +973,738 @@ export default function ReportDetailPage() {
             </div>
           )}
         </div>
+
+        {/* 목표까지의 거리 (Vision Distance) */}
+        {report.students && (
+          <VisionDistanceFooter
+            currentScore={report.total_score ?? undefined}
+            targetScore={analysis.growthPredictions?.[0]?.predictedScore || 90}
+            studentName={report.students.name}
+            reportType="test"
+          />
+        )}
         </>
+        )}
+
+        {/* ===== 주간 리포트 뷰 ===== */}
+        {report.report_type === 'weekly' && weeklyAnalysis && (
+          <>
+            {/* 주간 요약 */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">📅 주간 요약</h3>
+              <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-indigo-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-indigo-600">수업 횟수</div>
+                  <div className="text-2xl font-bold text-indigo-700">{weeklyAnalysis.classSessions?.length || 0}회</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-green-600">숙제 완료율</div>
+                  <div className="text-2xl font-bold text-green-700">{weeklyAnalysis.assignmentCompletion?.rate || 0}%</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-purple-600">연속성 점수</div>
+                  <div className="text-2xl font-bold text-purple-700">{weeklyAnalysis.microLoopFeedback?.continuityScore || 0}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 수업 세션 */}
+            {weeklyAnalysis.classSessions && weeklyAnalysis.classSessions.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📚 수업 세션</h3>
+                <div className="space-y-3">
+                  {weeklyAnalysis.classSessions.map((session, idx) => (
+                    <div key={idx} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium">{session.date}</span>
+                        <span className="text-sm text-gray-500">{session.duration}분</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {session.keywords?.map((kw, i) => (
+                          <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">{kw}</span>
+                        ))}
+                      </div>
+                      <div className="flex gap-4 text-sm">
+                        <span>이해도: {'⭐'.repeat(session.understandingLevel || 0)}</span>
+                        <span>집중도: {'⭐'.repeat(session.attentionLevel || 0)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 학습 내용 평가 */}
+            {weeklyAnalysis.learningContent && weeklyAnalysis.learningContent.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 학습 내용 평가</h3>
+                <div className="space-y-2">
+                  {weeklyAnalysis.learningContent.map((item, idx) => (
+                    <div key={idx} className={`p-3 rounded-lg ${
+                      item.evaluation === 'excellent' ? 'bg-green-50' :
+                      item.evaluation === 'good' ? 'bg-blue-50' : 'bg-orange-50'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 text-xs rounded ${
+                          item.evaluation === 'excellent' ? 'bg-green-200 text-green-700' :
+                          item.evaluation === 'good' ? 'bg-blue-200 text-blue-700' : 'bg-orange-200 text-orange-700'
+                        }`}>
+                          {item.evaluation === 'excellent' ? '우수' : item.evaluation === 'good' ? '양호' : '보완필요'}
+                        </span>
+                        <span className="font-medium">{item.topic}</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{item.details}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 마이크로 루프 피드백 */}
+            {weeklyAnalysis.microLoopFeedback && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🔄 마이크로 루프 피드백</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-gray-600">모멘텀 상태</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    weeklyAnalysis.microLoopFeedback.momentumStatus === 'accelerating' ? 'bg-green-100 text-green-700' :
+                    weeklyAnalysis.microLoopFeedback.momentumStatus === 'maintaining' ? 'bg-blue-100 text-blue-700' :
+                    weeklyAnalysis.microLoopFeedback.momentumStatus === 'recovering' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-orange-100 text-orange-700'
+                  }`}>
+                    {weeklyAnalysis.microLoopFeedback.momentumStatus === 'accelerating' ? '🚀 가속 중' :
+                     weeklyAnalysis.microLoopFeedback.momentumStatus === 'maintaining' ? '✅ 유지 중' :
+                     weeklyAnalysis.microLoopFeedback.momentumStatus === 'recovering' ? '🔧 회복 중' : '⚠️ 감속 중'}
+                  </span>
+                </div>
+                {weeklyAnalysis.microLoopFeedback.lastWeekGoalAchievement && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700">지난주 목표 달성</div>
+                    {weeklyAnalysis.microLoopFeedback.lastWeekGoalAchievement.map((goal, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm">
+                        <span>{goal.achieved ? '✅' : '❌'}</span>
+                        <span>{goal.goal}</span>
+                        {goal.notes && <span className="text-gray-500">- {goal.notes}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 다음 주 계획 */}
+            {weeklyAnalysis.nextWeekPlan && (
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-sm p-6 mb-6 text-white">
+                <h3 className="text-lg font-semibold mb-3">📌 다음 주 계획</h3>
+                <div className="mb-3">
+                  <span className="text-indigo-200">핵심 목표:</span>
+                  <span className="ml-2 font-medium">{weeklyAnalysis.nextWeekPlan.focus}</span>
+                </div>
+                {weeklyAnalysis.nextWeekPlan.goals && (
+                  <ul className="space-y-1">
+                    {weeklyAnalysis.nextWeekPlan.goals.map((g, i) => (
+                      <li key={i} className="text-sm">• {g}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* 격려 메시지 */}
+            {weeklyAnalysis.encouragement && (
+              <div className="bg-yellow-50 rounded-xl p-6 mb-6 border border-yellow-200">
+                <p className="text-yellow-800">💪 {weeklyAnalysis.encouragement}</p>
+              </div>
+            )}
+
+            {/* 목표까지의 거리 (Vision Distance) */}
+            {report.students && (
+              <VisionDistanceFooter
+                currentScore={report.total_score ?? undefined}
+                targetScore={90}
+                studentName={report.students.name}
+                reportType="weekly"
+              />
+            )}
+          </>
+        )}
+
+        {/* ===== 월간 리포트 뷰 ===== */}
+        {report.report_type === 'monthly' && monthlyAnalysis && (
+          <>
+            {/* 월간 요약 통계 */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 월간 요약</h3>
+              <div className="grid md:grid-cols-4 gap-4">
+                <div className="bg-indigo-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-indigo-600">총 수업</div>
+                  <div className="text-2xl font-bold text-indigo-700">{monthlyAnalysis.classSessionsSummary?.totalClasses || 0}회</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-blue-600">총 시간</div>
+                  <div className="text-2xl font-bold text-blue-700">{monthlyAnalysis.classSessionsSummary?.totalHours || 0}시간</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-green-600">출석률</div>
+                  <div className="text-2xl font-bold text-green-700">{monthlyAnalysis.classSessionsSummary?.attendanceRate || 0}%</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-purple-600">평균 이해도</div>
+                  <div className="text-2xl font-bold text-purple-700">{monthlyAnalysis.classSessionsSummary?.averageUnderstanding || 0}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 커리큘럼 진도 */}
+            {monthlyAnalysis.curriculumProgress && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 커리큘럼 진도</h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="text-gray-600">{monthlyAnalysis.curriculumProgress.startUnit}</div>
+                  <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 rounded-full"
+                      style={{ width: `${monthlyAnalysis.curriculumProgress.completionRate}%` }}
+                    />
+                  </div>
+                  <div className="text-gray-600">{monthlyAnalysis.curriculumProgress.endUnit}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">진도율: {monthlyAnalysis.curriculumProgress.completionRate}%</span>
+                  <span className={`px-3 py-1 rounded-full text-sm ${
+                    monthlyAnalysis.curriculumProgress.paceAssessment === 'ahead' ? 'bg-green-100 text-green-700' :
+                    monthlyAnalysis.curriculumProgress.paceAssessment === 'on_track' ? 'bg-blue-100 text-blue-700' :
+                    'bg-orange-100 text-orange-700'
+                  }`}>
+                    {monthlyAnalysis.curriculumProgress.paceAssessment === 'ahead' ? '선행 중' :
+                     monthlyAnalysis.curriculumProgress.paceAssessment === 'on_track' ? '정상 진행' : '후행'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 학습 내용 종합 */}
+            {monthlyAnalysis.learningContentSummary && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 학습 내용 종합</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <h4 className="font-medium text-green-700 mb-2">✨ 우수 영역</h4>
+                    <ul className="text-sm text-green-600 space-y-1">
+                      {monthlyAnalysis.learningContentSummary.excellentTopics?.map((t, i) => (
+                        <li key={i}>• {t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-700 mb-2">👍 양호 영역</h4>
+                    <ul className="text-sm text-blue-600 space-y-1">
+                      {monthlyAnalysis.learningContentSummary.goodTopics?.map((t, i) => (
+                        <li key={i}>• {t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg p-4">
+                    <h4 className="font-medium text-orange-700 mb-2">⚠️ 도전 영역</h4>
+                    <ul className="text-sm text-orange-600 space-y-1">
+                      {monthlyAnalysis.learningContentSummary.challengingTopics?.map((t, i) => (
+                        <li key={i}>• {t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 마이크로 루프 월간 점검 */}
+            {monthlyAnalysis.microLoopMonthlyReview && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🔄 마이크로 루프 월간 점검</h3>
+                <div className="grid md:grid-cols-3 gap-4 mb-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-sm text-gray-500">월간 목표 달성도</div>
+                    <div className="text-3xl font-bold text-indigo-600">{monthlyAnalysis.microLoopMonthlyReview.monthlyGoalAchievement}%</div>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-sm text-gray-500">주간 연속성 평균</div>
+                    <div className="text-3xl font-bold text-blue-600">{monthlyAnalysis.microLoopMonthlyReview.weeklyConsistency}</div>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-sm text-gray-500">성장 모멘텀</div>
+                    <div className={`text-lg font-bold ${
+                      monthlyAnalysis.microLoopMonthlyReview.growthMomentum === 'accelerating' ? 'text-green-600' :
+                      monthlyAnalysis.microLoopMonthlyReview.growthMomentum === 'maintaining' ? 'text-blue-600' : 'text-orange-600'
+                    }`}>
+                      {monthlyAnalysis.microLoopMonthlyReview.growthMomentum === 'accelerating' ? '🚀 가속' :
+                       monthlyAnalysis.microLoopMonthlyReview.growthMomentum === 'maintaining' ? '✅ 유지' : '⚠️ 감속'}
+                    </div>
+                  </div>
+                </div>
+                {monthlyAnalysis.microLoopMonthlyReview.adjustmentNeeded && (
+                  <div className="bg-yellow-50 rounded-lg p-4">
+                    <h4 className="font-medium text-yellow-800 mb-2">📌 조정 권장사항</h4>
+                    <ul className="text-sm text-yellow-700 space-y-1">
+                      {monthlyAnalysis.microLoopMonthlyReview.adjustmentRecommendations?.map((r, i) => (
+                        <li key={i}>• {r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 부모님 보고 */}
+            {monthlyAnalysis.parentReport && (
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-sm p-6 mb-6 text-white">
+                <h3 className="text-lg font-semibold mb-4">👨‍👩‍👧 학부모님께</h3>
+                {monthlyAnalysis.parentReport.highlights && (
+                  <div className="mb-4">
+                    <h4 className="font-medium text-indigo-200 mb-2">이달의 하이라이트</h4>
+                    <ul className="space-y-1">
+                      {monthlyAnalysis.parentReport.highlights.map((h, i) => (
+                        <li key={i} className="text-sm">✨ {h}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {monthlyAnalysis.parentReport.concerns && monthlyAnalysis.parentReport.concerns.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="font-medium text-indigo-200 mb-2">관심 필요 사항</h4>
+                    <ul className="space-y-1">
+                      {monthlyAnalysis.parentReport.concerns.map((c, i) => (
+                        <li key={i} className="text-sm">⚠️ {c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {monthlyAnalysis.parentReport.recommendations && (
+                  <div>
+                    <h4 className="font-medium text-indigo-200 mb-2">권장사항</h4>
+                    <ul className="space-y-1">
+                      {monthlyAnalysis.parentReport.recommendations.map((r, i) => (
+                        <li key={i} className="text-sm">💡 {r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 목표까지의 거리 (Vision Distance) */}
+            {report.students && (
+              <VisionDistanceFooter
+                currentScore={report.total_score ?? undefined}
+                targetScore={90}
+                studentName={report.students.name}
+                reportType="monthly"
+              />
+            )}
+          </>
+        )}
+
+        {/* ===== 6개월 리포트 뷰 ===== */}
+        {report.report_type === 'semi_annual' && semiAnnualAnalysis && (
+          <>
+            {/* 반기 요약 */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 {semiAnnualAnalysis.halfYear} 요약</h3>
+              <div className="grid md:grid-cols-5 gap-4">
+                <div className="bg-indigo-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-indigo-600">총 수업</div>
+                  <div className="text-xl font-bold text-indigo-700">{semiAnnualAnalysis.periodSummary?.totalClasses || 0}회</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-blue-600">총 시간</div>
+                  <div className="text-xl font-bold text-blue-700">{semiAnnualAnalysis.periodSummary?.totalHours || 0}h</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-green-600">총 시험</div>
+                  <div className="text-xl font-bold text-green-700">{semiAnnualAnalysis.periodSummary?.totalTests || 0}회</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-purple-600">평균 점수</div>
+                  <div className="text-xl font-bold text-purple-700">{semiAnnualAnalysis.periodSummary?.averageScore || 0}점</div>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-orange-600">점수 향상</div>
+                  <div className="text-xl font-bold text-orange-700">+{semiAnnualAnalysis.periodSummary?.scoreImprovement || 0}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 성장 궤적 */}
+            {semiAnnualAnalysis.growthTrajectory && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 성장 궤적</h3>
+                <div className="flex items-center justify-between mb-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">시작점</div>
+                    <div className="text-2xl font-bold text-indigo-600">{semiAnnualAnalysis.growthTrajectory.startingPoint?.score}점</div>
+                    <div className="text-xs text-gray-400">{semiAnnualAnalysis.growthTrajectory.startingPoint?.level}</div>
+                  </div>
+                  <div className="flex-1 mx-4 text-center">
+                    <div className="text-3xl">→</div>
+                    <div className={`text-lg font-bold ${
+                      semiAnnualAnalysis.growthTrajectory.growthRate >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {semiAnnualAnalysis.growthTrajectory.growthRate >= 0 ? '+' : ''}{semiAnnualAnalysis.growthTrajectory.growthRate}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">현재</div>
+                    <div className="text-2xl font-bold text-purple-600">{semiAnnualAnalysis.growthTrajectory.currentPoint?.score}점</div>
+                    <div className="text-xs text-gray-400">{semiAnnualAnalysis.growthTrajectory.currentPoint?.level}</div>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                    semiAnnualAnalysis.growthTrajectory.growthType === 'exponential' ? 'bg-green-100 text-green-700' :
+                    semiAnnualAnalysis.growthTrajectory.growthType === 'linear' ? 'bg-blue-100 text-blue-700' :
+                    semiAnnualAnalysis.growthTrajectory.growthType === 'plateau' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-orange-100 text-orange-700'
+                  }`}>
+                    성장 유형: {
+                      semiAnnualAnalysis.growthTrajectory.growthType === 'exponential' ? '급성장' :
+                      semiAnnualAnalysis.growthTrajectory.growthType === 'linear' ? '꾸준한 성장' :
+                      semiAnnualAnalysis.growthTrajectory.growthType === 'plateau' ? '정체기' : '변동 있음'
+                    }
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 메타프로필 변화 */}
+            {semiAnnualAnalysis.metaProfileEvolution && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🧠 메타프로필 변화</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="border rounded-lg p-4">
+                    <h4 className="font-medium text-gray-700 mb-2">흡수율</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">{semiAnnualAnalysis.metaProfileEvolution.absorptionRateChange?.previous}</span>
+                      <span>→</span>
+                      <span className="font-bold text-indigo-600">{semiAnnualAnalysis.metaProfileEvolution.absorptionRateChange?.current}</span>
+                      <span className={`text-sm ${
+                        semiAnnualAnalysis.metaProfileEvolution.absorptionRateChange?.trend === 'improving' ? 'text-green-500' :
+                        semiAnnualAnalysis.metaProfileEvolution.absorptionRateChange?.trend === 'stable' ? 'text-blue-500' : 'text-red-500'
+                      }`}>
+                        ({semiAnnualAnalysis.metaProfileEvolution.absorptionRateChange?.trend === 'improving' ? '↑' :
+                          semiAnnualAnalysis.metaProfileEvolution.absorptionRateChange?.trend === 'stable' ? '→' : '↓'})
+                      </span>
+                    </div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <h4 className="font-medium text-gray-700 mb-2">지구력</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">{semiAnnualAnalysis.metaProfileEvolution.staminaChange?.previous}</span>
+                      <span>→</span>
+                      <span className="font-bold text-green-600">{semiAnnualAnalysis.metaProfileEvolution.staminaChange?.current}</span>
+                    </div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <h4 className="font-medium text-gray-700 mb-2">메타인지</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">{semiAnnualAnalysis.metaProfileEvolution.metaCognitionChange?.previous}</span>
+                      <span>→</span>
+                      <span className="font-bold text-purple-600">{semiAnnualAnalysis.metaProfileEvolution.metaCognitionChange?.current}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 취약점 종합 점검 */}
+            {semiAnnualAnalysis.weaknessReview && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 취약점 종합 점검</h3>
+                <div className="mb-4 p-4 bg-green-50 rounded-lg">
+                  <div className="text-sm text-green-600 mb-1">해결률</div>
+                  <div className="text-3xl font-bold text-green-700">{semiAnnualAnalysis.weaknessReview.resolutionRate}%</div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <h4 className="font-medium text-green-700 mb-2">✅ 해결된 취약점</h4>
+                    <ul className="text-sm text-green-600 space-y-1">
+                      {semiAnnualAnalysis.weaknessReview.resolved?.map((w, i) => <li key={i}>• {w}</li>)}
+                    </ul>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg p-4">
+                    <h4 className="font-medium text-orange-700 mb-2">⚠️ 지속 관찰 필요</h4>
+                    <ul className="text-sm text-orange-600 space-y-1">
+                      {semiAnnualAnalysis.weaknessReview.persistent?.map((w, i) => <li key={i}>• {w}</li>)}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 매크로 루프 분석 */}
+            {semiAnnualAnalysis.macroLoopAnalysis && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🔄 매크로 루프 분석</h3>
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-sm text-gray-500">반기 목표 달성률</div>
+                    <div className="text-3xl font-bold text-indigo-600">{semiAnnualAnalysis.macroLoopAnalysis.goalAchievementRate}%</div>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-sm text-gray-500">학습 효율성</div>
+                    <div className="text-3xl font-bold text-green-600">{semiAnnualAnalysis.macroLoopAnalysis.learningEfficiency}%</div>
+                  </div>
+                </div>
+                {semiAnnualAnalysis.macroLoopAnalysis.strategicAdjustments && semiAnnualAnalysis.macroLoopAnalysis.strategicAdjustments.length > 0 && (
+                  <div className="bg-yellow-50 rounded-lg p-4">
+                    <h4 className="font-medium text-yellow-800 mb-2">📌 전략적 조정 제안</h4>
+                    <div className="space-y-2">
+                      {semiAnnualAnalysis.macroLoopAnalysis.strategicAdjustments.map((adj, i) => (
+                        <div key={i} className="text-sm">
+                          <span className="font-medium text-yellow-700">{adj.area}:</span>
+                          <span className="text-yellow-600 ml-1">{adj.suggestedChange}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 부모님 종합 보고 */}
+            {semiAnnualAnalysis.parentComprehensiveReport && (
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-sm p-6 mb-6 text-white">
+                <h3 className="text-lg font-semibold mb-4">👨‍👩‍👧 학부모님께 드리는 반기 종합 보고</h3>
+                <div className="mb-4">
+                  <h4 className="font-medium text-indigo-200 mb-2">요약</h4>
+                  <p className="text-sm">{semiAnnualAnalysis.parentComprehensiveReport.executiveSummary}</p>
+                </div>
+                {semiAnnualAnalysis.parentComprehensiveReport.recommendations && (
+                  <div>
+                    <h4 className="font-medium text-indigo-200 mb-2">권장사항</h4>
+                    <ul className="space-y-1">
+                      {semiAnnualAnalysis.parentComprehensiveReport.recommendations.map((r, i) => (
+                        <li key={i} className="text-sm">💡 {r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 목표까지의 거리 (Vision Distance) */}
+            {report.students && (
+              <VisionDistanceFooter
+                currentScore={semiAnnualAnalysis.periodSummary?.averageScore ?? undefined}
+                targetScore={90}
+                studentName={report.students.name}
+                reportType="semi_annual"
+              />
+            )}
+          </>
+        )}
+
+        {/* ===== 연간 리포트 뷰 ===== */}
+        {report.report_type === 'annual' && annualAnalysis && (
+          <>
+            {/* 연간 통계 */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 {annualAnalysis.year}년 연간 통계</h3>
+              <div className="grid md:grid-cols-4 gap-4">
+                <div className="bg-indigo-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-indigo-600">총 수업</div>
+                  <div className="text-xl font-bold text-indigo-700">{annualAnalysis.annualStatistics?.totalClasses || 0}회</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-blue-600">총 학습시간</div>
+                  <div className="text-xl font-bold text-blue-700">{annualAnalysis.annualStatistics?.totalHours || 0}시간</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-green-600">평균 점수</div>
+                  <div className="text-xl font-bold text-green-700">{annualAnalysis.annualStatistics?.averageScore || 0}점</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <div className="text-xs text-purple-600">점수 향상</div>
+                  <div className="text-xl font-bold text-purple-700">+{annualAnalysis.annualStatistics?.scoreImprovement || 0}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 성장 스토리 */}
+            {annualAnalysis.growthStory && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📖 연간 성장 스토리</h3>
+
+                {/* 시작과 끝 */}
+                <div className="flex items-center justify-between mb-6 p-4 bg-gradient-to-r from-gray-50 to-indigo-50 rounded-lg">
+                  <div className="text-center flex-1">
+                    <div className="text-xs text-gray-500">학년 초</div>
+                    <div className="text-lg font-bold text-gray-700">{annualAnalysis.growthStory.beginningState?.description}</div>
+                  </div>
+                  <div className="mx-4 text-3xl">🚀</div>
+                  <div className="text-center flex-1">
+                    <div className="text-xs text-gray-500">학년 말</div>
+                    <div className="text-lg font-bold text-indigo-700">{annualAnalysis.growthStory.endingState?.description}</div>
+                  </div>
+                </div>
+
+                {/* 주요 마일스톤 */}
+                {annualAnalysis.growthStory.majorMilestones && annualAnalysis.growthStory.majorMilestones.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="font-medium text-gray-700 mb-2">🏆 주요 마일스톤</h4>
+                    <div className="space-y-2">
+                      {annualAnalysis.growthStory.majorMilestones.map((m, i) => (
+                        <div key={i} className="flex items-center gap-3 p-2 bg-green-50 rounded-lg">
+                          <span className="text-sm text-gray-500">{m.date}</span>
+                          <span className="font-medium text-green-700">{m.milestone}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 서사 요약 */}
+                {annualAnalysis.growthStory.narrativeSummary && (
+                  <div className="p-4 bg-indigo-50 rounded-lg">
+                    <p className="text-indigo-800 italic">&ldquo;{annualAnalysis.growthStory.narrativeSummary}&rdquo;</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Baseline 대비 성장 */}
+            {annualAnalysis.baselineComparison && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 Baseline 대비 성장</h3>
+                <div className="text-center mb-4">
+                  <div className="text-sm text-gray-500">전체 성장률</div>
+                  <div className={`text-4xl font-bold ${
+                    annualAnalysis.baselineComparison.overallGrowthRate >= 20 ? 'text-green-600' :
+                    annualAnalysis.baselineComparison.overallGrowthRate >= 10 ? 'text-blue-600' : 'text-orange-600'
+                  }`}>
+                    +{annualAnalysis.baselineComparison.overallGrowthRate}%
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm ${
+                    annualAnalysis.baselineComparison.growthCategory === 'exceptional' ? 'bg-green-100 text-green-700' :
+                    annualAnalysis.baselineComparison.growthCategory === 'excellent' ? 'bg-blue-100 text-blue-700' :
+                    annualAnalysis.baselineComparison.growthCategory === 'good' ? 'bg-indigo-100 text-indigo-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {annualAnalysis.baselineComparison.growthCategory === 'exceptional' ? '탁월함' :
+                     annualAnalysis.baselineComparison.growthCategory === 'excellent' ? '우수' :
+                     annualAnalysis.baselineComparison.growthCategory === 'good' ? '양호' :
+                     annualAnalysis.baselineComparison.growthCategory === 'steady' ? '꾸준함' : '관심 필요'}
+                  </span>
+                </div>
+                {annualAnalysis.baselineComparison.currentMetrics && (
+                  <div className="space-y-2">
+                    {annualAnalysis.baselineComparison.currentMetrics.map((m, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span className="font-medium">{m.domain}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500">{m.initial}</span>
+                          <span>→</span>
+                          <span className="font-bold text-indigo-600">{m.current}</span>
+                          <span className="text-green-500 text-sm">(+{m.growthRate}%)</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 연간 매크로 루프 종합 */}
+            {annualAnalysis.annualMacroLoopSummary && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🔄 연간 매크로 루프 종합</h3>
+                {annualAnalysis.annualMacroLoopSummary.halfYearComparison && (
+                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                    <div className="border rounded-lg p-4 text-center">
+                      <div className="text-sm text-gray-500">상반기</div>
+                      <div className="text-2xl font-bold text-indigo-600">
+                        {annualAnalysis.annualMacroLoopSummary.halfYearComparison.firstHalf?.averageScore}점
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        성장률 {annualAnalysis.annualMacroLoopSummary.halfYearComparison.firstHalf?.growthRate}%
+                      </div>
+                    </div>
+                    <div className="border rounded-lg p-4 text-center">
+                      <div className="text-sm text-gray-500">하반기</div>
+                      <div className="text-2xl font-bold text-purple-600">
+                        {annualAnalysis.annualMacroLoopSummary.halfYearComparison.secondHalf?.averageScore}점
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        성장률 {annualAnalysis.annualMacroLoopSummary.halfYearComparison.secondHalf?.growthRate}%
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {annualAnalysis.annualMacroLoopSummary.learningROI && (
+                  <div className="bg-green-50 rounded-lg p-4 text-center">
+                    <div className="text-sm text-green-600">학습 ROI</div>
+                    <div className="text-lg font-bold text-green-700">
+                      {annualAnalysis.annualMacroLoopSummary.learningROI.efficiencyRating}
+                    </div>
+                    <div className="text-xs text-green-500">
+                      {annualAnalysis.annualMacroLoopSummary.learningROI.timeInvested}시간 투자 →
+                      {annualAnalysis.annualMacroLoopSummary.learningROI.improvementAchieved}점 향상
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 다음 학년 준비 */}
+            {annualAnalysis.nextYearPreparation && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 다음 학년 준비</h3>
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-sm text-gray-500">준비도 점수</div>
+                    <div className="text-3xl font-bold text-indigo-600">{annualAnalysis.nextYearPreparation.readinessScore}%</div>
+                  </div>
+                  <div className="text-center p-4 border rounded-lg">
+                    <div className="text-sm text-gray-500">권장 학습 속도</div>
+                    <div className={`text-lg font-bold ${
+                      annualAnalysis.nextYearPreparation.recommendedPace === 'accelerated' ? 'text-green-600' :
+                      annualAnalysis.nextYearPreparation.recommendedPace === 'normal' ? 'text-blue-600' : 'text-orange-600'
+                    }`}>
+                      {annualAnalysis.nextYearPreparation.recommendedPace === 'accelerated' ? '🚀 가속' :
+                       annualAnalysis.nextYearPreparation.recommendedPace === 'normal' ? '✅ 정상' : '🔧 보완 필요'}
+                    </div>
+                  </div>
+                </div>
+                {annualAnalysis.nextYearPreparation.focusAreas && (
+                  <div className="bg-yellow-50 rounded-lg p-4">
+                    <h4 className="font-medium text-yellow-800 mb-2">📌 집중 영역</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {annualAnalysis.nextYearPreparation.focusAreas.map((a, i) => (
+                        <span key={i} className="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full text-sm">{a}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 연간 종합 메시지 */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-sm p-6 mb-6 text-white">
+              <h3 className="text-lg font-semibold mb-4">🌟 {annualAnalysis.year}년을 마치며</h3>
+              <p className="text-indigo-100 leading-relaxed">
+                {report.students?.name} 학생은 한 해 동안 놀라운 성장을 보여주었습니다.
+                시작점에서 {annualAnalysis.baselineComparison?.overallGrowthRate || 0}%의 성장을 이루었으며,
+                다음 학년에도 이 모멘텀을 유지할 것으로 기대됩니다.
+              </p>
+            </div>
+
+            {/* 목표까지의 거리 (Vision Distance) */}
+            {report.students && (
+              <VisionDistanceFooter
+                currentScore={annualAnalysis.annualStatistics?.averageScore ?? undefined}
+                targetScore={95}
+                studentName={report.students.name}
+                reportType="annual"
+              />
+            )}
+          </>
         )}
       </main>
     </div>
