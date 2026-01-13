@@ -47,15 +47,31 @@ function getDatesForDayOfWeek(
   endDate: string
 ): string[] {
   const dates: string[] = [];
+
+  // 날짜 유효성 검사
+  if (!startDate || !endDate) return dates;
+
   const start = new Date(startDate);
   const end = new Date(endDate);
 
+  // Invalid Date 체크
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return dates;
+
+  // 날짜 범위 제한 (최대 31일)
+  const maxDays = 31;
+  const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysDiff < 0 || daysDiff > maxDays) return dates;
+
   const current = new Date(start);
-  while (current <= end) {
+  let iterations = 0;
+  const maxIterations = maxDays + 1;
+
+  while (current <= end && iterations < maxIterations) {
     if (current.getDay() === dayOfWeek) {
       dates.push(current.toISOString().split('T')[0]);
     }
     current.setDate(current.getDate() + 1);
+    iterations++;
   }
 
   return dates;
@@ -124,14 +140,15 @@ export default function NewWeeklyReportPage() {
         setStudentSchedules(schedules);
 
         // 해당 주의 수업 날짜 자동 계산
-        const classDates: string[] = [];
+        let classDates: string[] = [];
         schedules.forEach((schedule) => {
           const dates = getDatesForDayOfWeek(
             schedule.day_of_week,
             formData.startDate,
             formData.endDate
           );
-          classDates.push(...dates);
+          // spread 대신 concat 사용 (스택 오버플로우 방지)
+          classDates = classDates.concat(dates);
         });
 
         // 날짜 정렬
@@ -165,30 +182,47 @@ export default function NewWeeklyReportPage() {
 
   // 날짜 변경 시 monthWeek 및 수업일정 업데이트
   useEffect(() => {
-    const startDate = new Date(formData.startDate);
-    setFormData((prev) => ({
-      ...prev,
-      monthWeek: getMonthWeekFormat(startDate),
-      period: `${prev.startDate} ~ ${prev.endDate}`,
-    }));
+    // 날짜 유효성 검사
+    if (!formData.startDate || !formData.endDate) return;
 
-    // 학생이 선택되어 있으면 수업 일정 재계산
+    const startDate = new Date(formData.startDate);
+    if (isNaN(startDate.getTime())) return;
+
+    const newMonthWeek = getMonthWeekFormat(startDate);
+    const newPeriod = `${formData.startDate} ~ ${formData.endDate}`;
+
+    // 수업 일정 재계산
+    let newClassDates: string[] = [];
     if (selectedStudentId && studentSchedules.length > 0) {
-      const classDates: string[] = [];
       studentSchedules.forEach((schedule) => {
         const dates = getDatesForDayOfWeek(
           schedule.day_of_week,
           formData.startDate,
           formData.endDate
         );
-        classDates.push(...dates);
+        // spread 대신 concat 사용 (스택 오버플로우 방지)
+        newClassDates = newClassDates.concat(dates);
       });
-      classDates.sort();
-      setFormData((prev) => ({
-        ...prev,
-        classDates: classDates.length > 0 ? classDates : [],
-      }));
+      newClassDates.sort();
     }
+
+    // 한 번에 업데이트 (불필요한 리렌더 방지)
+    setFormData((prev) => {
+      // 변경이 없으면 업데이트하지 않음
+      if (
+        prev.monthWeek === newMonthWeek &&
+        prev.period === newPeriod &&
+        JSON.stringify(prev.classDates) === JSON.stringify(newClassDates)
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        monthWeek: newMonthWeek,
+        period: newPeriod,
+        classDates: newClassDates,
+      };
+    });
   }, [formData.startDate, formData.endDate, selectedStudentId, studentSchedules]);
 
   const checkAuthAndLoadData = async () => {
