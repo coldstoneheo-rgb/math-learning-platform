@@ -25,6 +25,12 @@ function getMonthWeekFormat(date: Date): string {
   return `${month}월 ${weekOfMonth}주차`;
 }
 
+// 주차 번호 추출 (1~5)
+function getWeekNumber(date: Date): number {
+  const day = date.getDate();
+  return Math.ceil(day / 7);
+}
+
 // 이번 주 시작/종료일 계산
 function getThisWeekRange(): { start: string; end: string } {
   const today = new Date();
@@ -273,30 +279,20 @@ export default function NewWeeklyReportPage() {
     setGeneratingAi(true);
 
     try {
-      // 이미지 파일 추출
-      const imageFiles = uploadedFiles
-        .filter((f) => f.type === 'image')
-        .map((f) => f.data.split(',')[1]);
-
-      // PDF와 CSV 파일 데이터 추출
-      const pdfFiles = uploadedFiles.filter((f) => f.type === 'pdf').map((f) => f.data);
-      const csvFiles = uploadedFiles.filter((f) => f.type === 'csv').map((f) => f.data);
+      // 시작일 기준 주차 번호 계산
+      const startDateObj = new Date(formData.startDate);
+      const weekNumber = getWeekNumber(startDateObj);
 
       const response = await fetch('/api/weekly-report/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: selectedStudentId,
-          year: currentDate.getFullYear(),
-          monthWeek: formData.monthWeek,
+          year: startDateObj.getFullYear(),
+          weekNumber: weekNumber,
           startDate: formData.startDate,
           endDate: formData.endDate,
-          classDates: formData.classDates,
           teacherNotes: formData.classNotes || '주간 종합 평가 요청',
-          // 파일 데이터
-          imageFiles,
-          pdfFiles,
-          csvFiles,
         }),
       });
 
