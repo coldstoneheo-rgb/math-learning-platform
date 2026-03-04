@@ -112,40 +112,28 @@ export default function ParentsPage() {
     setSaving(true);
 
     try {
-      const supabase = createClient();
-
-      // 1. Supabase Auth로 계정 생성
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('계정 생성 실패');
-
-      // 2. API Route를 통해 users 테이블에 레코드 생성 (service_role 사용)
-      const createUserResponse = await fetch('/api/auth/create-user', {
+      // 서버 사이드 API로 학부모 계정 생성 (현재 선생님 세션 유지)
+      const response = await fetch('/api/auth/create-parent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: authData.user.id,
           email: formData.email,
           name: formData.name,
-          role: 'parent',
+          password: formData.password,
         }),
       });
 
-      if (!createUserResponse.ok) {
-        const errorData = await createUserResponse.json();
-        throw new Error(errorData.error || 'Failed to create user profile');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '계정 생성에 실패했습니다.');
       }
 
       setSuccessMessage(`학부모 계정이 생성되었습니다. (${formData.email})`);
       await loadParents();
       closeModal();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('계정 생성 오류:', err);
-      setError(err.message || '계정 생성 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '계정 생성 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }

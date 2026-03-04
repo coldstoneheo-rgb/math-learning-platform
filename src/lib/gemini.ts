@@ -1040,14 +1040,80 @@ ${input.teacherNotes}
       weekNumber: { type: 'number' },
       studentName: { type: 'string' },
       studentGrade: { type: 'string' },
-      classSessions: { type: 'array' },
-      learningContent: { type: 'array' },
-      assignmentCompletion: { type: 'object' },
+      classSessions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            date: { type: 'string' },
+            duration: { type: 'number' },
+            keywords: { type: 'array', items: { type: 'string' } },
+            understandingLevel: { type: 'number' },
+            attentionLevel: { type: 'number' }
+          }
+        }
+      },
+      learningContent: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            topic: { type: 'string' },
+            evaluation: { type: 'string' },
+            details: { type: 'string' }
+          }
+        }
+      },
+      assignmentCompletion: {
+        type: 'object',
+        properties: {
+          total: { type: 'number' },
+          completed: { type: 'number' },
+          rate: { type: 'number' },
+          quality: { type: 'string' }
+        }
+      },
       weeklyAchievements: { type: 'array', items: { type: 'string' } },
       areasForImprovement: { type: 'array', items: { type: 'string' } },
-      reviewAssignments: { type: 'array' },
-      nextWeekPlan: { type: 'object' },
-      microLoopFeedback: { type: 'object' },
+      reviewAssignments: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            source: { type: 'string' },
+            page: { type: 'string' },
+            number: { type: 'string' },
+            concept: { type: 'string' },
+            reason: { type: 'string' }
+          }
+        }
+      },
+      nextWeekPlan: {
+        type: 'object',
+        properties: {
+          focus: { type: 'string' },
+          goals: { type: 'array', items: { type: 'string' } },
+          assignments: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      microLoopFeedback: {
+        type: 'object',
+        properties: {
+          lastWeekGoalAchievement: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                goal: { type: 'string' },
+                achieved: { type: 'boolean' },
+                notes: { type: 'string' }
+              }
+            }
+          },
+          continuityScore: { type: 'number' },
+          momentumStatus: { type: 'string' }
+        }
+      },
       encouragement: { type: 'string' },
       teacherComment: { type: 'string' }
     }
@@ -1174,20 +1240,99 @@ ${input.teacherNotes}
     type: 'object',
     properties: {
       period: { type: 'string' },
-      month: { type: 'object' },
+      month: {
+        type: 'object',
+        properties: {
+          year: { type: 'number' },
+          month: { type: 'number' }
+        }
+      },
       studentName: { type: 'string' },
-      classSessionsSummary: { type: 'object' },
-      curriculumProgress: { type: 'object' },
-      learningContentSummary: { type: 'object' },
-      testPerformance: { type: 'object' },
-      assignmentSummary: { type: 'object' },
+      classSessionsSummary: {
+        type: 'object',
+        properties: {
+          totalClasses: { type: 'number' },
+          totalHours: { type: 'number' },
+          attendanceRate: { type: 'number' },
+          averageUnderstanding: { type: 'number' },
+          averageAttention: { type: 'number' }
+        }
+      },
+      curriculumProgress: {
+        type: 'object',
+        properties: {
+          startUnit: { type: 'string' },
+          endUnit: { type: 'string' },
+          completionRate: { type: 'number' },
+          paceAssessment: { type: 'string' },
+          paceAdjustmentNeeded: { type: 'string' }
+        }
+      },
+      learningContentSummary: {
+        type: 'object',
+        properties: {
+          excellentTopics: { type: 'array', items: { type: 'string' } },
+          goodTopics: { type: 'array', items: { type: 'string' } },
+          challengingTopics: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      testPerformance: {
+        type: 'object',
+        properties: {
+          testCount: { type: 'number' },
+          averageScore: { type: 'number' },
+          highestScore: { type: 'number' },
+          lowestScore: { type: 'number' },
+          trend: { type: 'string' }
+        }
+      },
+      assignmentSummary: {
+        type: 'object',
+        properties: {
+          totalAssigned: { type: 'number' },
+          completionRate: { type: 'number' },
+          averageQuality: { type: 'number' },
+          consistencyScore: { type: 'number' }
+        }
+      },
       monthlyAchievements: { type: 'array', items: { type: 'string' } },
       resolvedWeaknesses: { type: 'array', items: { type: 'string' } },
       newChallenges: { type: 'array', items: { type: 'string' } },
-      parentReport: { type: 'object' },
-      microLoopMonthlyReview: { type: 'object' },
-      nextMonthPlan: { type: 'object' },
-      shortTermVision: { type: 'object' },
+      parentReport: {
+        type: 'object',
+        properties: {
+          highlights: { type: 'array', items: { type: 'string' } },
+          concerns: { type: 'array', items: { type: 'string' } },
+          recommendations: { type: 'array', items: { type: 'string' } },
+          costInfo: { type: 'string' }
+        }
+      },
+      microLoopMonthlyReview: {
+        type: 'object',
+        properties: {
+          monthlyGoalAchievement: { type: 'number' },
+          weeklyConsistency: { type: 'number' },
+          growthMomentum: { type: 'string' },
+          adjustmentNeeded: { type: 'boolean' },
+          adjustmentRecommendations: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      nextMonthPlan: {
+        type: 'object',
+        properties: {
+          mainGoals: { type: 'array', items: { type: 'string' } },
+          focusAreas: { type: 'array', items: { type: 'string' } },
+          expectedCoverage: { type: 'string' }
+        }
+      },
+      shortTermVision: {
+        type: 'object',
+        properties: {
+          predictedProgress: { type: 'string' },
+          keyMilestones: { type: 'array', items: { type: 'string' } },
+          potentialChallenges: { type: 'array', items: { type: 'string' } }
+        }
+      },
       teacherMessage: { type: 'string' }
     }
   };
@@ -1301,16 +1446,110 @@ ${input.metaProfile ? `
       halfYear: { type: 'string' },
       year: { type: 'number' },
       studentName: { type: 'string' },
-      periodSummary: { type: 'object' },
-      growthTrajectory: { type: 'object' },
-      metaProfileEvolution: { type: 'object' },
-      weaknessReview: { type: 'object' },
-      strengthDevelopment: { type: 'object' },
-      macroLoopAnalysis: { type: 'object' },
-      levelReassessment: { type: 'object' },
-      nextHalfStrategy: { type: 'object' },
-      longTermVisionUpdate: { type: 'object' },
-      parentComprehensiveReport: { type: 'object' },
+      periodSummary: {
+        type: 'object',
+        properties: {
+          totalClasses: { type: 'number' },
+          totalHours: { type: 'number' },
+          totalTests: { type: 'number' },
+          averageScore: { type: 'number' },
+          scoreImprovement: { type: 'number' }
+        }
+      },
+      growthTrajectory: {
+        type: 'object',
+        properties: {
+          startingPoint: { type: 'object', properties: { date: { type: 'string' }, score: { type: 'number' }, level: { type: 'string' } } },
+          currentPoint: { type: 'object', properties: { date: { type: 'string' }, score: { type: 'number' }, level: { type: 'string' } } },
+          growthCurve: { type: 'array', items: { type: 'object', properties: { month: { type: 'string' }, score: { type: 'number' }, milestone: { type: 'string' } } } },
+          growthRate: { type: 'number' },
+          growthType: { type: 'string' }
+        }
+      },
+      metaProfileEvolution: {
+        type: 'object',
+        properties: {
+          errorSignatureChange: {
+            type: 'object',
+            properties: {
+              resolvedPatterns: { type: 'array', items: { type: 'string' } },
+              persistentPatterns: { type: 'array', items: { type: 'string' } },
+              newPatterns: { type: 'array', items: { type: 'string' } },
+              overallTrend: { type: 'string' }
+            }
+          },
+          absorptionRateChange: { type: 'object', properties: { previous: { type: 'number' }, current: { type: 'number' }, trend: { type: 'string' } } },
+          staminaChange: { type: 'object', properties: { previous: { type: 'number' }, current: { type: 'number' }, trend: { type: 'string' } } },
+          metaCognitionChange: { type: 'object', properties: { previous: { type: 'number' }, current: { type: 'number' }, trend: { type: 'string' } } }
+        }
+      },
+      weaknessReview: {
+        type: 'object',
+        properties: {
+          startingWeaknesses: { type: 'array', items: { type: 'string' } },
+          resolved: { type: 'array', items: { type: 'string' } },
+          improved: { type: 'array', items: { type: 'string' } },
+          persistent: { type: 'array', items: { type: 'string' } },
+          new: { type: 'array', items: { type: 'string' } },
+          resolutionRate: { type: 'number' }
+        }
+      },
+      strengthDevelopment: {
+        type: 'object',
+        properties: {
+          consolidatedStrengths: { type: 'array', items: { type: 'string' } },
+          emergingStrengths: { type: 'array', items: { type: 'string' } },
+          leveragedFor: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      macroLoopAnalysis: {
+        type: 'object',
+        properties: {
+          goalAchievementRate: { type: 'number' },
+          monthlyConsistency: { type: 'array', items: { type: 'object', properties: { month: { type: 'string' }, score: { type: 'number' } } } },
+          learningEfficiency: { type: 'number' },
+          strategicAdjustments: {
+            type: 'array',
+            items: { type: 'object', properties: { area: { type: 'string' }, currentApproach: { type: 'string' }, suggestedChange: { type: 'string' }, expectedImpact: { type: 'string' } } }
+          }
+        }
+      },
+      levelReassessment: {
+        type: 'object',
+        properties: {
+          previousLevel: { type: 'string' },
+          currentLevel: { type: 'string' },
+          gradeGrowth: { type: 'number' },
+          comparisonToStandard: { type: 'string' }
+        }
+      },
+      nextHalfStrategy: {
+        type: 'object',
+        properties: {
+          primaryGoals: { type: 'array', items: { type: 'string' } },
+          focusDomains: { type: 'array', items: { type: 'string' } },
+          targetScore: { type: 'number' },
+          keyMilestones: { type: 'array', items: { type: 'object', properties: { month: { type: 'number' }, milestone: { type: 'string' } } } },
+          riskMitigation: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      longTermVisionUpdate: {
+        type: 'object',
+        properties: {
+          yearEndProjection: { type: 'string' },
+          nextYearOutlook: { type: 'string' },
+          potentialPaths: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      parentComprehensiveReport: {
+        type: 'object',
+        properties: {
+          executiveSummary: { type: 'string' },
+          detailedAnalysis: { type: 'string' },
+          investmentReturn: { type: 'string' },
+          recommendations: { type: 'array', items: { type: 'string' } }
+        }
+      },
       teacherAssessment: { type: 'string' }
     }
   };
@@ -1436,19 +1675,118 @@ ${input.metaProfile ? `
       studentName: { type: 'string' },
       startGrade: { type: 'number' },
       endGrade: { type: 'number' },
-      annualStatistics: { type: 'object' },
-      growthStory: { type: 'object' },
-      baselineComparison: { type: 'object' },
-      metaProfileAnnualEvolution: { type: 'object' },
-      weaknessFinalReview: { type: 'object' },
-      strengthFinalReview: { type: 'object' },
-      gradeAchievement: { type: 'object' },
-      annualMacroLoopSummary: { type: 'object' },
-      nextYearPreparation: { type: 'object' },
-      longTermPath: { type: 'object' },
-      growthNarrativeFinal: { type: 'object' },
-      parentAnnualReport: { type: 'object' },
-      teacherAnnualAssessment: { type: 'object' }
+      annualStatistics: {
+        type: 'object',
+        properties: {
+          totalClasses: { type: 'number' },
+          totalHours: { type: 'number' },
+          totalTests: { type: 'number' },
+          totalReports: { type: 'number' },
+          averageScore: { type: 'number' },
+          scoreImprovement: { type: 'number' },
+          attendanceRate: { type: 'number' }
+        }
+      },
+      growthStory: {
+        type: 'object',
+        properties: {
+          beginningState: { type: 'object', properties: { date: { type: 'string' }, description: { type: 'string' } } },
+          majorMilestones: { type: 'array', items: { type: 'object', properties: { date: { type: 'string' }, milestone: { type: 'string' }, significance: { type: 'string' } } } },
+          turningPoints: { type: 'array', items: { type: 'object', properties: { date: { type: 'string' }, event: { type: 'string' }, impact: { type: 'string' } } } },
+          endingState: { type: 'object', properties: { date: { type: 'string' }, description: { type: 'string' } } },
+          narrativeSummary: { type: 'string' }
+        }
+      },
+      baselineComparison: {
+        type: 'object',
+        properties: {
+          currentMetrics: { type: 'array', items: { type: 'object', properties: { domain: { type: 'string' }, initial: { type: 'number' }, current: { type: 'number' }, growth: { type: 'number' }, growthRate: { type: 'number' } } } },
+          overallGrowthRate: { type: 'number' },
+          growthCategory: { type: 'string' }
+        }
+      },
+      metaProfileAnnualEvolution: {
+        type: 'object',
+        properties: {
+          errorSignature: { type: 'object', properties: { improvements: { type: 'array', items: { type: 'string' } }, persistentIssues: { type: 'array', items: { type: 'string' } } } },
+          absorptionRate: { type: 'object', properties: { trend: { type: 'array', items: { type: 'object', properties: { month: { type: 'string' }, score: { type: 'number' } } } }, improvement: { type: 'number' }, assessment: { type: 'string' } } },
+          solvingStamina: { type: 'object', properties: { improvement: { type: 'number' }, assessment: { type: 'string' } } },
+          metaCognition: { type: 'object', properties: { improvement: { type: 'number' }, assessment: { type: 'string' } } }
+        }
+      },
+      weaknessFinalReview: {
+        type: 'object',
+        properties: {
+          totalIdentified: { type: 'number' },
+          resolved: { type: 'array', items: { type: 'string' } },
+          persistent: { type: 'array', items: { type: 'string' } },
+          resolutionRate: { type: 'number' }
+        }
+      },
+      strengthFinalReview: {
+        type: 'object',
+        properties: {
+          coreStrengths: { type: 'array', items: { type: 'string' } },
+          developedStrengths: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      gradeAchievement: {
+        type: 'object',
+        properties: {
+          startLevel: { type: 'string' },
+          endLevel: { type: 'string' },
+          gradeImprovement: { type: 'number' },
+          assessment: { type: 'string' }
+        }
+      },
+      annualMacroLoopSummary: {
+        type: 'object',
+        properties: {
+          goalAchievementRate: { type: 'number' },
+          learningEfficiency: { type: 'number' },
+          keyAccomplishments: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      nextYearPreparation: {
+        type: 'object',
+        properties: {
+          primaryObjectives: { type: 'array', items: { type: 'string' } },
+          prerequisiteGaps: { type: 'array', items: { type: 'string' } },
+          recommendedApproach: { type: 'string' }
+        }
+      },
+      longTermPath: {
+        type: 'object',
+        properties: {
+          threeYearVision: { type: 'string' },
+          potentialTrajectories: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      growthNarrativeFinal: {
+        type: 'object',
+        properties: {
+          headline: { type: 'string' },
+          story: { type: 'string' },
+          keyTheme: { type: 'string' }
+        }
+      },
+      parentAnnualReport: {
+        type: 'object',
+        properties: {
+          executiveSummary: { type: 'string' },
+          highlights: { type: 'array', items: { type: 'string' } },
+          areasOfGrowth: { type: 'array', items: { type: 'string' } },
+          recommendations: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      teacherAnnualAssessment: {
+        type: 'object',
+        properties: {
+          overallEvaluation: { type: 'string' },
+          characterGrowth: { type: 'string' },
+          academicGrowth: { type: 'string' }
+        }
+      }
     }
   };
 
