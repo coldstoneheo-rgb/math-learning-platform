@@ -378,35 +378,35 @@ export default function ParentReportDetailPage() {
             {/* 진단 요약 */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 진단 결과 요약</h3>
-              {levelTestAnalysis.overallAssessment && (
+              {levelTestAnalysis.initialBaseline?.overallLevel && (
                 <div className="mb-4 p-4 bg-emerald-50 rounded-lg">
-                  <p className="text-emerald-800 font-medium">{levelTestAnalysis.overallAssessment}</p>
+                  <p className="text-emerald-800 font-medium">{levelTestAnalysis.initialBaseline.overallLevel}</p>
                 </div>
               )}
               {levelTestAnalysis.gradeLevelAssessment && (
                 <div className="grid md:grid-cols-3 gap-4 mb-4">
                   <div className="p-4 bg-blue-50 rounded-lg text-center">
                     <div className="text-sm text-blue-600">현재 학년</div>
-                    <div className="text-xl font-bold text-blue-700">{levelTestAnalysis.gradeLevelAssessment.actualGrade || '-'}</div>
+                    <div className="text-xl font-bold text-blue-700">{levelTestAnalysis.gradeLevelAssessment.currentGrade || '-'}</div>
                   </div>
                   <div className="p-4 bg-indigo-50 rounded-lg text-center">
                     <div className="text-sm text-indigo-600">실력 수준</div>
-                    <div className="text-xl font-bold text-indigo-700">{levelTestAnalysis.gradeLevelAssessment.levelLabel || '-'}</div>
+                    <div className="text-xl font-bold text-indigo-700">{levelTestAnalysis.gradeLevelAssessment.assessedLevel || '-'}</div>
                   </div>
                   <div className="p-4 bg-purple-50 rounded-lg text-center">
                     <div className="text-sm text-purple-600">학습 유형</div>
-                    <div className="text-xl font-bold text-purple-700">{levelTestAnalysis.learningStyle || '-'}</div>
+                    <div className="text-xl font-bold text-purple-700">{levelTestAnalysis.learningStyleDiagnosis?.style || '-'}</div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* 영역별 진단 */}
-            {levelTestAnalysis.domainAssessments && levelTestAnalysis.domainAssessments.length > 0 && (
+            {levelTestAnalysis.domainDiagnosis && levelTestAnalysis.domainDiagnosis.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 영역별 수준</h3>
                 <div className="space-y-3">
-                  {levelTestAnalysis.domainAssessments.map((domain, idx) => (
+                  {levelTestAnalysis.domainDiagnosis.map((domain, idx) => (
                     <div key={idx} className="flex items-center gap-4">
                       <div className="w-24 text-sm text-gray-700 shrink-0">{domain.domain}</div>
                       <div className="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
@@ -424,39 +424,35 @@ export default function ParentReportDetailPage() {
 
             {/* 강점 & 개선 영역 */}
             <div className="grid md:grid-cols-2 gap-6 mb-6">
-              {levelTestAnalysis.strengths && levelTestAnalysis.strengths.length > 0 && (
+              {levelTestAnalysis.initialBaseline?.strengths && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">💪 잘하는 것</h3>
-                  <ul className="space-y-2">
-                    {levelTestAnalysis.strengths.map((s, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-green-500 mt-0.5">✓</span>
-                        <span className="text-gray-700">{s}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-sm text-gray-700 leading-relaxed">{levelTestAnalysis.initialBaseline.strengths}</p>
                 </div>
               )}
-              {levelTestAnalysis.weaknesses && levelTestAnalysis.weaknesses.length > 0 && (
+              {levelTestAnalysis.initialBaseline?.weaknesses && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">🔧 보완할 것</h3>
-                  <ul className="space-y-2">
-                    {levelTestAnalysis.weaknesses.map((w, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-orange-500 mt-0.5">→</span>
-                        <span className="text-gray-700">{w}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-sm text-gray-700 leading-relaxed">{levelTestAnalysis.initialBaseline.weaknesses}</p>
                 </div>
               )}
             </div>
 
             {/* 맞춤 커리큘럼 */}
-            {levelTestAnalysis.recommendedCurriculum && (
+            {levelTestAnalysis.suggestedCurriculum && levelTestAnalysis.suggestedCurriculum.length > 0 && (
               <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-6 mb-6 text-white">
                 <h3 className="text-lg font-semibold mb-3">📅 맞춤 학습 로드맵</h3>
-                <p className="text-emerald-100 text-sm leading-relaxed">{levelTestAnalysis.recommendedCurriculum}</p>
+                <div className="space-y-4">
+                  {levelTestAnalysis.suggestedCurriculum.map((phase, idx) => (
+                    <div key={idx} className="bg-white/10 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">{phase.phase}</span>
+                        <span className="text-emerald-100 text-sm">({phase.duration})</span>
+                      </div>
+                      <p className="text-emerald-100 text-sm">{phase.focus}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </>
@@ -831,26 +827,26 @@ export default function ParentReportDetailPage() {
             {annualAnalysis.parentAnnualReport && (
               <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">👨‍👩‍👧 학부모 연간 보고</h3>
-                {annualAnalysis.parentAnnualReport.executiveSummary && (
+                {annualAnalysis.parentAnnualReport.letterToParents && (
                   <div className="mb-4 p-4 bg-rose-50 rounded-lg">
-                    <p className="text-rose-800 font-medium">{annualAnalysis.parentAnnualReport.executiveSummary}</p>
+                    <p className="text-rose-800 font-medium whitespace-pre-wrap">{annualAnalysis.parentAnnualReport.letterToParents}</p>
                   </div>
                 )}
-                {annualAnalysis.parentAnnualReport.highlights && annualAnalysis.parentAnnualReport.highlights.length > 0 && (
+                {annualAnalysis.parentAnnualReport.yearHighlights && annualAnalysis.parentAnnualReport.yearHighlights.length > 0 && (
                   <div className="mb-4">
                     <h4 className="font-medium text-green-700 mb-2">✨ 올해의 하이라이트</h4>
                     <ul className="space-y-1">
-                      {annualAnalysis.parentAnnualReport.highlights.map((h, i) => (
+                      {annualAnalysis.parentAnnualReport.yearHighlights.map((h, i) => (
                         <li key={i} className="text-sm text-gray-700 flex items-start gap-2"><span className="text-green-500">•</span>{h}</li>
                       ))}
                     </ul>
                   </div>
                 )}
-                {annualAnalysis.parentAnnualReport.recommendations && annualAnalysis.parentAnnualReport.recommendations.length > 0 && (
+                {annualAnalysis.parentAnnualReport.nextYearRecommendations && annualAnalysis.parentAnnualReport.nextYearRecommendations.length > 0 && (
                   <div>
                     <h4 className="font-medium text-blue-700 mb-2">💡 내년을 위한 권장사항</h4>
                     <ul className="space-y-1">
-                      {annualAnalysis.parentAnnualReport.recommendations.map((r, i) => (
+                      {annualAnalysis.parentAnnualReport.nextYearRecommendations.map((r, i) => (
                         <li key={i} className="text-sm text-gray-700 flex items-start gap-2"><span className="text-blue-500">→</span>{r}</li>
                       ))}
                     </ul>
@@ -863,15 +859,35 @@ export default function ParentReportDetailPage() {
             {annualAnalysis.nextYearPreparation && (
               <div className="bg-gradient-to-r from-rose-500 to-pink-600 rounded-xl p-6 mb-6 text-white">
                 <h3 className="text-lg font-semibold mb-3">🚀 내년 준비</h3>
-                {annualAnalysis.nextYearPreparation.primaryObjectives && (
-                  <ul className="space-y-1 mb-3">
-                    {annualAnalysis.nextYearPreparation.primaryObjectives.map((o, i) => (
-                      <li key={i} className="text-sm text-rose-100">• {o}</li>
-                    ))}
-                  </ul>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{annualAnalysis.nextYearPreparation.readinessScore}%</div>
+                    <div className="text-xs text-rose-200">준비도</div>
+                  </div>
+                  <div className="text-center px-3 py-1 bg-white/20 rounded-full text-sm">
+                    {annualAnalysis.nextYearPreparation.recommendedPace === 'accelerated' ? '심화 학습 권장' :
+                     annualAnalysis.nextYearPreparation.recommendedPace === 'supported' ? '보충 학습 필요' : '정상 진도'}
+                  </div>
+                </div>
+                {annualAnalysis.nextYearPreparation.focusAreas && annualAnalysis.nextYearPreparation.focusAreas.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-sm font-medium mb-2">집중 영역</div>
+                    <ul className="space-y-1">
+                      {annualAnalysis.nextYearPreparation.focusAreas.map((area, i) => (
+                        <li key={i} className="text-sm text-rose-100">• {area}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
-                {annualAnalysis.nextYearPreparation.recommendedApproach && (
-                  <p className="text-rose-100 text-sm mt-2">{annualAnalysis.nextYearPreparation.recommendedApproach}</p>
+                {annualAnalysis.nextYearPreparation.earlyWarnings && annualAnalysis.nextYearPreparation.earlyWarnings.length > 0 && (
+                  <div className="p-3 bg-white/10 rounded-lg">
+                    <div className="text-sm font-medium mb-1">주의사항</div>
+                    <ul className="space-y-1">
+                      {annualAnalysis.nextYearPreparation.earlyWarnings.map((warning, i) => (
+                        <li key={i} className="text-xs text-rose-200">⚠ {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             )}
