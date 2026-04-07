@@ -255,7 +255,7 @@ export interface TestAnalysisData {
  * AnalysisData - 레거시 호환용 (TestAnalysisData와 동일)
  * @deprecated 새 코드에서는 AnyAnalysisData 또는 구체적 타입 사용 권장
  */
-export interface AnalysisData extends TestAnalysisData {}
+export type AnalysisData = TestAnalysisData;
 
 /**
  * AnyAnalysisData - 모든 리포트 타입의 분석 데이터 Union

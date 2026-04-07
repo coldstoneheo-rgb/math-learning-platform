@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
 import type { Student, User, SemiAnnualReportAnalysis, AnalysisData } from '@/types';
@@ -243,9 +244,9 @@ export default function NewSemiAnnualReportPage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
-            </a>
+            </Link>
             <h1 className="text-xl font-bold text-gray-900">반기 종합 리포트 작성</h1>
           </div>
           <span className="text-gray-600">{user?.name} 선생님</span>

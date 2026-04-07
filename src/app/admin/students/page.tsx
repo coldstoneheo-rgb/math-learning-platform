@@ -138,9 +138,9 @@ export default function StudentsPage() {
 
       await loadStudents();
       closeModal();
-    } catch (err: any) {
+    } catch (err) {
       console.error('저장 오류:', err);
-      setError(err.message || '저장 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '저장 중 오류가 발생���습니다.');
     } finally {
       setSaving(false);
     }
@@ -172,9 +172,9 @@ export default function StudentsPage() {
 
       if (error) throw error;
       await loadStudents();
-    } catch (err: any) {
+    } catch (err) {
       console.error('삭제 오류:', err);
-      alert('삭제 중 오류가 발생했습니다.');
+      alert(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -378,7 +378,7 @@ export default function StudentsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">학습 스타일</label>
                 <select
                   value={formData.learning_style}
-                  onChange={(e) => setFormData({ ...formData, learning_style: e.target.value as any })}
+                  onChange={(e) => setFormData({ ...formData, learning_style: e.target.value as 'visual' | 'verbal' | 'logical' | '' })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                 >
                   <option value="">선택 안 함</option>

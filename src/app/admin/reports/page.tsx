@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Report, Student, ReportType } from '@/types';
 
@@ -185,9 +186,9 @@ export default function ReportsPage() {
         {filteredReports.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center">
             <p className="text-gray-500 mb-4">생성된 리포트가 없습니다.</p>
-            <a href="/admin/reports/create" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            <Link href="/admin/reports/create" className="text-indigo-600 hover:text-indigo-700 font-medium">
               첫 리포트 생성하기
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">

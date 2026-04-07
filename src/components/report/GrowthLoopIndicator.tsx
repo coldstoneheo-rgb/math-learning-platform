@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo } from 'react';
+
 /**
  * GrowthLoopIndicator Component
  *
@@ -211,6 +213,14 @@ export function BaselineReferenceCard({
   baselineDate,
   studentName,
 }: BaselineReferenceCardProps) {
+  // Calculate days since baseline using useMemo with current timestamp captured once
+  const daysSinceBaseline = useMemo(() => {
+    if (!baselineDate) return 0;
+    const now = Date.now();
+    return Math.floor((now - new Date(baselineDate).getTime()) / (1000 * 60 * 60 * 24));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baselineDate]);
+
   if (!baselineScore) {
     return (
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
@@ -231,10 +241,6 @@ export function BaselineReferenceCard({
 
   const growth = currentScore && baselineScore
     ? Math.round(((currentScore - baselineScore) / baselineScore) * 100)
-    : 0;
-
-  const daysSinceBaseline = baselineDate
-    ? Math.floor((Date.now() - new Date(baselineDate).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
   return (

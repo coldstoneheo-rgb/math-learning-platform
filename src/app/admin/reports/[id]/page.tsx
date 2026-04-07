@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import {
   MetaHeader,
@@ -141,9 +142,9 @@ export default function ReportDetailPage() {
     <header className="bg-white shadow-sm print:hidden">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <a href="/admin" className="text-indigo-600 hover:text-indigo-700 font-medium">🏠 대시보드</a>
+          <Link href="/admin" className="text-indigo-600 hover:text-indigo-700 font-medium">🏠 대시보드</Link>
           <span className="text-gray-300">|</span>
-          <a href="/admin/reports" className="text-gray-500 hover:text-gray-700">← 목록</a>
+          <Link href="/admin/reports" className="text-gray-500 hover:text-gray-700">← 목록</Link>
           <h1 className="text-xl font-bold text-gray-900">리포트 상세</h1>
         </div>
         <div className="flex items-center gap-2">

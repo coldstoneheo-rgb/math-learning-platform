@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfile } from '@/lib/student-profile-extractor';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
@@ -226,9 +227,9 @@ export default function NewReportPage() {
 
       alert('리포트가 저장되었습니다.');
       router.push('/admin');
-    } catch (err: any) {
+    } catch (err) {
       console.error('저장 오류:', err);
-      setError(err.message || '저장 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
@@ -254,9 +255,9 @@ export default function NewReportPage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
-            </a>
+            </Link>
             <h1 className="text-xl font-bold text-gray-900">시험지 분석</h1>
           </div>
           <span className="text-gray-600">{user?.name} 선생님</span>

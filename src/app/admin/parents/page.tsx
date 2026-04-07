@@ -158,9 +158,9 @@ export default function ParentsPage() {
       setSuccessMessage('자녀가 연결되었습니다.');
       await Promise.all([loadParents(), loadStudents()]);
       closeLinkModal();
-    } catch (err: any) {
+    } catch (err) {
       console.error('연결 오류:', err);
-      setError(err.message || '연결 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '연결 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
@@ -180,7 +180,7 @@ export default function ParentsPage() {
 
       setSuccessMessage('연결이 해제되었습니다.');
       await Promise.all([loadParents(), loadStudents()]);
-    } catch (err: any) {
+    } catch (err) {
       console.error('연결 해제 오류:', err);
       alert('연결 해제 중 오류가 발생했습니다.');
     }
@@ -209,9 +209,9 @@ export default function ParentsPage() {
 
       setSuccessMessage('학부모 계정이 삭제되었습니다.');
       await loadParents();
-    } catch (err: any) {
+    } catch (err) {
       console.error('삭제 오류:', err);
-      alert(err.message || '삭제 중 오류가 발생했습니다.');
+      alert(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.');
     }
   };
 
