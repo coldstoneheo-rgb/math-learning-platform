@@ -352,6 +352,60 @@ ${pv.predictions.map((pred, i) =>
     ).join('\n')}`);
   }
 
+  // 8. 전략 피드백 (Phase 2: 피드백 루프)
+  if (context.strategyFeedback) {
+    const sf = context.strategyFeedback;
+    const feedbackParts: string[] = [];
+
+    // 효과적이었던 전략
+    if (sf.effectiveStrategies && sf.effectiveStrategies.length > 0) {
+      feedbackParts.push(`### 효과적이었던 전략 (유사한 방식 권장)
+${sf.effectiveStrategies.slice(0, 5).map((s, i) =>
+        `${i + 1}. **${s.type}**: ${s.title}
+   - 평균 개선율: ${s.avgImprovement}%, 성공률: ${s.successRate}%
+   - 적용 횟수: ${s.usageCount}회${s.concept ? `, 관련 개념: ${s.concept}` : ''}`
+      ).join('\n')}`);
+    }
+
+    // 효과 없었던 전략
+    if (sf.ineffectiveStrategies && sf.ineffectiveStrategies.length > 0) {
+      feedbackParts.push(`### 효과 없었던 전략 (다른 접근 필요)
+${sf.ineffectiveStrategies.slice(0, 5).map((s, i) =>
+        `${i + 1}. **${s.type}**: ${s.title}
+   - 개선율: ${s.improvement}%${s.feedback ? `, 피드백: ${s.feedback}` : ''}
+   - ⚠️ 이 유형의 전략은 피하고 다른 방법 시도 권장`
+      ).join('\n')}`);
+    }
+
+    // 개념별 개선 현황
+    if (sf.conceptImprovements && sf.conceptImprovements.length > 0) {
+      feedbackParts.push(`### 개념별 누적 개선 현황
+${sf.conceptImprovements.slice(0, 5).map(c =>
+        `- ${c.concept}: 총 ${c.totalImprovement}% 개선 (${c.occurrenceCount}회 시도)`
+      ).join('\n')}`);
+    }
+
+    // 전체 통계
+    if (sf.overallStats) {
+      feedbackParts.push(`### 전략 효과 전체 통계
+- 총 전략 수: ${sf.overallStats.totalStrategies}개
+- 완료율: ${Math.round((sf.overallStats.completedCount / Math.max(sf.overallStats.totalStrategies, 1)) * 100)}%
+- 평균 개선율: ${sf.overallStats.avgImprovement}%
+- 성공률 (10% 이상 개선): ${sf.overallStats.successRate}%`);
+    }
+
+    if (feedbackParts.length > 0) {
+      sections.push(`
+## 이전 전략 효과 분석 (피드백 루프 데이터) ⭐ 중요!
+아래 피드백을 반영하여 전략을 제안하세요:
+1. 효과적이었던 전략과 유사한 방식의 새 전략 제안
+2. 효과 없었던 전략은 완전히 다른 접근법으로 대체
+3. 개념별 개선 현황을 고려하여 아직 개선되지 않은 영역 우선 타겟
+
+${feedbackParts.join('\n\n')}`);
+    }
+  }
+
   return sections.length > 0 ? `
 # ===== 학생 컨텍스트 데이터 (AI 분석 참조용) =====
 ${sections.join('\n')}

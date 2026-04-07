@@ -1588,6 +1588,52 @@ export interface AnalysisContextData {
     actualOutcomes: string[];
     accuracy: number;
   };
+  // 전략 피드백 데이터 (Phase 2: 피드백 루프)
+  strategyFeedback?: StrategyFeedbackContext;
+}
+
+/**
+ * StrategyFeedbackContext - AI 분석에 제공되는 전략 피드백 데이터
+ * 과거 전략의 효과를 분석하여 새로운 전략 제안에 활용
+ */
+export interface StrategyFeedbackContext {
+  // 효과적이었던 전략 (성공률 높은 순)
+  effectiveStrategies: {
+    type: string;
+    title: string;
+    concept?: string;
+    avgImprovement: number;
+    successRate: number;
+    usageCount: number;
+  }[];
+  // 효과 없었던 전략 (다른 접근 필요)
+  ineffectiveStrategies: {
+    type: string;
+    title: string;
+    concept?: string;
+    improvement: number;
+    feedback?: string;
+  }[];
+  // 개념별 개선 현황
+  conceptImprovements: {
+    concept: string;
+    totalImprovement: number;
+    occurrenceCount: number;
+  }[];
+  // 전략 유형별 통계
+  typeStats: {
+    type: string;
+    avgImprovement: number;
+    completionRate: number;
+    successRate: number;
+  }[];
+  // 전체 통계
+  overallStats: {
+    totalStrategies: number;
+    completedCount: number;
+    avgImprovement: number;
+    successRate: number;
+  };
 }
 
 // ============================================
