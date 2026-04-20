@@ -34,6 +34,7 @@ const REPORT_TYPE_CONFIG: Record<ReportType, { name: string; color: string; bgCo
   semi_annual: { name: '반기', color: 'text-orange-600', bgColor: 'bg-orange-100' },
   annual: { name: '연간', color: 'text-red-600', bgColor: 'bg-red-100' },
   consolidated: { name: '종합', color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
+  self_analysis: { name: '내 풀이 분석', color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
 };
 
 export default function StudentDashboard() {
@@ -489,8 +490,29 @@ export default function StudentDashboard() {
           )}
         </div>
 
+        {/* 내 풀이 분석받기 배너 */}
+        <div className="mt-8 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">✨</span>
+              <div>
+                <h2 className="text-lg font-bold mb-1">내 풀이를 AI가 분석해드려요!</h2>
+                <p className="text-emerald-100 text-sm">
+                  문제풀이 사진을 올리면 지금까지 쌓인 데이터와 비교하여 성장 분석을 해드립니다.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/student/self-analysis/new"
+              className="flex-shrink-0 px-5 py-2.5 bg-white text-emerald-700 font-semibold rounded-lg hover:bg-emerald-50 transition-colors text-sm"
+            >
+              분석받기 →
+            </Link>
+          </div>
+        </div>
+
         {/* 동기부여 메시지 */}
-        <div className="mt-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-8 text-white text-center">
+        <div className="mt-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-8 text-white text-center">
           <div className="text-4xl mb-4">💪</div>
           <h2 className="text-2xl font-bold mb-2">오늘도 화이팅!</h2>
           <p className="text-indigo-100">

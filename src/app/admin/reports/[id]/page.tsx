@@ -14,7 +14,7 @@ import {
   VisionDistanceFooter,
 } from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
-import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis } from '@/types';
+import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
@@ -118,6 +118,9 @@ export default function ReportDetailPage() {
     : null;
   const annualAnalysis = report?.report_type === 'annual'
     ? (report?.analysis_data as AnnualReportAnalysis)
+    : null;
+  const selfAnalysis = report?.report_type === 'self_analysis'
+    ? (report?.analysis_data as SelfAnalysisReport)
     : null;
 
   if (loading) {
@@ -1704,6 +1707,164 @@ export default function ReportDetailPage() {
                 studentName={report.students.name}
                 reportType="annual"
               />
+            )}
+          </>
+        )}
+
+        {/* ===== 내 풀이 분석 (학생/학부모 업로드) ===== */}
+        {selfAnalysis && (
+          <>
+            {/* 업로드 정보 배너 */}
+            <div className="mb-6 p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-3">
+              <span className="text-2xl">✨</span>
+              <div>
+                <p className="font-medium text-emerald-800">
+                  {selfAnalysis.uploadedBy === 'parent' ? '학부모' : '학생'}이 직접 업로드한 풀이 분석입니다.
+                </p>
+                <p className="text-sm text-emerald-600">
+                  유형: {selfAnalysis.problemType} · 주제: {selfAnalysis.topicTags?.join(', ')}
+                </p>
+              </div>
+            </div>
+
+            {/* 전체 평가 요약 */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">분석 결과 요약</h3>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  selfAnalysis.comparisonWithHistory?.overallTrend === 'improving'
+                    ? 'bg-green-100 text-green-700'
+                    : selfAnalysis.comparisonWithHistory?.overallTrend === 'stable'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {selfAnalysis.comparisonWithHistory?.overallTrend === 'improving' ? '📈 향상 중' :
+                   selfAnalysis.comparisonWithHistory?.overallTrend === 'stable' ? '➡️ 안정적' : '📌 집중 필요'}
+                </span>
+              </div>
+              {selfAnalysis.milestone && (
+                <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200 flex items-center gap-2">
+                  <span>🏅</span>
+                  <p className="text-yellow-800 font-medium text-sm">{selfAnalysis.milestone}</p>
+                </div>
+              )}
+              <div className="p-4 bg-emerald-50 rounded-lg mb-3">
+                <p className="text-emerald-800 font-medium">{selfAnalysis.oneLineSummary}</p>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed">{selfAnalysis.overallAssessment}</p>
+              {selfAnalysis.studentNote && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">학생 메모</p>
+                  <p className="text-sm text-gray-700">{selfAnalysis.studentNote}</p>
+                </div>
+              )}
+            </div>
+
+            {/* 잘한 점 & 개선할 점 */}
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
+              {selfAnalysis.strengthsObserved && selfAnalysis.strengthsObserved.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">💪 잘한 점</h3>
+                  <ul className="space-y-2">
+                    {selfAnalysis.strengthsObserved.map((s, i) => (
+                      <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                        <span className="text-green-500 shrink-0">✓</span><span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {selfAnalysis.areasToImprove && selfAnalysis.areasToImprove.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 개선할 점</h3>
+                  <ul className="space-y-2">
+                    {selfAnalysis.areasToImprove.map((a, i) => (
+                      <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                        <span className="text-orange-500 shrink-0">→</span><span>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* 이전 데이터와 비교 */}
+            {selfAnalysis.comparisonWithHistory && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 이전 데이터와 비교</h3>
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-gray-700 text-sm">{selfAnalysis.comparisonWithHistory.trendSummary}</p>
+                </div>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {selfAnalysis.comparisonWithHistory.improvements && selfAnalysis.comparisonWithHistory.improvements.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-green-700 mb-2">✅ 나아진 점</h4>
+                      <ul className="space-y-1">{selfAnalysis.comparisonWithHistory.improvements.map((item, i) => <li key={i} className="text-xs text-gray-600">• {item}</li>)}</ul>
+                    </div>
+                  )}
+                  {selfAnalysis.comparisonWithHistory.newObservations && selfAnalysis.comparisonWithHistory.newObservations.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-700 mb-2">🔍 새로 발견된 점</h4>
+                      <ul className="space-y-1">{selfAnalysis.comparisonWithHistory.newObservations.map((item, i) => <li key={i} className="text-xs text-gray-600">• {item}</li>)}</ul>
+                    </div>
+                  )}
+                  {selfAnalysis.comparisonWithHistory.persistentIssues && selfAnalysis.comparisonWithHistory.persistentIssues.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-orange-700 mb-2">⚠️ 지속 주의</h4>
+                      <ul className="space-y-1">{selfAnalysis.comparisonWithHistory.persistentIssues.map((item, i) => <li key={i} className="text-xs text-gray-600">• {item}</li>)}</ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 문항별 피드백 */}
+            {selfAnalysis.problemFeedback && selfAnalysis.problemFeedback.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 문항별 피드백</h3>
+                <div className="space-y-3">
+                  {selfAnalysis.problemFeedback.map((pf, i) => (
+                    <div key={i} className="p-4 rounded-lg border bg-gray-50 border-gray-200">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="w-6 h-6 rounded-full flex items-center justify-center bg-emerald-500 text-white text-xs font-bold">
+                          {i + 1}
+                        </span>
+                        <span className="font-medium text-sm text-gray-800">{pf.problemIdentifier || `문항 ${i + 1}`}</span>
+                        {pf.errorType && <span className="ml-auto text-xs bg-red-100 px-2 py-0.5 rounded-full text-red-600 border border-red-200">{pf.errorType}</span>}
+                      </div>
+                      <p className="text-sm text-gray-700 ml-9 mb-2">{pf.observation}</p>
+                      {pf.whatWentWell && <p className="text-xs text-green-700 ml-9">✓ {pf.whatWentWell}</p>}
+                      {pf.suggestion && <p className="text-xs text-orange-700 ml-9 mt-1">→ {pf.suggestion}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 다음 단계 */}
+            {selfAnalysis.nextSteps && (
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-6 mb-6 text-white">
+                <h3 className="text-lg font-semibold mb-4">📌 다음 학습 계획</h3>
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  {selfAnalysis.nextSteps.immediate && selfAnalysis.nextSteps.immediate.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-emerald-100 mb-2">즉시 실행</h4>
+                      <ul className="space-y-1">{selfAnalysis.nextSteps.immediate.map((s, i) => <li key={i} className="text-sm text-emerald-50">• {s}</li>)}</ul>
+                    </div>
+                  )}
+                  {selfAnalysis.nextSteps.thisWeek && selfAnalysis.nextSteps.thisWeek.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-emerald-100 mb-2">이번 주</h4>
+                      <ul className="space-y-1">{selfAnalysis.nextSteps.thisWeek.map((s, i) => <li key={i} className="text-sm text-emerald-50">• {s}</li>)}</ul>
+                    </div>
+                  )}
+                </div>
+                {selfAnalysis.nextSteps.studyTip && (
+                  <div className="p-3 bg-white/20 rounded-lg">
+                    <p className="text-sm text-emerald-50">💡 {selfAnalysis.nextSteps.studyTip}</p>
+                  </div>
+                )}
+              </div>
             )}
           </>
         )}

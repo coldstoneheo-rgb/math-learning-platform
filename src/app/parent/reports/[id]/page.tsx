@@ -8,7 +8,7 @@ import { exportReportToPdf } from '@/lib/pdf-export';
 import type {
   User, Report, Student, AnalysisData,
   LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis,
-  SemiAnnualReportAnalysis, AnnualReportAnalysis,
+  SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport,
 } from '@/types';
 
 interface ReportWithStudent extends Report {
@@ -23,6 +23,7 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
   semi_annual: '반기 리포트',
   annual: '연간 리포트',
   consolidated: '통합 분석',
+  self_analysis: '내 풀이 분석',
 };
 
 const REPORT_TYPE_COLORS: Record<string, string> = {
@@ -33,6 +34,7 @@ const REPORT_TYPE_COLORS: Record<string, string> = {
   semi_annual: 'from-orange-500 to-amber-600',
   annual: 'from-rose-500 to-pink-600',
   consolidated: 'from-gray-500 to-slate-600',
+  self_analysis: 'from-emerald-500 to-teal-600',
 };
 
 export default function ParentReportDetailPage() {
@@ -138,6 +140,7 @@ export default function ParentReportDetailPage() {
   const monthlyAnalysis = reportType === 'monthly' ? report.analysis_data as MonthlyReportAnalysis : null;
   const semiAnnualAnalysis = reportType === 'semi_annual' ? report.analysis_data as SemiAnnualReportAnalysis : null;
   const annualAnalysis = reportType === 'annual' ? report.analysis_data as AnnualReportAnalysis : null;
+  const selfAnalysis = reportType === 'self_analysis' ? report.analysis_data as SelfAnalysisReport : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -891,6 +894,146 @@ export default function ParentReportDetailPage() {
                 )}
               </div>
             )}
+          </>
+        )}
+
+        {/* ===== 내 풀이 분석 리포트 ===== */}
+        {selfAnalysis && (
+          <>
+            {/* 전체 평가 요약 */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">✨ 풀이 분석 결과</h3>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  selfAnalysis.comparisonWithHistory?.overallTrend === 'improving'
+                    ? 'bg-green-100 text-green-700'
+                    : selfAnalysis.comparisonWithHistory?.overallTrend === 'stable'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {selfAnalysis.comparisonWithHistory?.overallTrend === 'improving' ? '📈 향상 중' :
+                   selfAnalysis.comparisonWithHistory?.overallTrend === 'stable' ? '➡️ 안정적' : '📌 집중 필요'}
+                </span>
+              </div>
+              {selfAnalysis.milestone && (
+                <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200 flex items-center gap-2">
+                  <span className="text-xl">🏅</span>
+                  <p className="text-yellow-800 font-medium text-sm">{selfAnalysis.milestone}</p>
+                </div>
+              )}
+              <div className="p-4 bg-emerald-50 rounded-lg mb-4">
+                <p className="text-emerald-800 font-medium">{selfAnalysis.oneLineSummary}</p>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed">{selfAnalysis.overallAssessment}</p>
+            </div>
+
+            {/* 잘한 점 & 개선할 점 */}
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
+              {selfAnalysis.strengthsObserved && selfAnalysis.strengthsObserved.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">💪 잘한 점</h3>
+                  <ul className="space-y-2">
+                    {selfAnalysis.strengthsObserved.map((s, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="text-green-500 shrink-0">✓</span><span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {selfAnalysis.areasToImprove && selfAnalysis.areasToImprove.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 더 연습하면 좋을 점</h3>
+                  <ul className="space-y-2">
+                    {selfAnalysis.areasToImprove.map((a, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="text-orange-500 shrink-0">→</span><span>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* 과거 데이터와 비교 */}
+            {selfAnalysis.comparisonWithHistory && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 이전과 비교한 변화</h3>
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-gray-700 text-sm">{selfAnalysis.comparisonWithHistory.trendSummary}</p>
+                </div>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {selfAnalysis.comparisonWithHistory.improvements && selfAnalysis.comparisonWithHistory.improvements.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-green-700 mb-2">✅ 나아진 점</h4>
+                      <ul className="space-y-1">
+                        {selfAnalysis.comparisonWithHistory.improvements.map((item, i) => (
+                          <li key={i} className="text-xs text-gray-600 flex items-start gap-1"><span className="text-green-400">•</span>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selfAnalysis.comparisonWithHistory.newObservations && selfAnalysis.comparisonWithHistory.newObservations.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-700 mb-2">🔍 새로 발견된 점</h4>
+                      <ul className="space-y-1">
+                        {selfAnalysis.comparisonWithHistory.newObservations.map((item, i) => (
+                          <li key={i} className="text-xs text-gray-600 flex items-start gap-1"><span className="text-blue-400">•</span>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selfAnalysis.comparisonWithHistory.persistentIssues && selfAnalysis.comparisonWithHistory.persistentIssues.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-orange-700 mb-2">⚠️ 지속 주의 사항</h4>
+                      <ul className="space-y-1">
+                        {selfAnalysis.comparisonWithHistory.persistentIssues.map((item, i) => (
+                          <li key={i} className="text-xs text-gray-600 flex items-start gap-1"><span className="text-orange-400">•</span>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 다음 학습 계획 (학부모 가이드) */}
+            {selfAnalysis.nextSteps && (
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-6 mb-6 text-white">
+                <h3 className="text-lg font-semibold mb-4">🏠 이렇게 도와주세요</h3>
+                {selfAnalysis.nextSteps.immediate && selfAnalysis.nextSteps.immediate.length > 0 && (
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium text-emerald-100 mb-2">오늘 / 내일</h4>
+                    <ul className="space-y-1">
+                      {selfAnalysis.nextSteps.immediate.map((s, i) => (
+                        <li key={i} className="text-sm text-emerald-50">• {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selfAnalysis.nextSteps.thisWeek && selfAnalysis.nextSteps.thisWeek.length > 0 && (
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium text-emerald-100 mb-2">이번 주</h4>
+                    <ul className="space-y-1">
+                      {selfAnalysis.nextSteps.thisWeek.map((s, i) => (
+                        <li key={i} className="text-sm text-emerald-50">• {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selfAnalysis.nextSteps.studyTip && (
+                  <div className="p-3 bg-white/20 rounded-lg">
+                    <p className="text-sm text-emerald-50">💡 {selfAnalysis.nextSteps.studyTip}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 격려 메시지 */}
+            <div className="bg-yellow-50 rounded-xl p-6 mb-6 border border-yellow-200 text-center">
+              <div className="text-3xl mb-2">🌟</div>
+              <p className="text-yellow-800 font-medium">{selfAnalysis.encouragement}</p>
+            </div>
           </>
         )}
 

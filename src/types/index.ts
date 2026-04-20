@@ -32,7 +32,8 @@ export type ReportType =
   | 'monthly'        // 월간 리포트
   | 'semi_annual'    // 반기 리포트
   | 'annual'         // 연간 리포트
-  | 'consolidated';  // 레거시: 통합 리포트 (deprecated)
+  | 'consolidated'   // 레거시: 통합 리포트 (deprecated)
+  | 'self_analysis'; // 학생/학부모 자기 분석 (Self-Analysis)
 
 export interface TestInfo {
   testName: string;
@@ -252,6 +253,68 @@ export interface TestAnalysisData {
 }
 
 /**
+ * SelfAnalysisReport - 학생/학부모 자기 분석 리포트
+ * 교사 리포트와 별개로, 학생/학부모가 문제풀이 스캔본을 업로드하여 AI 분석을 요청할 때 사용
+ */
+export type SelfAnalysisProblemType =
+  | '연습문제'
+  | '교재'
+  | '숙제'
+  | '시험대비'
+  | '자유학습';
+
+export interface SelfAnalysisProblemFeedback {
+  problemIdentifier?: string; // "3번", "p.42 4번" 등 문제 식별자
+  observation: string;       // 5관점에서 관찰한 내용
+  whatWentWell?: string;     // 잘한 점
+  suggestion?: string;       // 개선 제안
+  errorType?: string;        // 오류 유형 (오답인 경우)
+}
+
+export interface SelfAnalysisReport {
+  analysisDate: string;
+  problemType: SelfAnalysisProblemType;
+  topicTags: string[];       // ['일차방정식', '인수분해'] 등
+  studentNote?: string;      // 학생이 입력한 메모 (어려웠던 부분 등)
+  uploadedBy: 'student' | 'parent';
+
+  // AI 종합 평가
+  overallAssessment: string;
+  oneLineSummary: string;
+
+  // 잘한 점 (강화할 것)
+  strengthsObserved: string[];
+
+  // 개선할 점 (집중할 것)
+  areasToImprove: string[];
+
+  // 과거 데이터와의 비교 (누적 학습 데이터 기반)
+  comparisonWithHistory: {
+    improvements: string[];        // 과거 대비 나아진 점
+    persistentIssues: string[];    // 여전히 지속되는 이슈
+    newObservations: string[];     // 이번에 새로 발견된 패턴
+    overallTrend: 'improving' | 'stable' | 'needs_attention';
+    trendSummary: string;
+  };
+
+  // 문항별 피드백
+  problemFeedback: SelfAnalysisProblemFeedback[];
+
+  // 당장 실천할 수 있는 다음 단계
+  nextSteps: {
+    immediate: string[];           // 오늘 바로 할 수 있는 것
+    thisWeek: string[];            // 이번 주 목표
+    studyTip: string;              // AI가 제안하는 학습 팁
+  };
+
+  // 동기부여 메시지
+  encouragement: string;
+
+  // 성장 마일스톤 (이번 분석에서 눈에 띄는 성취)
+  milestone?: string;
+}
+
+/**
  * AnalysisData - 레거시 호환용 (TestAnalysisData와 동일)
  * @deprecated 새 코드에서는 AnyAnalysisData 또는 구체적 타입 사용 권장
  */
@@ -268,6 +331,7 @@ export type AnyAnalysisData =
   | ({ _type: 'monthly' } & MonthlyReportAnalysis)
   | ({ _type: 'semi_annual' } & SemiAnnualReportAnalysis)
   | ({ _type: 'annual' } & AnnualReportAnalysis)
+  | ({ _type: 'self_analysis' } & SelfAnalysisReport)
   | ({ _type?: undefined } & TestAnalysisData); // 레거시 데이터 호환
 
 /**

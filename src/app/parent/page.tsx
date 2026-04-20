@@ -130,6 +130,7 @@ export default function ParentDashboard() {
       semi_annual: '반기 종합',
       annual: '연간 종합',
       consolidated: '통합 분석',
+      self_analysis: '내 풀이 분석',
     };
     return labels[type] || type;
   };
@@ -143,6 +144,7 @@ export default function ParentDashboard() {
       semi_annual: 'bg-indigo-100 text-indigo-700',
       annual: 'bg-amber-100 text-amber-700',
       consolidated: 'bg-orange-100 text-orange-700',
+      self_analysis: 'bg-emerald-100 text-emerald-700',
     };
     return colors[type] || 'bg-gray-100 text-gray-700';
   };
@@ -343,6 +345,27 @@ export default function ParentDashboard() {
                   mathCapability={getMathCapabilityData(selectedChild.reports)}
                   growthRate={getGrowthRate(selectedChild.reports)}
                 />
+
+                {/* 아이 풀이 분석받기 배너 */}
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-5 mb-6 text-white">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">📸</span>
+                      <div>
+                        <h3 className="font-bold mb-0.5">아이 풀이를 AI가 분석해드려요</h3>
+                        <p className="text-emerald-100 text-xs">
+                          풀이 사진을 올리면 누적 학습 데이터와 비교하여 성장 분석을 제공합니다.
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href="/parent/self-analysis/new"
+                      className="flex-shrink-0 px-4 py-2 bg-white text-emerald-700 font-semibold rounded-lg hover:bg-emerald-50 transition-colors text-sm"
+                    >
+                      분석받기 →
+                    </a>
+                  </div>
+                </div>
 
                 {/* 최근 리포트 목록 */}
                 <div className="bg-white rounded-xl shadow-sm p-6">

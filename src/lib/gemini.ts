@@ -11,6 +11,8 @@ import type {
   MonthlyReportAnalysis,
   SemiAnnualReportAnalysis,
   AnnualReportAnalysis,
+  SelfAnalysisReport,
+  SelfAnalysisProblemType,
 } from '@/types';
 import { routeModel, createRoutingLog, type ModelRoutingContext } from './model-router';
 
@@ -243,6 +245,7 @@ const REPORT_TYPE_PROMPTS: Record<ReportType, string> = {
   semi_annual: SEMI_ANNUAL_REPORT_PROMPT,
   annual: ANNUAL_REPORT_PROMPT,
   consolidated: TEST_ANALYSIS_PROMPT, // 레거시 호환
+  self_analysis: TEST_ANALYSIS_PROMPT, // placeholder, 전용 함수 사용
 };
 
 // ============================================
@@ -1925,6 +1928,178 @@ ${JSON.stringify(analysisData, null, 2)}
     // 메타프로필 업데이트 실패 시 빈 객체 반환 (치명적 오류 아님)
     console.error('메타프로필 업데이트 생성 실패');
     return {};
+  }
+}
+
+// ============================================
+// Self-Analysis (학생/학부모 자기 분석)
+// ============================================
+
+const SELF_ANALYSIS_SCHEMA = {
+  type: 'object',
+  properties: {
+    analysisDate: { type: 'string' },
+    problemType: { type: 'string' },
+    topicTags: { type: 'array', items: { type: 'string' } },
+    uploadedBy: { type: 'string' },
+    overallAssessment: { type: 'string' },
+    oneLineSummary: { type: 'string' },
+    strengthsObserved: { type: 'array', items: { type: 'string' } },
+    areasToImprove: { type: 'array', items: { type: 'string' } },
+    comparisonWithHistory: {
+      type: 'object',
+      properties: {
+        improvements: { type: 'array', items: { type: 'string' } },
+        persistentIssues: { type: 'array', items: { type: 'string' } },
+        newObservations: { type: 'array', items: { type: 'string' } },
+        overallTrend: { type: 'string', enum: ['improving', 'stable', 'needs_attention'] },
+        trendSummary: { type: 'string' },
+      },
+    },
+    problemFeedback: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          problemIdentifier: { type: 'string' },
+          observation: { type: 'string' },
+          whatWentWell: { type: 'string' },
+          suggestion: { type: 'string' },
+          errorType: { type: 'string' },
+        },
+      },
+    },
+    nextSteps: {
+      type: 'object',
+      properties: {
+        immediate: { type: 'array', items: { type: 'string' } },
+        thisWeek: { type: 'array', items: { type: 'string' } },
+        studyTip: { type: 'string' },
+      },
+    },
+    encouragement: { type: 'string' },
+    milestone: { type: 'string' },
+  },
+  required: [
+    'analysisDate', 'problemType', 'topicTags', 'uploadedBy',
+    'overallAssessment', 'oneLineSummary', 'strengthsObserved',
+    'areasToImprove', 'comparisonWithHistory', 'problemFeedback',
+    'nextSteps', 'encouragement',
+  ],
+};
+
+/**
+ * 학생/학부모 자기 분석 - 문제풀이 스캔본 분석
+ * @param studentName 학생 이름
+ * @param images 문제풀이 스캔 이미지 (base64)
+ * @param problemType 문제 유형
+ * @param topicTags 주제 태그
+ * @param studentNote 학생 메모
+ * @param uploadedBy 업로드 주체
+ * @param context 누적 학습 컨텍스트
+ */
+export async function analyzeSelfStudy(
+  studentName: string,
+  images: string[],
+  problemType: SelfAnalysisProblemType,
+  topicTags: string[],
+  studentNote: string | undefined,
+  uploadedBy: 'student' | 'parent',
+  context?: AnalysisContextData
+): Promise<SelfAnalysisReport> {
+  const ai = getGeminiClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  const contextPrompt = buildContextPrompt(context);
+
+  const systemPrompt = `당신은 학생의 수학 학습을 따뜻하게 지원하는 AI 학습 코치입니다.
+학생이나 학부모가 직접 업로드한 문제풀이 스캔본을 분석하여,
+학생이 자신의 성장을 느끼고 다음 단계로 나아갈 수 있도록 격려하는 피드백을 제공합니다.
+
+## 핵심 원칙
+1. **격려 우선**: 잘한 점을 먼저, 구체적으로 칭찬할 것
+2. **성장 관점**: 틀린 것이 아니라 "아직 배우는 중"으로 표현
+3. **실용적 피드백**: 당장 실천 가능한 구체적 다음 단계 제시
+4. **개인화**: 누적 학습 데이터를 활용하여 "저번보다", "이번엔" 같은 개인화된 표현 사용
+5. **부모 친화적**: 학부모가 읽어도 이해할 수 있는 평이한 언어
+
+## 분석 관점 (5가지)
+1️⃣ 풀이 접근 방식: 문제를 어떤 방식으로 시도했는가?
+2️⃣ 개념 이해도: 핵심 개념을 얼마나 이해하고 있는가?
+3️⃣ 오류 패턴: 반복되는 실수나 오해가 있는가?
+4️⃣ 풀이 습관: 과정을 체계적으로 기록하고 있는가?
+5️⃣ 성장 신호: 이전 분석 대비 나아진 점은 무엇인가?
+
+## 비교 분석 (누적 데이터 활용)
+- 이전에 있던 문제가 해결되었으면 반드시 언급
+- 새로운 성장 신호가 보이면 구체적으로 칭찬
+- 여전히 지속되는 문제는 개선 방향과 함께 부드럽게 언급`;
+
+  const userPrompt = `${contextPrompt}
+
+## 자기 분석 요청 정보
+- 학생 이름: ${studentName}
+- 분석 날짜: ${today}
+- 문제 유형: ${problemType}
+- 학습 주제: ${topicTags.length > 0 ? topicTags.join(', ') : '지정 없음'}
+- 업로드 주체: ${uploadedBy === 'student' ? '학생 본인' : '학부모'}
+${studentNote ? `- 학생/학부모 메모: "${studentNote}"` : ''}
+
+위 문제풀이 스캔 이미지를 분석하여 ${studentName} 학생을 위한 개인화된 학습 피드백을 제공해주세요.
+학생이 자신의 성장을 체감하고 동기부여를 받을 수 있도록 따뜻하고 구체적인 피드백을 작성해주세요.
+
+출력 형식: JSON (SELF_ANALYSIS_SCHEMA 구조)
+- analysisDate: "${today}"
+- problemType: "${problemType}"
+- topicTags: ${JSON.stringify(topicTags)}
+- uploadedBy: "${uploadedBy}"
+- 나머지 필드: 분석 결과에 따라 작성`;
+
+  const imageParts = images.map((img) => ({
+    inlineData: {
+      data: img,
+      mimeType: 'image/jpeg' as const,
+    },
+  }));
+
+  const routingCtx: ModelRoutingContext = {
+    reportType: 'self_analysis',
+  };
+  const selectedModel = routeModel(routingCtx);
+  createRoutingLog(routingCtx);
+
+  try {
+    const response = await ai.models.generateContent({
+      model: selectedModel,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: systemPrompt + '\n\n' + userPrompt },
+            ...imageParts,
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: SELF_ANALYSIS_SCHEMA,
+      },
+    });
+
+    const text = response.text;
+    if (!text) throw new GeminiApiError('AI 응답이 비어있습니다.');
+
+    const result = cleanAndParseJSON<SelfAnalysisReport>(text);
+    return {
+      ...result,
+      analysisDate: today,
+      problemType,
+      topicTags,
+      uploadedBy,
+    };
+  } catch (error) {
+    if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
+    throw new GeminiApiError('자기 분석 중 오류가 발생했습니다.', error);
   }
 }
 
