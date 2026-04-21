@@ -21,6 +21,7 @@ import {
   Radar,
   Legend,
 } from 'recharts';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface StudentWithReports extends Student {
   reports: Report[];
@@ -32,6 +33,7 @@ export default function ParentDashboard() {
   const [children, setChildren] = useState<StudentWithReports[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState<StudentWithReports | null>(null);
+  const [reportTypeFilter, setReportTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -221,11 +223,7 @@ export default function ParentDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
@@ -367,48 +365,85 @@ export default function ParentDashboard() {
                   </div>
                 </div>
 
-                {/* 최근 리포트 목록 */}
+                {/* 리포트 목록 */}
                 <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">리포트 목록</h3>
-
-                  {selectedChild.reports.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">
-                      아직 생성된 리포트가 없습니다.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {selectedChild.reports.map((report) => (
-                        <a
-                          key={report.id}
-                          href={`/parent/reports/${report.id}`}
-                          className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      리포트 목록
+                      <span className="ml-2 text-sm font-normal text-gray-400">
+                        ({selectedChild.reports.filter(r => reportTypeFilter === 'all' || r.report_type === reportTypeFilter).length}개)
+                      </span>
+                    </h3>
+                    {/* 타입 필터 */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { value: 'all', label: '전체' },
+                        { value: 'test', label: '시험' },
+                        { value: 'level_test', label: '레벨테스트' },
+                        { value: 'weekly', label: '주간' },
+                        { value: 'monthly', label: '월간' },
+                        { value: 'semi_annual', label: '반기' },
+                        { value: 'annual', label: '연간' },
+                        { value: 'self_analysis', label: '내 풀이' },
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setReportTypeFilter(opt.value)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            reportTypeFilter === opt.value
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
                         >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <span className={`inline-block px-2 py-1 text-xs font-medium rounded mb-2 ${getReportTypeBadgeColor(report.report_type)}`}>
-                                {getReportTypeLabel(report.report_type)}
-                              </span>
-                              <h4 className="font-medium text-gray-900">
-                                {report.test_name || '리포트'}
-                              </h4>
-                              <p className="text-sm text-gray-500 mt-1">
-                                {report.test_date || new Date(report.created_at).toLocaleDateString('ko-KR')}
-                              </p>
-                            </div>
-                            {report.total_score !== null && report.max_score && (
-                              <div className="text-right">
-                                <div className="text-2xl font-bold text-indigo-600">
-                                  {report.total_score}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  / {report.max_score}점
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </a>
+                          {opt.label}
+                        </button>
                       ))}
                     </div>
+                  </div>
+
+                  {selectedChild.reports.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">아직 생성된 리포트가 없습니다.</p>
+                  ) : (
+                    <>
+                      {selectedChild.reports.filter(r => reportTypeFilter === 'all' || r.report_type === reportTypeFilter).length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <p className="text-sm">해당 유형의 리포트가 없습니다.</p>
+                          <button onClick={() => setReportTypeFilter('all')} className="mt-2 text-xs text-indigo-500 hover:underline">
+                            전체 보기
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {selectedChild.reports
+                            .filter(r => reportTypeFilter === 'all' || r.report_type === reportTypeFilter)
+                            .map((report) => (
+                              <a
+                                key={report.id}
+                                href={`/parent/reports/${report.id}`}
+                                className="block p-4 border border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                              >
+                                <div className="flex justify-between items-start gap-3">
+                                  <div className="min-w-0">
+                                    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded mb-1.5 ${getReportTypeBadgeColor(report.report_type)}`}>
+                                      {getReportTypeLabel(report.report_type)}
+                                    </span>
+                                    <h4 className="font-medium text-gray-900 truncate">{report.test_name || '리포트'}</h4>
+                                    <p className="text-sm text-gray-500 mt-0.5">
+                                      {report.test_date || new Date(report.created_at).toLocaleDateString('ko-KR')}
+                                    </p>
+                                  </div>
+                                  {report.total_score !== null && report.max_score && (
+                                    <div className="text-right shrink-0">
+                                      <div className="text-2xl font-bold text-indigo-600">{report.total_score}</div>
+                                      <div className="text-xs text-gray-500">/ {report.max_score}점</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </a>
+                            ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </>

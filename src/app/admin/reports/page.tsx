@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Report, Student, ReportType } from '@/types';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 
 interface ReportWithStudent extends Report {
   students: Pick<Student, 'name' | 'student_id' | 'grade'>;
@@ -25,6 +28,7 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<ReportWithStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState<Set<ReportType | 'all'>>(new Set(['all']));
+  const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
     checkAuthAndLoadReports();
@@ -114,7 +118,7 @@ export default function ReportsPage() {
       .eq('id', report.id);
 
     if (error) {
-      alert('삭제 중 오류가 발생했습니다.');
+      addToast('삭제 중 오류가 발생했습니다.', 'error');
       return;
     }
 
@@ -138,15 +142,12 @@ export default function ReportsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">

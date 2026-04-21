@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Report, Student, Schedule, ClassSession, Assignment, StudentWeakness } from '@/types';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface ReportWithStudent extends Report {
   students: Pick<Student, 'name' | 'grade'>;
@@ -194,11 +195,7 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Student } from '@/types';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface ParentWithChildren extends User {
   students: Pick<Student, 'id' | 'name' | 'grade'>[];
@@ -249,11 +250,7 @@ export default function ParentsPage() {
   const availableStudents = students.filter(s => !s.parent_id);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (

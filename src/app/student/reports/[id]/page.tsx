@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import type { User, Report, Student, AnalysisData, ReportType, SelfAnalysisReport } from '@/types';
 
 interface ReportWithStudent extends Report {
@@ -33,6 +36,7 @@ export default function StudentReportDetailPage() {
   const [report, setReport] = useState<ReportWithStudent | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
     checkAuthAndLoadReport();
@@ -81,7 +85,7 @@ export default function StudentReportDetailPage() {
       .single();
 
     if (error || !reportData) {
-      alert('리포트를 찾을 수 없거나 접근 권한이 없습니다.');
+      addToast('리포트를 찾을 수 없거나 접근 권한이 없습니다.', 'error');
       router.push('/student');
       return;
     }
@@ -109,25 +113,20 @@ export default function StudentReportDetailPage() {
       );
 
       if (!success) {
-        alert('PDF 내보내기에 실패했습니다.');
+        addToast('PDF 내보내기에 실패했습니다.', 'error');
+      } else {
+        addToast('PDF가 저장되었습니다.', 'success');
       }
     } catch (error) {
       console.error('PDF 내보내기 오류:', error);
-      alert('PDF 내보내기 중 오류가 발생했습니다.');
+      addToast('PDF 내보내기 중 오류가 발생했습니다.', 'error');
     } finally {
       setExporting(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">리포트 로딩 중...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="리포트 로딩 중..." />;
   }
 
   if (!report) {
@@ -151,6 +150,7 @@ export default function StudentReportDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm print:hidden">
         <div className="max-w-5xl mx-auto px-4 py-4">

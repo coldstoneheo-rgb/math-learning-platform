@@ -5,6 +5,9 @@ import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import type {
   User, Report, Student, AnalysisData,
   LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis,
@@ -45,6 +48,7 @@ export default function ParentReportDetailPage() {
   const [user, setUser] = useState<User | null>(null);
   const [report, setReport] = useState<ReportWithStudent | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toasts, addToast, removeToast } = useToast();
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -80,7 +84,7 @@ export default function ParentReportDetailPage() {
       .single();
 
     if (error || !reportData) {
-      alert('리포트를 찾을 수 없거나 접근 권한이 없습니다.');
+      addToast('리포트를 찾을 수 없거나 접근 권한이 없습니다.', 'error');
       router.push('/parent');
       return;
     }
@@ -105,20 +109,20 @@ export default function ParentReportDetailPage() {
         report.test_name || '리포트',
         report.test_date || new Date().toISOString().split('T')[0]
       );
-      if (!success) alert('PDF 내보내기에 실패했습니다.');
+      if (!success) {
+        addToast('PDF 내보내기에 실패했습니다.', 'error');
+      } else {
+        addToast('PDF가 저장되었습니다.', 'success');
+      }
     } catch {
-      alert('PDF 내보내기 중 오류가 발생했습니다.');
+      addToast('PDF 내보내기 중 오류가 발생했습니다.', 'error');
     } finally {
       setExporting(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!report) {
@@ -144,6 +148,7 @@ export default function ParentReportDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm print:hidden">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">

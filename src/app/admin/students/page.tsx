@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Student, User } from '@/types';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 export default function StudentsPage() {
   const router = useRouter();
@@ -204,11 +205,7 @@ export default function StudentsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (

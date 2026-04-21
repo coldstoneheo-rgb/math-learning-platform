@@ -14,6 +14,9 @@ import {
   VisionDistanceFooter,
 } from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport } from '@/types';
 
 interface ReportWithStudent extends Report {
@@ -29,6 +32,7 @@ export default function ReportDetailPage() {
   const [report, setReport] = useState<ReportWithStudent | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
     checkAuthAndLoadReport();
@@ -64,7 +68,7 @@ export default function ReportDetailPage() {
       .single();
 
     if (error || !reportData) {
-      alert('리포트를 찾을 수 없습니다.');
+      addToast('리포트를 찾을 수 없습니다.', 'error');
       router.push('/admin/reports');
       return;
     }
@@ -92,11 +96,13 @@ export default function ReportDetailPage() {
       );
 
       if (!success) {
-        alert('PDF 내보내기에 실패했습니다.');
+        addToast('PDF 내보내기에 실패했습니다.', 'error');
+      } else {
+        addToast('PDF가 저장되었습니다.', 'success');
       }
     } catch (error) {
       console.error('PDF 내보내기 오류:', error);
-      alert('PDF 내보내기 중 오류가 발생했습니다.');
+      addToast('PDF 내보내기 중 오류가 발생했습니다.', 'error');
     } finally {
       setExporting(false);
     }
@@ -124,11 +130,7 @@ export default function ReportDetailPage() {
     : null;
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!report || (!analysis && !levelTestAnalysis)) {
@@ -141,6 +143,7 @@ export default function ReportDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+    <Toast toasts={toasts} onRemove={removeToast} />
     {/* 헤더 */}
     <header className="bg-white shadow-sm print:hidden">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -905,7 +908,35 @@ export default function ReportDetailPage() {
         {analysis.detailedAnalysis && analysis.detailedAnalysis.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 문항별 분석</h3>
-            <div className="overflow-x-auto">
+
+            {/* Mobile: card view */}
+            <div className="md:hidden space-y-3">
+              {analysis.detailedAnalysis.map((item, index) => (
+                <div key={index} className={`rounded-lg border p-4 text-sm ${
+                  item.isCorrect === 'X' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-bold text-gray-800">문제 {item.problemNumber}</span>
+                    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white font-bold text-xs ${
+                      item.isCorrect === 'O' ? 'bg-green-500' :
+                      item.isCorrect === 'X' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`}>
+                      {item.isCorrect}
+                    </span>
+                  </div>
+                  <p className="font-medium text-gray-800 mb-1">{item.keyConcept}</p>
+                  {item.errorType && (
+                    <p className="text-xs text-red-600 mb-1">오류: {item.errorType}</p>
+                  )}
+                  {item.analysis && (
+                    <p className="text-xs text-gray-600 leading-relaxed">{item.analysis}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: table view */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -930,7 +961,7 @@ export default function ReportDetailPage() {
                       </td>
                       <td className="px-3 py-2">{item.keyConcept}</td>
                       <td className="px-3 py-2 text-gray-600">{item.errorType || '-'}</td>
-                      <td className="px-3 py-2 text-gray-600 text-xs max-w-xs truncate" title={item.analysis}>
+                      <td className="px-3 py-2 text-gray-600 text-xs max-w-xs" title={item.analysis}>
                         {item.analysis || '-'}
                       </td>
                     </tr>
