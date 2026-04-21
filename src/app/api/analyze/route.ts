@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { analyzeTestPaperWithContext, GeminiApiError, GeminiParseError } from '@/lib/gemini';
 import { buildAnalysisContext } from '@/lib/context-builder';
-import { applyRateLimit } from '@/lib/rate-limiter';
+import { applyRateLimitAsync } from '@/lib/rate-limiter';
 import { analyzeRequestSchema, validateRequest } from '@/lib/validations';
 import type { AnalyzeApiResponse, ReportType, TestAnalysisFormData } from '@/types';
 
@@ -11,8 +11,8 @@ export const maxDuration = 120;
 
 export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeApiResponse>> {
   try {
-    // Rate Limiting: AI 분석은 분당 5회 제한
-    const rateLimitResult = applyRateLimit(request, 'AI_ANALYSIS');
+    // Rate Limiting: AI 분석은 분당 5회 제한 (Redis 우선, in-memory fallback)
+    const rateLimitResult = await applyRateLimitAsync(request, 'AI_ANALYSIS');
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { success: false, error: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' },

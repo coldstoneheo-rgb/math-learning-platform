@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { analyzeSelfStudy, GeminiApiError, GeminiParseError } from '@/lib/gemini';
 import { buildAnalysisContext } from '@/lib/context-builder';
-import { applyRateLimit } from '@/lib/rate-limiter';
+import { applyRateLimitAsync } from '@/lib/rate-limiter';
 import { z } from 'zod';
 import type { SelfAnalysisProblemType, SelfAnalysisReport } from '@/types';
 
@@ -27,7 +27,7 @@ interface SelfAnalysisApiResponse {
 export async function POST(request: NextRequest): Promise<NextResponse<SelfAnalysisApiResponse>> {
   try {
     // Rate limiting: self-analysis는 분당 3회 제한 (비용 관리)
-    const rateLimitResult = applyRateLimit(request, 'AI_ANALYSIS');
+    const rateLimitResult = await applyRateLimitAsync(request, 'AI_ANALYSIS');
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { success: false, error: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' },
