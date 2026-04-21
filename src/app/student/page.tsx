@@ -37,6 +37,7 @@ export default function StudentDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [student, setStudent] = useState<StudentWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reportTypeFilter, setReportTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -486,40 +487,82 @@ export default function StudentDashboard() {
           )}
         </div>
 
-        {/* ===== 최근 리포트 ===== */}
+        {/* ===== 리포트 목록 (필터) ===== */}
         <div className="mb-8 bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800">최근 리포트</h2>
-            {student.reports.length > 6 && (
-              <span className="text-xs text-gray-400">최근 6개 표시</span>
-            )}
+            <h2 className="text-lg font-bold text-gray-800">
+              내 리포트
+              <span className="ml-2 text-sm font-normal text-gray-400">
+                ({(reportTypeFilter === 'all' ? student.reports : student.reports.filter(r => r.report_type === reportTypeFilter)).length}개)
+              </span>
+            </h2>
           </div>
-          {student.reports.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {student.reports.slice(0, 6).map((report) => {
-                const config = REPORT_TYPE_CONFIG[report.report_type as ReportType];
-                const analysis = report.analysis_data as AnalysisData | null;
-                return (
-                  <Link key={report.id} href={`/student/reports/${report.id}`}
-                    className="block border rounded-xl p-4 hover:shadow-md transition-shadow hover:border-indigo-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-xs px-2 py-1 rounded-full ${config?.bgColor} ${config?.color}`}>
-                        {config?.name || report.report_type}
-                      </span>
-                      {report.total_score != null && (
-                        <span className="text-lg font-bold text-indigo-600">{report.total_score}점</span>
+          {/* 필터 버튼 */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[
+              { key: 'all', label: '전체' },
+              { key: 'test', label: '시험' },
+              { key: 'level_test', label: '레벨테스트' },
+              { key: 'weekly', label: '주간' },
+              { key: 'monthly', label: '월간' },
+              { key: 'semi_annual', label: '반기' },
+              { key: 'annual', label: '연간' },
+              { key: 'self_analysis', label: '내 풀이' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setReportTypeFilter(key)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  reportTypeFilter === key
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {student.reports.length > 0 ? (() => {
+            const filtered = reportTypeFilter === 'all'
+              ? student.reports
+              : student.reports.filter(r => r.report_type === reportTypeFilter);
+            if (filtered.length === 0) {
+              return (
+                <div className="text-center py-8 text-gray-400">
+                  <p className="text-sm">해당 유형의 리포트가 없습니다</p>
+                  <button onClick={() => setReportTypeFilter('all')} className="mt-2 text-xs text-indigo-500 hover:underline">
+                    전체 보기
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filtered.map((report) => {
+                  const config = REPORT_TYPE_CONFIG[report.report_type as ReportType];
+                  const analysis = report.analysis_data as AnalysisData | null;
+                  return (
+                    <Link key={report.id} href={`/student/reports/${report.id}`}
+                      className="block border rounded-xl p-4 hover:shadow-md transition-shadow hover:border-indigo-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${config?.bgColor} ${config?.color}`}>
+                          {config?.name || report.report_type}
+                        </span>
+                        {report.total_score != null && (
+                          <span className="text-lg font-bold text-indigo-600">{report.total_score}점</span>
+                        )}
+                      </div>
+                      <h3 className="font-medium text-gray-800 truncate text-sm">{report.test_name || '리포트'}</h3>
+                      <p className="text-xs text-gray-500 mt-1">{report.test_date}</p>
+                      {analysis?.macroAnalysis?.oneLineSummary && (
+                        <p className="text-xs text-gray-400 mt-2 line-clamp-2">{analysis.macroAnalysis.oneLineSummary}</p>
                       )}
-                    </div>
-                    <h3 className="font-medium text-gray-800 truncate text-sm">{report.test_name || '리포트'}</h3>
-                    <p className="text-xs text-gray-500 mt-1">{report.test_date}</p>
-                    {analysis?.macroAnalysis?.oneLineSummary && (
-                      <p className="text-xs text-gray-400 mt-2 line-clamp-2">{analysis.macroAnalysis.oneLineSummary}</p>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })() : (
             <div className="text-center py-8 text-gray-400">
               <p className="text-sm">아직 리포트가 없습니다</p>
             </div>

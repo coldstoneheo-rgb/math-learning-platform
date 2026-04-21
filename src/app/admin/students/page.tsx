@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Student, User } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 
 export default function StudentsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toasts, addToast, removeToast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [formData, setFormData] = useState({
@@ -175,7 +178,7 @@ export default function StudentsPage() {
       await loadStudents();
     } catch (err) {
       console.error('삭제 오류:', err);
-      alert(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.');
+      addToast(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -210,6 +213,7 @@ export default function StudentsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">

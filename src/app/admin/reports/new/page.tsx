@@ -6,6 +6,10 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfile } from '@/lib/student-profile-extractor';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import { generateStudyPlanFromPrescription } from '@/lib/study-plan-generator';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
 import type { Student, User, TestAnalysisFormData, AnalysisData } from '@/types';
 
@@ -18,6 +22,7 @@ export default function NewReportPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   // 폼 상태
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
@@ -223,9 +228,28 @@ export default function NewReportPage() {
         } catch (feedbackError) {
           console.warn('[Feedback Loop] 등록 실패:', feedbackError);
         }
+
+        // [Study Plan] AI 처방 → 학습 계획 자동 생성
+        if (analysisResult.actionablePrescription?.length > 0) {
+          try {
+            const planResult = await generateStudyPlanFromPrescription(
+              selectedStudentId,
+              insertedReport.id,
+              analysisResult.actionablePrescription,
+              formData.testName
+            );
+            if (planResult.success) {
+              console.log('[Study Plan] 학습 계획 자동 생성 완료:', planResult.planId);
+            } else {
+              console.warn('[Study Plan] 학습 계획 생성 실패:', planResult.error);
+            }
+          } catch (planError) {
+            console.warn('[Study Plan] 학습 계획 생성 오류:', planError);
+          }
+        }
       }
 
-      alert('리포트가 저장되었습니다.');
+      addToast('리포트가 저장되었습니다.', 'success');
       router.push('/admin');
     } catch (err) {
       console.error('저장 오류:', err);
@@ -242,15 +266,12 @@ export default function NewReportPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">

@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfileFromConsolidated } from '@/lib/student-profile-extractor';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import type { Student, User, Report, MacroAnalysis, ActionablePrescriptionItem, GrowthPrediction, ConsolidatedReportData, AnalysisData } from '@/types';
 
 interface ReportWithStudent extends Report {
@@ -20,6 +23,7 @@ export default function NewConsolidatedReportPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
   const [selectedReportIds, setSelectedReportIds] = useState<number[]>([]);
@@ -255,7 +259,7 @@ export default function NewConsolidatedReportPage() {
         }
       }
 
-      alert('통합 리포트가 저장되었습니다.');
+      addToast('통합 리포트가 저장되었습니다.', 'success');
       router.push('/admin/reports');
     } catch (err) {
       console.error('저장 오류:', err);
@@ -272,15 +276,12 @@ export default function NewConsolidatedReportPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">

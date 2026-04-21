@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import type { Student, User, WeeklyReportAnalysis, Schedule, AnalysisData } from '@/types';
 
 interface WeeklyFormData {
@@ -91,6 +94,7 @@ export default function NewWeeklyReportPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
   const [studentSchedules, setStudentSchedules] = useState<Schedule[]>([]);
@@ -442,7 +446,7 @@ export default function NewWeeklyReportPage() {
         }
       }
 
-      alert('주간 리포트가 저장되었습니다.');
+      addToast('주간 리포트가 저장되었습니다.', 'success');
       router.push('/admin/reports');
     } catch (err: unknown) {
       console.error('저장 오류:', err);
@@ -464,15 +468,12 @@ export default function NewWeeklyReportPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">

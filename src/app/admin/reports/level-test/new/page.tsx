@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import { generateStudyPlanFromPrescription } from '@/lib/study-plan-generator';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
 import type { Student, User, LevelTestAnalysis, StudentMetaProfile, AnalysisData } from '@/types';
 
@@ -16,6 +20,7 @@ export default function NewLevelTestPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
   const [testDate, setTestDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -302,9 +307,30 @@ export default function NewLevelTestPage() {
         } catch (metaError) {
           console.warn('[Level Test] Meta profile API error:', metaError);
         }
+
+        // [Study Plan] AI 처방 → 학습 계획 자동 생성
+        const analysisAsAny = analysisResult as unknown as Record<string, unknown>;
+        const prescriptions = Array.isArray(analysisAsAny?.actionablePrescription)
+          ? analysisAsAny.actionablePrescription as Parameters<typeof generateStudyPlanFromPrescription>[2]
+          : null;
+        if (prescriptions && prescriptions.length > 0) {
+          try {
+            const planResult = await generateStudyPlanFromPrescription(
+              selectedStudentId,
+              insertedReport.id,
+              prescriptions,
+              `${student?.name} 레벨 테스트`
+            );
+            if (planResult.success) {
+              console.log('[Study Plan] 레벨 테스트 학습 계획 생성 완료:', planResult.planId);
+            }
+          } catch (planError) {
+            console.warn('[Study Plan] 학습 계획 생성 오류:', planError);
+          }
+        }
       }
 
-      alert('레벨 테스트 리포트가 저장되었습니다. Baseline이 설정되었습니다.');
+      addToast('레벨 테스트 리포트가 저장되었습니다. Baseline이 설정되었습니다.', 'success');
       router.push('/admin/reports');
     } catch (err: unknown) {
       console.error('저장 오류:', err);
@@ -328,15 +354,12 @@ export default function NewLevelTestPage() {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">

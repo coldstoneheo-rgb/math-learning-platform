@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Student } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 
 interface ParentWithChildren extends User {
   students: Pick<Student, 'id' | 'name' | 'grade'>[];
@@ -16,6 +18,7 @@ export default function ParentsPage() {
   const [parents, setParents] = useState<ParentWithChildren[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toasts, addToast, removeToast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [selectedParent, setSelectedParent] = useState<ParentWithChildren | null>(null);
@@ -183,13 +186,13 @@ export default function ParentsPage() {
       await Promise.all([loadParents(), loadStudents()]);
     } catch (err) {
       console.error('연결 해제 오류:', err);
-      alert('연결 해제 중 오류가 발생했습니다.');
+      addToast('연결 해제 중 오류가 발생했습니다.', 'error');
     }
   };
 
   const handleDeleteParent = async (parent: ParentWithChildren) => {
     if (parent.students.length > 0) {
-      alert('먼저 연결된 자녀를 모두 해제해주세요.');
+      addToast('먼저 연결된 자녀를 모두 해제해주세요.', 'warning');
       return;
     }
 
@@ -212,7 +215,7 @@ export default function ParentsPage() {
       await loadParents();
     } catch (err) {
       console.error('삭제 오류:', err);
-      alert(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.');
+      addToast(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -255,6 +258,7 @@ export default function ParentsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
