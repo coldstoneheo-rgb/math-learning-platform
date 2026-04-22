@@ -73,15 +73,22 @@ function extractMetaProfileFromAnalysis(
   const detailedAnalysis = data.detailedAnalysis as Array<Record<string, unknown>> | undefined;
   if (detailedAnalysis && detailedAnalysis.length > 0) {
     const accuracyBySequence: Array<{ problemRange: string; accuracy: number }> = [];
-    const chunkSize = Math.ceil(detailedAnalysis.length / 3);
+    const totalItems = detailedAnalysis.length;
+    const chunkSize = Math.ceil(totalItems / 3);
 
     for (let i = 0; i < 3; i++) {
-      const chunk = detailedAnalysis.slice(i * chunkSize, (i + 1) * chunkSize);
+      const startIdx = i * chunkSize;
+      const endIdx = Math.min((i + 1) * chunkSize, totalItems);
+
+      // Skip if this chunk would be empty or have invalid range
+      if (startIdx >= totalItems) continue;
+
+      const chunk = detailedAnalysis.slice(startIdx, endIdx);
       const correctCount = chunk.filter(q => q.isCorrect === true || q.isCorrect === 'O').length;
       const accuracy = chunk.length > 0 ? Math.round((correctCount / chunk.length) * 100) : 0;
 
       accuracyBySequence.push({
-        problemRange: `${i * chunkSize + 1}-${Math.min((i + 1) * chunkSize, detailedAnalysis.length)}`,
+        problemRange: `${startIdx + 1}-${endIdx}`,
         accuracy,
       });
     }
