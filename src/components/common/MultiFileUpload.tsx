@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useState, useRef } from 'react';
+import { Image, FileText, FileSpreadsheet, Loader2, FolderDown, FolderOpen } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 
 export interface UploadedFile {
@@ -28,19 +29,19 @@ const FILE_TYPE_CONFIG = {
   image: {
     accept: 'image/*',
     mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    icon: '🖼️',
+    Icon: Image,
     label: '이미지',
   },
   pdf: {
     accept: '.pdf',
     mimeTypes: ['application/pdf'],
-    icon: '📄',
+    Icon: FileText,
     label: 'PDF',
   },
   csv: {
     accept: '.csv',
     mimeTypes: ['text/csv', 'application/vnd.ms-excel'],
-    icon: '📊',
+    Icon: FileSpreadsheet,
     label: 'CSV',
   },
 };
@@ -268,8 +269,14 @@ export default function MultiFileUpload({
           disabled={files.length >= maxFiles}
         />
 
-        <div className="text-4xl mb-3">
-          {isCompressing ? '⏳' : isDragging ? '📥' : '📁'}
+        <div className="mb-3">
+          {isCompressing ? (
+            <Loader2 className="w-10 h-10 text-indigo-500 mx-auto animate-spin" />
+          ) : isDragging ? (
+            <FolderDown className="w-10 h-10 text-indigo-500 mx-auto" />
+          ) : (
+            <FolderOpen className="w-10 h-10 text-gray-400 mx-auto" />
+          )}
         </div>
 
         <p className="text-gray-600 text-center">
@@ -327,8 +334,11 @@ export default function MultiFileUpload({
                     className="w-12 h-12 object-cover rounded"
                   />
                 ) : (
-                  <div className="w-12 h-12 flex items-center justify-center bg-gray-200 rounded text-2xl">
-                    {FILE_TYPE_CONFIG[file.type].icon}
+                  <div className="w-12 h-12 flex items-center justify-center bg-gray-200 rounded">
+                    {(() => {
+                      const IconComponent = FILE_TYPE_CONFIG[file.type].Icon;
+                      return <IconComponent className="w-6 h-6 text-gray-500" />;
+                    })()}
                   </div>
                 )}
 

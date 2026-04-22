@@ -9,6 +9,8 @@
  * - 영역별 취약도
  */
 
+import { motion } from 'framer-motion';
+import { Target, Zap } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -21,6 +23,25 @@ import {
   PieChart,
   Pie,
 } from 'recharts';
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const }
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -10 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: { delay: i * 0.1, duration: 0.3 }
+  }),
+};
 
 // 오류 유형 정의
 type ErrorType = '개념 오류' | '절차 오류' | '계산 오류' | '문제 오독' | '기타/부주의';
@@ -163,9 +184,17 @@ export default function ErrorPatternTrend({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
+    <motion.div
+      className="bg-white rounded-xl shadow-sm p-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">🎯 오류 패턴 분석</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Target className="w-5 h-5 text-orange-500" />
+          오류 패턴 분석
+        </h3>
         {lastUpdated && (
           <span className="text-xs text-gray-400">
             마지막 업데이트: {new Date(lastUpdated).toLocaleDateString('ko-KR')}
@@ -205,8 +234,12 @@ export default function ErrorPatternTrend({
             {/* 오류 유형 리스트 */}
             <div className="space-y-2">
               {primaryErrorTypes.map((item, index) => (
-                <div
+                <motion.div
                   key={index}
+                  custom={index}
+                  variants={itemVariants}
+                  initial="hidden"
+                  animate="visible"
                   className="flex items-center justify-between p-2 rounded-lg"
                   style={{ backgroundColor: `${ERROR_TYPE_COLORS[item.type]}10` }}
                 >
@@ -230,7 +263,7 @@ export default function ErrorPatternTrend({
                       </span>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -291,7 +324,10 @@ export default function ErrorPatternTrend({
       {/* 특징적 오류 패턴 */}
       {signaturePatterns.length > 0 && (
         <div className="bg-orange-50 rounded-lg p-4">
-          <h4 className="font-medium text-orange-800 mb-2">⚡ 특징적 오류 패턴</h4>
+          <h4 className="font-medium text-orange-800 mb-2 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-orange-500" />
+            특징적 오류 패턴
+          </h4>
           <ul className="space-y-1">
             {signaturePatterns.map((pattern, index) => (
               <li key={index} className="text-sm text-orange-700 flex items-start gap-2">
@@ -302,6 +338,6 @@ export default function ErrorPatternTrend({
           </ul>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
