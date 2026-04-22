@@ -9,6 +9,8 @@
  * - 목표 대비 현재 위치
  */
 
+import { motion } from 'framer-motion';
+import { TrendingUp } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -23,6 +25,25 @@ import {
   ComposedChart,
 } from 'recharts';
 import type { GrowthPrediction } from '@/types';
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const }
+  },
+};
+
+const predictionCardVariants = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: (i: number) => ({
+    opacity: 1,
+    scale: 1,
+    transition: { delay: 0.3 + i * 0.1, duration: 0.3 }
+  }),
+};
 
 interface ScoreDataPoint {
   date: string;
@@ -240,9 +261,17 @@ export default function GrowthTrajectoryChart({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
+    <motion.div
+      className="bg-white rounded-xl shadow-sm p-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">📈 {title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-indigo-500" />
+          {title}
+        </h3>
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1">
             <div className="w-4 h-0.5 bg-indigo-500" />
@@ -321,9 +350,14 @@ export default function GrowthTrajectoryChart({
           <p className="text-xs text-gray-500 mb-2">예측 요약</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {predictions.map((pred, index) => (
-              <div
+              <motion.div
                 key={index}
+                custom={index}
+                variants={predictionCardVariants}
+                initial="hidden"
+                animate="visible"
                 className="bg-indigo-50 rounded-lg p-3 text-center"
+                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
               >
                 <div className="text-xs text-indigo-600 mb-1">{pred.timeframe} 후</div>
                 <div className="text-lg font-bold text-indigo-700">
@@ -332,11 +366,11 @@ export default function GrowthTrajectoryChart({
                 <div className="text-xs text-gray-500">
                   신뢰도 {pred.confidenceLevel}%
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

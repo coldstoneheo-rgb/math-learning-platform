@@ -8,8 +8,28 @@
  * - 현재 상태 및 트렌드 표시
  */
 
+import { motion } from 'framer-motion';
 import { BookOpen, Dumbbell, Brain, Target, Lightbulb, type LucideIcon } from 'lucide-react';
 import type { StudentMetaProfile } from '@/types';
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const }
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: (i: number) => ({
+    opacity: 1,
+    scale: 1,
+    transition: { delay: 0.2 + i * 0.08, duration: 0.3 }
+  }),
+};
 
 interface MetaHeaderProps {
   metaProfile?: StudentMetaProfile | null;
@@ -176,7 +196,12 @@ export default function MetaHeader({
     : gradeLabel;
 
   return (
-    <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-6 shadow-sm">
+    <motion.div
+      className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-6 shadow-sm"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Header Row */}
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -235,17 +260,25 @@ export default function MetaHeader({
 
       {/* Indicators Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {indicators.map((ind) => (
-          <IndicatorCard
+        {indicators.map((ind, index) => (
+          <motion.div
             key={ind.key}
-            label={ind.label}
-            value={ind.value}
-            Icon={ind.Icon}
-            color={ind.color}
-            description={ind.description}
-            tooltip={ind.tooltip}
-            isCount={ind.isCount}
-          />
+            custom={index}
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+          >
+            <IndicatorCard
+              label={ind.label}
+              value={ind.value}
+              Icon={ind.Icon}
+              color={ind.color}
+              description={ind.description}
+              tooltip={ind.tooltip}
+              isCount={ind.isCount}
+            />
+          </motion.div>
         ))}
       </div>
 
@@ -270,7 +303,7 @@ export default function MetaHeader({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
