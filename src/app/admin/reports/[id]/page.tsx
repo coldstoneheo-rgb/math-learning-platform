@@ -505,7 +505,7 @@ export default function ReportDetailPage() {
         {analysis.macroAnalysis?.mathCapability && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 수학 역량</h3>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
               {[
                 { key: 'calculationSpeed', label: '계산 속도' },
                 { key: 'calculationAccuracy', label: '계산 정확도' },

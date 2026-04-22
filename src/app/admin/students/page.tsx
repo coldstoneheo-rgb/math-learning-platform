@@ -252,27 +252,27 @@ export default function StudentsPage() {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full">
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">학생 ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">학년</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">학교</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">시작일</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">관리</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학생 ID</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">이름</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학년</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">학교</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">시작일</th>
+                  <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {students.map((student) => (
                   <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-mono text-gray-500">{student.student_id}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{student.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{getGradeLabel(student.grade)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{student.school || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{student.start_date || '-'}</td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm font-mono text-gray-500">{student.student_id}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm font-medium text-gray-900">{student.name}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600">{getGradeLabel(student.grade)}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden sm:table-cell">{student.school || '-'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden md:table-cell">{student.start_date || '-'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right">
                       <button
                         onClick={() => handleEdit(student)}
                         className="text-indigo-600 hover:text-indigo-800 text-sm mr-3"

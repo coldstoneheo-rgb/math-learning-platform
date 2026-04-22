@@ -192,21 +192,21 @@ export default function ReportsPage() {
             </Link>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full">
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden overflow-x-auto">
+            <table className="w-full min-w-[500px]">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">학생</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성일</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">관리</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학생</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">제목</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">유형</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">작성일</th>
+                  <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredReports.map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+                    <td className="px-4 md:px-6 py-3 md:py-4">
                       <div className="text-sm font-medium text-gray-900">
                         {report.students?.name || '알 수 없음'}
                       </div>
@@ -214,11 +214,11 @@ export default function ReportsPage() {
                         {report.students && getGradeLabel(report.students.grade)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {report.test_name || getReportTypeLabel(report.report_type)}
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-900 hidden sm:table-cell">
+                      <span className="line-clamp-1">{report.test_name || getReportTypeLabel(report.report_type)}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs rounded ${
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${
                         report.report_type === 'test' ? 'bg-blue-100 text-blue-700' :
                         report.report_type === 'weekly' ? 'bg-green-100 text-green-700' :
                         report.report_type === 'monthly' ? 'bg-purple-100 text-purple-700' :
@@ -227,13 +227,13 @@ export default function ReportsPage() {
                         {getReportTypeLabel(report.report_type)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden md:table-cell whitespace-nowrap">
                       {new Date(report.created_at).toLocaleDateString('ko-KR')}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right whitespace-nowrap">
                       <a
                         href={`/admin/reports/${report.id}`}
-                        className="text-indigo-600 hover:text-indigo-800 text-sm mr-3"
+                        className="text-indigo-600 hover:text-indigo-800 text-sm mr-2 md:mr-3"
                       >
                         보기
                       </a>
