@@ -8,6 +8,7 @@
  * - 현재 상태 및 트렌드 표시
  */
 
+import { BookOpen, Dumbbell, Brain, Target, Lightbulb, type LucideIcon } from 'lucide-react';
 import type { StudentMetaProfile } from '@/types';
 
 interface MetaHeaderProps {
@@ -82,12 +83,21 @@ export default function MetaHeader({
     );
   }
 
-  const indicators = [
+  const indicators: Array<{
+    key: string;
+    label: string;
+    value: number;
+    Icon: LucideIcon;
+    color: string;
+    description: string;
+    tooltip: string;
+    isCount?: boolean;
+  }> = [
     {
       key: 'absorption',
       label: '학습 흡수율',
       value: metaProfile.absorptionRate?.overallScore ?? 50,
-      icon: '📚',
+      Icon: BookOpen,
       color: 'indigo',
       description: getLearningTypeLabel(metaProfile.absorptionRate?.learningType || 'steady-grower'),
       tooltip: '새로운 개념을 얼마나 빨리 이해하고 적용하는지',
@@ -96,7 +106,7 @@ export default function MetaHeader({
       key: 'stamina',
       label: '문제풀이 지구력',
       value: metaProfile.solvingStamina?.overallScore ?? 50,
-      icon: '💪',
+      Icon: Dumbbell,
       color: 'green',
       description: getFatiguePatternLabel(metaProfile.solvingStamina?.fatiguePattern || 'consistent'),
       tooltip: '긴 시간 동안 집중력을 유지하며 문제를 푸는 능력',
@@ -105,7 +115,7 @@ export default function MetaHeader({
       key: 'metacognition',
       label: '메타인지 수준',
       value: metaProfile.metaCognitionLevel?.overallScore ?? 50,
-      icon: '🧠',
+      Icon: Brain,
       color: 'purple',
       description: getDevelopmentStageLabel(metaProfile.metaCognitionLevel?.developmentStage || 'developing'),
       tooltip: '자신의 학습 상태를 인식하고 조절하는 능력',
@@ -114,7 +124,7 @@ export default function MetaHeader({
       key: 'errorPatterns',
       label: '파악된 오류 유형',
       value: metaProfile.errorSignature?.primaryErrorTypes?.length ?? 0,
-      icon: '🎯',
+      Icon: Target,
       color: 'orange',
       description: metaProfile.errorSignature?.primaryErrorTypes?.length
         ? metaProfile.errorSignature.primaryErrorTypes.map(e => e.type).slice(0, 2).join(', ')
@@ -149,7 +159,7 @@ export default function MetaHeader({
           <div className="flex items-center gap-4">
             {indicators.slice(0, 3).map((ind) => (
               <div key={ind.key} className="flex items-center gap-1" title={ind.tooltip}>
-                <span className="text-sm">{ind.icon}</span>
+                <ind.Icon className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">
                   {ind.isCount ? ind.value : `${ind.value}%`}
                 </span>
@@ -189,7 +199,7 @@ export default function MetaHeader({
       {metaProfile.baseline?.assessmentDate && (
         <div className="bg-white/50 rounded-lg p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg">🎯</span>
+            <Target className="w-5 h-5 text-indigo-500" />
             <span className="font-semibold text-gray-700">학습 기준점 (Baseline)</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
@@ -217,8 +227,9 @@ export default function MetaHeader({
 
       {/* 지표 설명 섹션 */}
       <div className="bg-white/30 rounded-lg p-3 mb-4">
-        <p className="text-xs text-gray-500">
-          💡 아래 지표들은 레벨 테스트 기준 초기값(50%)입니다. 시험 분석을 통해 실제 데이터가 반영됩니다.
+        <p className="text-xs text-gray-500 flex items-center gap-1.5">
+          <Lightbulb className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+          아래 지표들은 레벨 테스트 기준 초기값(50%)입니다. 시험 분석을 통해 실제 데이터가 반영됩니다.
         </p>
       </div>
 
@@ -229,7 +240,7 @@ export default function MetaHeader({
             key={ind.key}
             label={ind.label}
             value={ind.value}
-            icon={ind.icon}
+            Icon={ind.Icon}
             color={ind.color}
             description={ind.description}
             tooltip={ind.tooltip}
@@ -266,7 +277,7 @@ export default function MetaHeader({
 interface IndicatorCardProps {
   label: string;
   value: number;
-  icon: string;
+  Icon: LucideIcon;
   color: string;
   description: string;
   tooltip?: string;
@@ -276,7 +287,7 @@ interface IndicatorCardProps {
 function IndicatorCard({
   label,
   value,
-  icon,
+  Icon,
   color,
   description,
   tooltip,
@@ -309,7 +320,7 @@ function IndicatorCard({
   return (
     <div className={`${colors.bg} rounded-lg p-3`} title={tooltip}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-lg">{icon}</span>
+        <Icon className={`w-5 h-5 ${colors.text}`} />
         <div className="text-right">
           <span className={`text-2xl font-bold ${getValueColor(value)}`}>
             {isCount ? value : `${value}`}

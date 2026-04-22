@@ -9,6 +9,7 @@
  * - 영역별 취약도
  */
 
+import { Target, Zap } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -165,7 +166,10 @@ export default function ErrorPatternTrend({
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">🎯 오류 패턴 분석</h3>
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Target className="w-5 h-5 text-orange-500" />
+          오류 패턴 분석
+        </h3>
         {lastUpdated && (
           <span className="text-xs text-gray-400">
             마지막 업데이트: {new Date(lastUpdated).toLocaleDateString('ko-KR')}
@@ -291,7 +295,10 @@ export default function ErrorPatternTrend({
       {/* 특징적 오류 패턴 */}
       {signaturePatterns.length > 0 && (
         <div className="bg-orange-50 rounded-lg p-4">
-          <h4 className="font-medium text-orange-800 mb-2">⚡ 특징적 오류 패턴</h4>
+          <h4 className="font-medium text-orange-800 mb-2 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-orange-500" />
+            특징적 오류 패턴
+          </h4>
           <ul className="space-y-1">
             {signaturePatterns.map((pattern, index) => (
               <li key={index} className="text-sm text-orange-700 flex items-start gap-2">
