@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Target,
@@ -146,7 +147,7 @@ const iconVariants = {
   },
 };
 
-export default function GrowthLoopIndicator({
+function GrowthLoopIndicator({
   reportType,
   baselineDate,
   hasBaseline = true,
@@ -512,3 +513,5 @@ export function VisionDistanceFooter({
     </motion.div>
   );
 }
+
+export default memo(GrowthLoopIndicator);

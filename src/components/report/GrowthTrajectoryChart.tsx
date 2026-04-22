@@ -9,6 +9,7 @@
  * - 목표 대비 현재 위치
  */
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
 import {
@@ -150,7 +151,7 @@ function CustomTooltip({
   );
 }
 
-export default function GrowthTrajectoryChart({
+function GrowthTrajectoryChart({
   scoreHistory = [],
   predictions = [],
   currentScore,
@@ -374,3 +375,5 @@ export default function GrowthTrajectoryChart({
     </motion.div>
   );
 }
+
+export default memo(GrowthTrajectoryChart);

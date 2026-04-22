@@ -8,6 +8,7 @@
  * - 현재 상태 및 트렌드 표시
  */
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, Dumbbell, Brain, Target, Lightbulb, type LucideIcon } from 'lucide-react';
 import type { StudentMetaProfile } from '@/types';
@@ -76,7 +77,7 @@ function getDevelopmentStageLabel(stage: string): string {
   return labels[stage] || stage;
 }
 
-export default function MetaHeader({
+function MetaHeader({
   metaProfile,
   studentName,
   studentGrade,
@@ -379,3 +380,5 @@ function IndicatorCard({
     </div>
   );
 }
+
+export default memo(MetaHeader);

@@ -9,6 +9,7 @@
  * - 영역별 취약도
  */
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Target, Zap } from 'lucide-react';
 import {
@@ -134,7 +135,7 @@ function CustomTooltip({
   );
 }
 
-export default function ErrorPatternTrend({
+function ErrorPatternTrend({
   primaryErrorTypes = [],
   signaturePatterns = [],
   domainVulnerability = [],
@@ -341,3 +342,5 @@ export default function ErrorPatternTrend({
     </motion.div>
   );
 }
+
+export default memo(ErrorPatternTrend);

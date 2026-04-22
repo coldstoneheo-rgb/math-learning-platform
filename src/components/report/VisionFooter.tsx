@@ -9,6 +9,7 @@
  * - 성장 예측 차트
  */
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Eye, Calendar, CalendarDays, CalendarRange, Flame } from 'lucide-react';
 import type {
@@ -57,7 +58,7 @@ interface VisionFooterProps {
   compact?: boolean;
 }
 
-export default function VisionFooter({
+function VisionFooter({
   futureVision,
   legacyVision,
   growthPredictions,
@@ -196,6 +197,8 @@ export default function VisionFooter({
     </motion.div>
   );
 }
+
+export default memo(VisionFooter);
 
 interface VisionTimelineItemProps {
   timeframe: string;

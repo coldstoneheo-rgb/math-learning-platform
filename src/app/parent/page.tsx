@@ -90,20 +90,21 @@ export default function ParentDashboard() {
       return;
     }
 
-    // 각 자녀의 리포트 조회
-    const childrenWithReports: StudentWithReports[] = [];
-    for (const student of studentData || []) {
-      const { data: reports } = await supabase
+    // 각 자녀의 리포트 병렬 조회 (성능 최적화)
+    const reportPromises = (studentData || []).map(student =>
+      supabase
         .from('reports')
         .select('*')
         .eq('student_id', student.id)
-        .order('test_date', { ascending: false });
+        .order('test_date', { ascending: false })
+    );
 
-      childrenWithReports.push({
-        ...student,
-        reports: reports || [],
-      });
-    }
+    const reportResults = await Promise.all(reportPromises);
+
+    const childrenWithReports: StudentWithReports[] = (studentData || []).map((student, index) => ({
+      ...student,
+      reports: reportResults[index]?.data || [],
+    }));
 
     setChildren(childrenWithReports);
     if (childrenWithReports.length > 0) {
