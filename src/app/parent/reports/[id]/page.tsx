@@ -3,8 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { MetaHeader, VisionFooter } from '@/components/report';
+import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge } from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
+import {
+  calculateHabitScore,
+  convertMomentumStatus,
+  handleZeroScore,
+  calculateSessionAverages,
+  generateWeeklyComparison,
+} from '@/lib/report-utils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -469,7 +476,89 @@ export default function ParentReportDetailPage() {
         {/* ===== 주간 리포트 ===== */}
         {weeklyAnalysis && (
           <>
-            {/* 주간 요약 통계 */}
+            {/* 학습 습관 점수 & 성장 모멘텀 */}
+            {(() => {
+              const sessions = weeklyAnalysis.classSessions || [];
+              const { avgUnderstanding, avgFocus } = calculateSessionAverages(sessions);
+              const habitScoreResult = weeklyAnalysis.habitScore || calculateHabitScore({
+                assignmentTotal: weeklyAnalysis.assignmentCompletion?.total || 0,
+                assignmentCompleted: weeklyAnalysis.assignmentCompletion?.completed || 0,
+                averageUnderstanding: avgUnderstanding,
+                averageFocus: avgFocus,
+                classSessionCount: sessions.length,
+              });
+              const momentum = weeklyAnalysis.growthMomentum || convertMomentumStatus(
+                weeklyAnalysis.microLoopFeedback?.momentumStatus || '',
+                habitScoreResult.score
+              );
+              const habitScoreData = handleZeroScore(habitScoreResult.score, 'habit');
+
+              return (
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                  {/* 성장 모멘텀 게이지 */}
+                  <MomentumGauge
+                    status={momentum.status}
+                    statusLabel={momentum.statusLabel}
+                    habitScore={habitScoreResult.score}
+                    weeklyComparison={weeklyAnalysis.growthMomentum?.weeklyComparison || generateWeeklyComparison(habitScoreResult.score)}
+                  />
+
+                  {/* 학습 습관 요약 */}
+                  <div className="bg-white rounded-xl shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 이번 주 학습 현황</h3>
+                    {habitScoreData.hasData ? (
+                      <>
+                        <div className="text-center mb-4">
+                          <div className="text-4xl font-bold text-indigo-600">{habitScoreResult.score}</div>
+                          <div className="text-sm text-gray-500">학습 습관 점수</div>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">숙제 완료</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 bg-gray-200 rounded-full h-2">
+                                <div className="bg-green-500 rounded-full h-2" style={{ width: `${(habitScoreResult.breakdown?.assignmentCompletion || 0) / 40 * 100}%` }} />
+                              </div>
+                              <span className="text-sm font-medium">{habitScoreResult.breakdown?.assignmentCompletion || 0}/40</span>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">집중도</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 bg-gray-200 rounded-full h-2">
+                                <div className="bg-blue-500 rounded-full h-2" style={{ width: `${(habitScoreResult.breakdown?.focusLevel || 0) / 30 * 100}%` }} />
+                              </div>
+                              <span className="text-sm font-medium">{habitScoreResult.breakdown?.focusLevel || 0}/30</span>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">이해도</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 bg-gray-200 rounded-full h-2">
+                                <div className="bg-purple-500 rounded-full h-2" style={{ width: `${(habitScoreResult.breakdown?.understandingLevel || 0) / 30 * 100}%` }} />
+                              </div>
+                              <span className="text-sm font-medium">{habitScoreResult.breakdown?.understandingLevel || 0}/30</span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="mt-4 text-sm text-gray-600 bg-indigo-50 rounded-lg p-3">
+                          {habitScoreResult.explanation}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">{habitScoreData.message}</p>
+                        {habitScoreData.suggestion && (
+                          <p className="text-sm text-gray-400 mt-2">{habitScoreData.suggestion}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 주간 요약 통계 (간소화) */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">📅 이번 주 요약</h3>
               <div className="grid grid-cols-3 gap-4">
@@ -482,8 +571,13 @@ export default function ParentReportDetailPage() {
                   <div className="text-2xl font-bold text-green-700">{weeklyAnalysis.assignmentCompletion?.rate || 0}%</div>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4 text-center">
-                  <div className="text-sm text-purple-600">연속성 점수</div>
-                  <div className="text-2xl font-bold text-purple-700">{weeklyAnalysis.microLoopFeedback?.continuityScore || 0}</div>
+                  <div className="text-sm text-purple-600">평균 이해도</div>
+                  <div className="text-2xl font-bold text-purple-700">
+                    {weeklyAnalysis.classSessions?.length > 0
+                      ? (weeklyAnalysis.classSessions.reduce((sum, s) => sum + (s.understandingLevel || 0), 0) / weeklyAnalysis.classSessions.length).toFixed(1)
+                      : '-'
+                    }/5
+                  </div>
                 </div>
               </div>
             </div>
@@ -538,17 +632,67 @@ export default function ParentReportDetailPage() {
               )}
             </div>
 
+            {/* 팩트 기반 분석 근거 (이미지 분석 결과 포함) */}
+            {weeklyAnalysis.factBasedEvidence && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border-l-4 border-indigo-500">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🔍 분석 근거</h3>
+                <div className="space-y-4">
+                  {weeklyAnalysis.factBasedEvidence.imageAnalysis && weeklyAnalysis.factBasedEvidence.imageAnalysis.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">📷 풀이 관찰</h4>
+                      <ul className="space-y-1">
+                        {weeklyAnalysis.factBasedEvidence.imageAnalysis.map((item, i) => (
+                          <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                            <span className="text-indigo-400">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {weeklyAnalysis.factBasedEvidence.dataPoints && weeklyAnalysis.factBasedEvidence.dataPoints.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">📊 데이터 포인트</h4>
+                      <ul className="space-y-1">
+                        {weeklyAnalysis.factBasedEvidence.dataPoints.map((item, i) => (
+                          <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                            <span className="text-blue-400">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {weeklyAnalysis.factBasedEvidence.teacherObservations && weeklyAnalysis.factBasedEvidence.teacherObservations.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">👩‍🏫 선생님 관찰</h4>
+                      <ul className="space-y-1">
+                        {weeklyAnalysis.factBasedEvidence.teacherObservations.map((item, i) => (
+                          <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                            <span className="text-green-400">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 다음 주 계획 */}
             {weeklyAnalysis.nextWeekPlan && (
               <div className="bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl p-6 mb-6 text-white">
                 <h3 className="text-lg font-semibold mb-3">📌 다음 주 계획</h3>
                 <p className="text-blue-100 mb-3"><span className="font-medium">핵심 목표:</span> {weeklyAnalysis.nextWeekPlan.focus}</p>
-                {weeklyAnalysis.nextWeekPlan.goals && (
+                {weeklyAnalysis.nextWeekPlan.goals && weeklyAnalysis.nextWeekPlan.goals.length > 0 ? (
                   <ul className="space-y-1">
                     {weeklyAnalysis.nextWeekPlan.goals.map((g, i) => (
                       <li key={i} className="text-sm text-blue-50">• {g}</li>
                     ))}
                   </ul>
+                ) : (
+                  <p className="text-sm text-blue-200">다음 주 세부 목표가 곧 업데이트됩니다.</p>
                 )}
               </div>
             )}

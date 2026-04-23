@@ -16,6 +16,11 @@ interface GenerateWeeklyReportRequest {
   startDate: string; // YYYY-MM-DD
   endDate: string;   // YYYY-MM-DD
   teacherNotes?: string;
+  attachments?: Array<{
+    name: string;
+    type: 'image' | 'document';
+    data: string;  // base64
+  }>;
 }
 
 interface GenerateWeeklyReportResponse {
@@ -79,6 +84,9 @@ export async function POST(
       );
     }
     const { studentId, year, weekNumber, startDate, endDate, teacherNotes } = validation.data;
+
+    // 첨부파일 추출 (Zod 스키마에 없으면 rawBody에서 직접)
+    const attachments = rawBody.attachments as GenerateWeeklyReportRequest['attachments'];
 
     // 3. 학생 정보 조회
     const { data: student, error: studentError } = await supabase
@@ -166,6 +174,8 @@ export async function POST(
         completed: completedAssignments,
       },
       teacherNotes: teacherNotes || '주간 종합 평가 요청',
+      // 첨부파일 (스캔본, 문제 풀이 이미지 등)
+      attachments: attachments,
     };
 
     // 11. 컨텍스트 데이터 구성

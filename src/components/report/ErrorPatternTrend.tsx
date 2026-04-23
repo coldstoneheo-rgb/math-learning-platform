@@ -286,7 +286,7 @@ function ErrorPatternTrend({
                 <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
                 <YAxis dataKey="domain" type="category" width={60} tick={{ fontSize: 12 }} />
                 <Tooltip
-                  formatter={(value: number) => [`${value}% (${getVulnerabilityLabel(value)})`, '취약도']}
+                  formatter={(value) => [`${value ?? 0}% (${getVulnerabilityLabel(Number(value ?? 0))})`, '취약도']}
                 />
                 <Bar dataKey="vulnerabilityScore" radius={[0, 4, 4, 0]}>
                   {sortedVulnerabilities.map((entry, index) => (

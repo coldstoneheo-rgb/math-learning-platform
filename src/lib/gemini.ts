@@ -1041,6 +1041,12 @@ export interface WeeklyReportInput {
     completed: number;
   };
   teacherNotes: string;
+  // 첨부파일 (스캔본, 문제 풀이 이미지 등)
+  attachments?: Array<{
+    name: string;
+    type: 'image' | 'document';
+    data: string;  // base64
+  }>;
 }
 
 export async function generateWeeklyReport(
@@ -1054,6 +1060,48 @@ export async function generateWeeklyReport(
   console.log('[Model Routing] weekly ->', selectedModel);
 
   const contextPrompt = buildContextPrompt(context);
+
+  // ===== 첨부파일(이미지) 처리 =====
+  const imageParts: Array<{ inlineData: { data: string; mimeType: string } }> = [];
+  const imageDescriptions: string[] = [];
+
+  if (input.attachments && input.attachments.length > 0) {
+    input.attachments.forEach((attachment, idx) => {
+      if (attachment.type === 'image' && attachment.data) {
+        // Base64 이미지를 Gemini 형식으로 변환
+        const mimeType = attachment.name.toLowerCase().endsWith('.png')
+          ? 'image/png'
+          : attachment.name.toLowerCase().endsWith('.gif')
+          ? 'image/gif'
+          : 'image/jpeg';
+
+        imageParts.push({
+          inlineData: { data: attachment.data, mimeType }
+        });
+        imageDescriptions.push(`- 이미지 ${idx + 1}: ${attachment.name}`);
+      }
+    });
+
+    if (imageParts.length > 0) {
+      console.log(`[Weekly Report] Processing ${imageParts.length} images for multimodal analysis`);
+    }
+  }
+
+  // 이미지 분석 지시 (이미지가 있을 때만)
+  const imageAnalysisSection = imageParts.length > 0 ? `
+## 첨부된 학습 자료 분석 (중요!)
+아래 이미지들이 첨부되어 있습니다. 반드시 이미지를 분석하여 주간 성취와 개선점을 도출하세요.
+${imageDescriptions.join('\n')}
+
+### 이미지 분석 지침
+1. **풀이 과정 관찰**: 학생이 어떤 방식으로 문제를 풀었는지 분석
+2. **오류 패턴 탐지**: 반복되는 실수나 개념 오류 파악
+3. **강점 발견**: 잘 해결한 부분, 좋은 풀이 습관 발견
+4. **구체적 근거 제시**: "이미지에서 [구체적 내용]을 확인할 수 있음" 형식으로 근거 제시
+5. **주간 성취와 연결**: 이미지에서 관찰된 내용을 weeklyAchievements에 반영
+
+⚠️ 이미지가 없다면 수업 데이터와 선생님 메모만으로 분석하되, 이미지가 있다면 반드시 이미지 내용을 우선적으로 분석하세요.
+` : '';
 
   const userPrompt = `
 ${contextPrompt}
@@ -1078,15 +1126,18 @@ ${input.classSessions.map((s, i) => `
 
 ## 선생님 메모
 ${input.teacherNotes}
+${imageAnalysisSection}
+## 생성 항목 (모든 항목에 구체적 근거 포함!)
+1. **학습 내용 평가**: 이번 주 다룬 개념별 이해도 (이미지 분석 근거 포함)
+2. **주간 성취 정리**: 구체적이고 측정 가능한 성취 3-5개 (막연한 표현 금지)
+3. **개선 필요 영역**: 다음 주 집중해야 할 구체적 영역 2-3개
+4. **복습 과제 지정**: 5요소 전략 (무엇을, 어디서, 얼마나, 어떻게, 측정방법)
+5. **학습 습관 점수**: 숙제 완료율, 집중도, 이해도 종합 (0-100점)
+6. **다음 주 계획**: 구체적인 학습 목표 2-3개
+7. **격려 메시지**: 학부모가 읽기 쉬운 따뜻한 메시지
 
-## 생성 항목
-1. 학습 내용 평가
-2. 주간 성취 정리
-3. 개선 필요 영역
-4. 복습 과제 지정
-5. Micro Loop 피드백 (지난주 목표 점검, 연속성 점수)
-6. 다음 주 계획
-7. 격려 메시지
+⚠️ 중요: 모든 분석은 입력 데이터(수업 키워드, 선생님 메모, 첨부 이미지)에 기반해야 합니다.
+일반적이거나 막연한 표현 대신 구체적인 사실과 관찰을 작성하세요.
 
 응답은 WeeklyReportAnalysis 스키마를 따라주세요.`;
 
@@ -1172,17 +1223,58 @@ ${input.teacherNotes}
         }
       },
       encouragement: { type: 'string' },
-      teacherComment: { type: 'string' }
+      teacherComment: { type: 'string' },
+      // ===== 확장 필드 (Phase 1.2) =====
+      habitScore: {
+        type: 'object',
+        properties: {
+          score: { type: 'number' },
+          breakdown: {
+            type: 'object',
+            properties: {
+              assignmentCompletion: { type: 'number' },
+              focusLevel: { type: 'number' },
+              understandingLevel: { type: 'number' }
+            }
+          },
+          trend: { type: 'string' },
+          explanation: { type: 'string' }
+        }
+      },
+      growthMomentum: {
+        type: 'object',
+        properties: {
+          status: { type: 'string' },
+          statusLabel: { type: 'string' },
+          weeklyComparison: { type: 'string' }
+        }
+      },
+      factBasedEvidence: {
+        type: 'object',
+        properties: {
+          imageAnalysis: { type: 'array', items: { type: 'string' } },
+          dataPoints: { type: 'array', items: { type: 'string' } },
+          teacherObservations: { type: 'array', items: { type: 'string' } }
+        }
+      }
     }
   };
 
   try {
+    // 멀티모달 요청 구성: 텍스트 + 이미지
+    const userParts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [
+      { text: userPrompt },
+      ...imageParts  // 첨부된 이미지들 추가
+    ];
+
     const response = await ai.models.generateContent({
       model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: WEEKLY_REPORT_PROMPT }] },
-        { role: 'model', parts: [{ text: '네, 주간 리포트를 생성합니다. Micro Loop 관점에서 지난주와의 연속성을 유지하며 분석하겠습니다.' }] },
-        { role: 'user', parts: [{ text: userPrompt }] }
+        { role: 'model', parts: [{ text: imageParts.length > 0
+          ? '네, 주간 리포트를 생성합니다. 첨부된 이미지를 분석하고, Micro Loop 관점에서 지난주와의 연속성을 유지하며 구체적인 분석을 제공하겠습니다.'
+          : '네, 주간 리포트를 생성합니다. Micro Loop 관점에서 지난주와의 연속성을 유지하며 분석하겠습니다.' }] },
+        { role: 'user', parts: userParts }
       ],
       config: {
         responseMimeType: 'application/json',

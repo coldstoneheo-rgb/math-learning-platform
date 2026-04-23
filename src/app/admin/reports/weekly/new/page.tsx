@@ -288,6 +288,13 @@ export default function NewWeeklyReportPage() {
       const startDateObj = new Date(formData.startDate);
       const weekNumber = getWeekNumber(startDateObj);
 
+      // 첨부파일을 API에 전달 (이미지 분석을 위해)
+      const attachments = uploadedFiles.map(f => ({
+        name: f.name,
+        type: f.type.startsWith('image/') ? 'image' as const : 'document' as const,
+        data: f.data,  // base64
+      }));
+
       const response = await fetch('/api/weekly-report/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -298,6 +305,7 @@ export default function NewWeeklyReportPage() {
           startDate: formData.startDate,
           endDate: formData.endDate,
           teacherNotes: formData.classNotes || '주간 종합 평가 요청',
+          attachments: attachments.length > 0 ? attachments : undefined,
         }),
       });
 

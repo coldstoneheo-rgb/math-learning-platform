@@ -13,3 +13,7 @@ export {
   BaselineReferenceCard,
   VisionDistanceFooter,
 } from './GrowthLoopIndicator';
+
+// Phase 1 확장 컴포넌트
+export { default as HabitTrendChart } from './HabitTrendChart';
+export { default as MomentumGauge, MomentumBadge } from './MomentumGauge';

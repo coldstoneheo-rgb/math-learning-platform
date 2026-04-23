@@ -323,7 +323,7 @@ export default function StudentDashboard() {
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{ borderRadius: '8px', fontSize: '13px' }}
-                    formatter={(value: number) => [`${value}점`, '점수']}
+                    formatter={(value) => [`${value ?? 0}점`, '점수']}
                   />
                   <Line
                     type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3}

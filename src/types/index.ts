@@ -1111,7 +1111,7 @@ export interface WeeklyReportAnalysis {
       achieved: boolean;
       notes: string;
     }[];
-    // 연속성 지표
+    // 연속성 지표 (내부용, UI에서는 habitScore 사용)
     continuityScore: number;
     // 모멘텀 상태
     momentumStatus: 'accelerating' | 'maintaining' | 'slowing' | 'recovering';
@@ -1120,6 +1120,46 @@ export interface WeeklyReportAnalysis {
   encouragement: string;
   // 선생님 코멘트
   teacherComment: string;
+
+  // ===== 확장 필드 (Phase 1.2) =====
+
+  // 학습 습관 점수 (부모 친화적 용어)
+  // 0-100점, 숙제완료율 + 집중도 + 이해도 종합
+  habitScore?: {
+    score: number;  // 0-100
+    breakdown: {
+      assignmentCompletion: number;  // 숙제 완료 기여분 (0-40)
+      focusLevel: number;            // 집중도 기여분 (0-30)
+      understandingLevel: number;    // 이해도 기여분 (0-30)
+    };
+    trend: 'up' | 'stable' | 'down';  // 지난주 대비 추세
+    explanation: string;  // "숙제를 잘 수행하고 수업에 집중하고 있어요"
+  };
+
+  // 성장 모멘텀 (부모 친화적 용어로 변환)
+  growthMomentum?: {
+    status: 'rising' | 'steady' | 'needs_attention';  // 상승중 / 유지중 / 관심필요
+    statusLabel: string;  // "꾸준히 성장하고 있어요!" 등
+    weeklyComparison: string;  // "지난주 대비 이해도가 15% 향상되었습니다"
+  };
+
+  // 팩트 기반 근거 (이미지 분석 결과)
+  factBasedEvidence?: {
+    imageAnalysis?: string[];  // 이미지에서 관찰된 구체적 내용
+    dataPoints: string[];      // 데이터 기반 관찰 (수치, 비율 등)
+    teacherObservations: string[];  // 선생님 메모에서 추출된 관찰
+  };
+
+  // 성장 추적 데이터 (차트용)
+  growthTracking?: {
+    weeklyScores: {
+      weekNumber: number;
+      habitScore: number;
+      understandingAvg: number;
+      focusAvg: number;
+    }[];
+    improvementRate: number;  // 지난 4주 대비 개선율 (%)
+  };
 }
 
 /**
