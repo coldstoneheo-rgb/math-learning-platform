@@ -1247,6 +1247,41 @@ export interface MonthlyReportAnalysis {
   };
   // 선생님 종합 메시지
   teacherMessage: string;
+
+  // ===== 확장 필드 (Phase 2.3) =====
+
+  // 5개 역량 레이더 차트 데이터 (0-100)
+  capabilityScores?: {
+    conceptUnderstanding: number;  // 개념이해도
+    problemSolving: number;        // 문제풀이력
+    learningHabit: number;         // 학습습관
+    assignmentPerformance: number; // 숙제수행
+    testPerformanceScore: number;  // 시험성과
+  };
+
+  // 취약점 상태별 분류 (WeaknessResolutionMap 용)
+  weaknessStatusMap?: {
+    resolved: string[];   // 이번 달 해결됨
+    improving: string[];  // 개선 진행 중
+    ongoing: string[];    // 여전히 지속됨
+    newlyFound: string[]; // 이번 달 새로 발견
+  };
+
+  // 주간 습관 점수 추이 (HabitTrendChart 용)
+  weeklyHabitScores?: {
+    weekNumber: number;
+    score: number;
+    understandingAvg: number;
+    focusAvg: number;
+  }[];
+
+  // 월간 성장 한 줄 요약 (부모가 한눈에 볼 핵심)
+  monthlyGrowthSummary?: {
+    headline: string;          // "이번 달은 개념 이해가 크게 향상되었어요!"
+    growthEmoji: string;       // "🚀" | "📈" | "👍" | "💪"
+    keyAchievement: string;    // 가장 큰 성취 1문장
+    keyFocus: string;          // 다음 달 집중 포인트 1문장
+  };
 }
 
 /**

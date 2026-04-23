@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge } from '@/components/report';
+import GrowthRadarChart, { buildRadarData } from '@/components/report/GrowthRadarChart';
+import WeaknessResolutionMap, { buildWeaknessItems } from '@/components/report/WeaknessResolutionMap';
 import { exportReportToPdf } from '@/lib/pdf-export';
 import {
   calculateHabitScore,
@@ -709,6 +711,24 @@ export default function ParentReportDetailPage() {
         {/* ===== 월간 리포트 ===== */}
         {monthlyAnalysis && (
           <>
+            {/* 월간 성장 한 줄 요약 배너 */}
+            {monthlyAnalysis.monthlyGrowthSummary && (
+              <div className="bg-gradient-to-r from-violet-500 to-purple-600 rounded-xl p-5 mb-6 text-white">
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl">{monthlyAnalysis.monthlyGrowthSummary.growthEmoji}</span>
+                  <div>
+                    <h3 className="text-lg font-bold">{monthlyAnalysis.monthlyGrowthSummary.headline}</h3>
+                    <p className="text-violet-100 text-sm mt-1">{monthlyAnalysis.monthlyGrowthSummary.keyAchievement}</p>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-violet-400/50">
+                  <p className="text-sm text-violet-200">
+                    <span className="font-medium text-white">다음 달 집중:</span> {monthlyAnalysis.monthlyGrowthSummary.keyFocus}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* 월간 요약 통계 */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 월간 요약</h3>
@@ -730,6 +750,52 @@ export default function ParentReportDetailPage() {
                   <div className="text-2xl font-bold text-purple-700">{monthlyAnalysis.assignmentSummary?.completionRate || 0}%</div>
                 </div>
               </div>
+            </div>
+
+            {/* 역량 레이더 차트 + 취약점 해결 현황 */}
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
+              {/* GrowthRadarChart */}
+              {monthlyAnalysis.capabilityScores ? (
+                <GrowthRadarChart
+                  data={buildRadarData({
+                    averageUnderstanding: monthlyAnalysis.classSessionsSummary?.averageUnderstanding || 3,
+                    averageAttention: monthlyAnalysis.classSessionsSummary?.averageAttention || 3,
+                    habitScore: monthlyAnalysis.capabilityScores.learningHabit,
+                    assignmentCompletionRate: monthlyAnalysis.assignmentSummary?.completionRate || 0,
+                    testAverageScore: monthlyAnalysis.testPerformance?.averageScore,
+                  })}
+                  currentMonth={`${monthlyAnalysis.month?.month}월`}
+                />
+              ) : (
+                <GrowthRadarChart
+                  data={buildRadarData({
+                    averageUnderstanding: monthlyAnalysis.classSessionsSummary?.averageUnderstanding || 3,
+                    averageAttention: monthlyAnalysis.classSessionsSummary?.averageAttention || 3,
+                    assignmentCompletionRate: monthlyAnalysis.assignmentSummary?.completionRate || 0,
+                    testAverageScore: monthlyAnalysis.testPerformance?.averageScore,
+                  })}
+                  currentMonth={`${monthlyAnalysis.month?.month}월`}
+                />
+              )}
+
+              {/* WeaknessResolutionMap */}
+              <WeaknessResolutionMap
+                weaknesses={
+                  monthlyAnalysis.weaknessStatusMap
+                    ? [
+                        ...(monthlyAnalysis.weaknessStatusMap.resolved || []).map(w => ({ concept: w, status: 'resolved' as const })),
+                        ...(monthlyAnalysis.weaknessStatusMap.improving || []).map(w => ({ concept: w, status: 'improving' as const })),
+                        ...(monthlyAnalysis.weaknessStatusMap.ongoing || []).map(w => ({ concept: w, status: 'ongoing' as const })),
+                        ...(monthlyAnalysis.weaknessStatusMap.newlyFound || []).map(w => ({ concept: w, status: 'new' as const })),
+                      ]
+                    : buildWeaknessItems(
+                        monthlyAnalysis.resolvedWeaknesses || [],
+                        monthlyAnalysis.newChallenges || []
+                      )
+                }
+                studentName={report?.students?.name}
+                compact={false}
+              />
             </div>
 
             {/* 학부모 보고 섹션 (핵심) */}

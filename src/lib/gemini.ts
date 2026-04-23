@@ -1372,17 +1372,37 @@ ${input.testResults.map(t => `- ${t.testName}: ${t.score}/${t.maxScore}`).join('
 ## 선생님 메모
 ${input.teacherNotes}
 
-## 생성 항목
-1. 커리큘럼 진도 평가
-2. 학습 내용 종합 (우수/양호/도전 분류)
-3. 월간 성취 정리
-4. 해결된 취약점
-5. 새로운 도전
+## 생성 항목 (모든 항목에 구체적 데이터 기반 분석 필수!)
+1. 커리큘럼 진도 평가 — 구체적인 단원/개념 언급
+2. 학습 내용 종합 (우수/양호/도전 분류) — 실제 키워드 기반
+3. 월간 성취 정리 — 측정 가능한 성과 3-5개
+4. 해결된 취약점 — 이전 주간 리포트 대비 개선된 것
+5. 새로운 도전 — 이번 달 새로 발견된 취약점
 6. Micro Loop 월간 점검
 7. 부모님 보고 섹션
 8. 다음 달 계획
-9. 단기 비전
 
+## 추가 필수 생성 항목 ⭐
+9. **capabilityScores** (0-100): 5개 역량 점수를 데이터 기반으로 계산
+   - conceptUnderstanding: 수업 이해도 평균을 0-100으로 변환
+   - problemSolving: 문제 풀이 능력 (시험 성과 + 수업 이해도 종합)
+   - learningHabit: 출석률 + 집중도로 계산
+   - assignmentPerformance: 숙제 완료율 그대로 사용
+   - testPerformanceScore: 시험 평균 점수 (없으면 50)
+
+10. **weaknessStatusMap**: 취약점 상태 분류
+    - resolved: 이번 달 극복한 취약점 목록
+    - improving: 개선 중인 취약점 목록
+    - ongoing: 지속되고 있는 취약점 목록
+    - newlyFound: 이번 달 새로 발견된 취약점 목록
+
+11. **monthlyGrowthSummary**: 월간 성장 핵심 요약
+    - headline: 부모가 한눈에 이해할 한 줄 핵심 요약
+    - growthEmoji: 성장 상태 이모지 (🚀/📈/👍/💪 중 하나)
+    - keyAchievement: 가장 큰 성취 1문장
+    - keyFocus: 다음 달 가장 중요한 집중 포인트 1문장
+
+⚠️ 모든 점수와 분석은 입력 데이터에 근거해야 합니다. 근거 없는 추상적 표현 금지.
 응답은 MonthlyReportAnalysis 스키마를 따라주세요.`;
 
   const monthlySchema = {
@@ -1482,7 +1502,36 @@ ${input.teacherNotes}
           potentialChallenges: { type: 'array', items: { type: 'string' } }
         }
       },
-      teacherMessage: { type: 'string' }
+      teacherMessage: { type: 'string' },
+      // ===== 확장 필드 (Phase 2.3) =====
+      capabilityScores: {
+        type: 'object',
+        properties: {
+          conceptUnderstanding: { type: 'number' },
+          problemSolving: { type: 'number' },
+          learningHabit: { type: 'number' },
+          assignmentPerformance: { type: 'number' },
+          testPerformanceScore: { type: 'number' }
+        }
+      },
+      weaknessStatusMap: {
+        type: 'object',
+        properties: {
+          resolved: { type: 'array', items: { type: 'string' } },
+          improving: { type: 'array', items: { type: 'string' } },
+          ongoing: { type: 'array', items: { type: 'string' } },
+          newlyFound: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      monthlyGrowthSummary: {
+        type: 'object',
+        properties: {
+          headline: { type: 'string' },
+          growthEmoji: { type: 'string' },
+          keyAchievement: { type: 'string' },
+          keyFocus: { type: 'string' }
+        }
+      }
     }
   };
 
