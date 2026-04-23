@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge } from '@/components/report';
 import GrowthRadarChart, { buildRadarData } from '@/components/report/GrowthRadarChart';
 import WeaknessResolutionMap, { buildWeaknessItems } from '@/components/report/WeaknessResolutionMap';
+import TrajectoryAreaChart from '@/components/report/TrajectoryAreaChart';
+import MetaProfileComparison, { buildMetaProfileMetrics } from '@/components/report/MetaProfileComparison';
+import AnnualGrowthStory from '@/components/report/AnnualGrowthStory';
 import { exportReportToPdf } from '@/lib/pdf-export';
 import {
   calculateHabitScore,
@@ -895,6 +898,17 @@ export default function ParentReportDetailPage() {
         {/* ===== 반기 리포트 ===== */}
         {semiAnnualAnalysis && (
           <>
+            {/* 성장 서사 배너 */}
+            {semiAnnualAnalysis.growthSummaryBanner && (
+              <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl p-4 mb-6 text-white flex items-center gap-4">
+                <span className="text-4xl">{semiAnnualAnalysis.growthSummaryBanner.growthEmoji}</span>
+                <div>
+                  <p className="font-bold text-lg leading-tight">{semiAnnualAnalysis.growthSummaryBanner.headline}</p>
+                  <p className="text-orange-100 text-sm mt-0.5">{semiAnnualAnalysis.growthSummaryBanner.keyAchievement}</p>
+                </div>
+              </div>
+            )}
+
             {/* 반기 통계 */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 {semiAnnualAnalysis.halfYear} 요약</h3>
@@ -913,6 +927,43 @@ export default function ParentReportDetailPage() {
                 ))}
               </div>
             </div>
+
+            {/* 성장 궤적 차트 */}
+            {semiAnnualAnalysis.growthTrajectory?.growthCurve && semiAnnualAnalysis.growthTrajectory.growthCurve.length > 0 && (
+              <div className="mb-6">
+                <TrajectoryAreaChart
+                  data={semiAnnualAnalysis.growthTrajectory.growthCurve}
+                  startScore={semiAnnualAnalysis.growthTrajectory.startingPoint?.score}
+                  currentScore={semiAnnualAnalysis.growthTrajectory.currentPoint?.score}
+                  growthRate={semiAnnualAnalysis.growthTrajectory.growthRate}
+                  growthType={semiAnnualAnalysis.growthTrajectory.growthType}
+                  title={`${semiAnnualAnalysis.halfYear} 성장 궤적`}
+                />
+              </div>
+            )}
+
+            {/* 학습 역량 변화 (메타프로필) */}
+            {semiAnnualAnalysis.metaProfileEvolution && (
+              <div className="mb-6">
+                <MetaProfileComparison
+                  metrics={buildMetaProfileMetrics(semiAnnualAnalysis.metaProfileEvolution)}
+                  period={`${semiAnnualAnalysis.year} ${semiAnnualAnalysis.halfYear}`}
+                />
+              </div>
+            )}
+
+            {/* 취약점 해결 현황 */}
+            {semiAnnualAnalysis.weaknessReview && (
+              <div className="mb-6">
+                <WeaknessResolutionMap
+                  weaknesses={buildWeaknessItems(
+                    semiAnnualAnalysis.weaknessReview.resolved ?? [],
+                    semiAnnualAnalysis.weaknessReview.new ?? [],
+                    semiAnnualAnalysis.weaknessReview.persistent ?? [],
+                  )}
+                />
+              </div>
+            )}
 
             {/* 학부모 종합 보고 */}
             {semiAnnualAnalysis.parentComprehensiveReport && (
@@ -945,36 +996,6 @@ export default function ParentReportDetailPage() {
               </div>
             )}
 
-            {/* 취약점 해결 현황 */}
-            {semiAnnualAnalysis.weaknessReview && (
-              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">🔧 취약점 해결 현황</h3>
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600">취약점 해결률</span>
-                    <span className="font-bold text-orange-600">{semiAnnualAnalysis.weaknessReview.resolutionRate || 0}%</span>
-                  </div>
-                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${semiAnnualAnalysis.weaknessReview.resolutionRate || 0}%` }} />
-                  </div>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {semiAnnualAnalysis.weaknessReview.resolved && semiAnnualAnalysis.weaknessReview.resolved.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium text-green-700 mb-2">✅ 해결됨</h4>
-                      <ul className="space-y-1">{semiAnnualAnalysis.weaknessReview.resolved.map((w, i) => <li key={i} className="text-xs text-gray-600">• {w}</li>)}</ul>
-                    </div>
-                  )}
-                  {semiAnnualAnalysis.weaknessReview.persistent && semiAnnualAnalysis.weaknessReview.persistent.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium text-red-700 mb-2">⚠️ 지속 중</h4>
-                      <ul className="space-y-1">{semiAnnualAnalysis.weaknessReview.persistent.map((w, i) => <li key={i} className="text-xs text-gray-600">• {w}</li>)}</ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* 다음 반기 전략 */}
             {semiAnnualAnalysis.nextHalfStrategy && (
               <div className="bg-gradient-to-r from-orange-500 to-amber-600 rounded-xl p-6 mb-6 text-white">
@@ -1003,6 +1024,17 @@ export default function ParentReportDetailPage() {
         {/* ===== 연간 리포트 ===== */}
         {annualAnalysis && (
           <>
+            {/* 성장 서사 배너 */}
+            {annualAnalysis.growthSummaryBanner && (
+              <div className="bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl p-4 mb-6 text-white flex items-center gap-4">
+                <span className="text-4xl">{annualAnalysis.growthSummaryBanner.growthEmoji}</span>
+                <div>
+                  <p className="font-bold text-lg leading-tight">{annualAnalysis.growthSummaryBanner.headline}</p>
+                  <p className="text-rose-100 text-sm mt-0.5">{annualAnalysis.growthSummaryBanner.keyAchievement}</p>
+                </div>
+              </div>
+            )}
+
             {/* 연간 통계 */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 {annualAnalysis.year}년 연간 요약</h3>
@@ -1021,29 +1053,47 @@ export default function ParentReportDetailPage() {
               </div>
             </div>
 
-            {/* 성장 스토리 */}
-            {annualAnalysis.growthStory?.narrativeSummary && (
-              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">📖 1년 성장 스토리</h3>
-                <div className="p-4 bg-rose-50 rounded-lg">
-                  <p className="text-rose-800 leading-relaxed">{annualAnalysis.growthStory.narrativeSummary}</p>
-                </div>
-                {annualAnalysis.growthStory.majorMilestones && annualAnalysis.growthStory.majorMilestones.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-medium text-gray-700 mb-3">🏁 주요 성장 마일스톤</h4>
-                    <div className="space-y-3">
-                      {annualAnalysis.growthStory.majorMilestones.map((m, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <span className="text-xs text-gray-500 w-20 shrink-0 mt-0.5">{m.date}</span>
-                          <div>
-                            <div className="text-sm font-medium text-gray-800">{m.milestone}</div>
-                            <div className="text-xs text-gray-500">{m.significance}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {/* 1년 성장 스토리 (AnnualGrowthStory 컴포넌트) */}
+            {annualAnalysis.growthStory && (
+              <div className="mb-6">
+                <AnnualGrowthStory
+                  growthStory={annualAnalysis.growthStory}
+                  growthCategory={annualAnalysis.baselineComparison?.growthCategory}
+                  overallGrowthRate={annualAnalysis.baselineComparison?.overallGrowthRate}
+                />
+              </div>
+            )}
+
+            {/* 연간 메타프로필 변화 */}
+            {annualAnalysis.metaProfileAnnualEvolution && (
+              <div className="mb-6">
+                <MetaProfileComparison
+                  metrics={[
+                    ...(annualAnalysis.metaProfileAnnualEvolution.absorptionRate?.trend?.length >= 2 ? [{
+                      label: '학습 흡수율',
+                      description: '새로운 개념을 얼마나 빨리 이해하는지',
+                      previous: annualAnalysis.metaProfileAnnualEvolution.absorptionRate.trend[0]?.score ?? 50,
+                      current: annualAnalysis.metaProfileAnnualEvolution.absorptionRate.trend[annualAnalysis.metaProfileAnnualEvolution.absorptionRate.trend.length - 1]?.score ?? 50,
+                      trend: (annualAnalysis.metaProfileAnnualEvolution.absorptionRate.improvement ?? 0) > 0 ? 'improving' : (annualAnalysis.metaProfileAnnualEvolution.absorptionRate.improvement ?? 0) < -5 ? 'declining' : 'stable',
+                      unit: '%',
+                    } as const] : []),
+                    ...(annualAnalysis.metaProfileAnnualEvolution.solvingStamina?.trend?.length >= 2 ? [{
+                      label: '풀이 지구력',
+                      description: '어려운 문제를 끝까지 풀어내는 힘',
+                      previous: annualAnalysis.metaProfileAnnualEvolution.solvingStamina.trend[0]?.score ?? 50,
+                      current: annualAnalysis.metaProfileAnnualEvolution.solvingStamina.trend[annualAnalysis.metaProfileAnnualEvolution.solvingStamina.trend.length - 1]?.score ?? 50,
+                      trend: (annualAnalysis.metaProfileAnnualEvolution.solvingStamina.improvement ?? 0) > 0 ? 'improving' : (annualAnalysis.metaProfileAnnualEvolution.solvingStamina.improvement ?? 0) < -5 ? 'declining' : 'stable',
+                    } as const] : []),
+                    ...(annualAnalysis.metaProfileAnnualEvolution.metaCognitionLevel?.trend?.length >= 2 ? [{
+                      label: '메타인지 수준',
+                      description: '내 풀이를 스스로 점검하고 수정하는 능력',
+                      previous: annualAnalysis.metaProfileAnnualEvolution.metaCognitionLevel.trend[0]?.score ?? 50,
+                      current: annualAnalysis.metaProfileAnnualEvolution.metaCognitionLevel.trend[annualAnalysis.metaProfileAnnualEvolution.metaCognitionLevel.trend.length - 1]?.score ?? 50,
+                      trend: (annualAnalysis.metaProfileAnnualEvolution.metaCognitionLevel.improvement ?? 0) > 0 ? 'improving' : (annualAnalysis.metaProfileAnnualEvolution.metaCognitionLevel.improvement ?? 0) < -5 ? 'declining' : 'stable',
+                    } as const] : []),
+                  ]}
+                  period={`${annualAnalysis.year}년 연간`}
+                />
               </div>
             )}
 
@@ -1079,7 +1129,7 @@ export default function ParentReportDetailPage() {
               </div>
             )}
 
-            {/* 성장 내러티브 & 다음 해 준비 */}
+            {/* 다음 학년 준비 */}
             {annualAnalysis.nextYearPreparation && (
               <div className="bg-gradient-to-r from-rose-500 to-pink-600 rounded-xl p-6 mb-6 text-white">
                 <h3 className="text-lg font-semibold mb-3">🚀 내년 준비</h3>

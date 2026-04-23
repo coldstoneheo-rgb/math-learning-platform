@@ -1413,6 +1413,13 @@ export interface SemiAnnualReportAnalysis {
   };
   // 선생님 반기 평가
   teacherAssessment: string;
+  // (선택) UI용 성장 서사 배너 — AI 또는 클라이언트에서 생성
+  growthSummaryBanner?: {
+    headline: string;
+    growthEmoji: string;
+    keyAchievement: string;
+    keyFocus: string;
+  };
 }
 
 /**
@@ -1591,6 +1598,13 @@ export interface AnnualReportAnalysis {
     proudMoments: string[];
     areasForGrowth: string[];
     personalMessage: string;
+  };
+  // (선택) UI용 성장 서사 배너 — AI 또는 클라이언트에서 생성
+  growthSummaryBanner?: {
+    headline: string;
+    growthEmoji: string;
+    keyAchievement: string;
+    keyFocus: string;
   };
 }
 
