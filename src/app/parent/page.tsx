@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Student, Report, AnalysisData } from '@/types';
+import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis } from '@/types';
+import { HabitTrendChart } from '@/components/report';
 import {
   LineChart,
   Line,
@@ -152,6 +153,58 @@ export default function ParentDashboard() {
     return colors[type] || 'bg-gray-100 text-gray-700';
   };
 
+  // 리포트 타입별 핵심 지표 추출
+  const getReportKeyMetric = (report: Report): { label: string; value: string; color: string } | null => {
+    const raw = report.analysis_data as unknown as Record<string, unknown>;
+    const reportType = report.report_type;
+
+    if (reportType === 'weekly') {
+      const analysis = (raw?.aiAnalysis ?? raw) as WeeklyReportAnalysis | null;
+      const score = analysis?.habitScore?.score ?? analysis?.microLoopFeedback?.continuityScore;
+      if (score) {
+        const color = score >= 70 ? 'text-green-600' : score >= 50 ? 'text-blue-600' : 'text-amber-600';
+        return { label: '습관', value: `${score}점`, color };
+      }
+    }
+
+    if (reportType === 'monthly') {
+      const analysis = raw as { aiAnalysis?: { monthlyGrowthSummary?: { growthEmoji?: string } } };
+      const emoji = analysis?.aiAnalysis?.monthlyGrowthSummary?.growthEmoji;
+      if (emoji) {
+        return { label: '성장', value: emoji, color: 'text-gray-700' };
+      }
+    }
+
+    if (reportType === 'semi_annual') {
+      const analysis = raw as { growthTrajectory?: { growthRate?: number } };
+      const rate = analysis?.growthTrajectory?.growthRate;
+      if (rate !== undefined) {
+        const color = rate > 0 ? 'text-emerald-600' : rate < 0 ? 'text-red-600' : 'text-gray-600';
+        return { label: '성장률', value: `${rate > 0 ? '+' : ''}${rate}%`, color };
+      }
+    }
+
+    if (reportType === 'annual') {
+      const analysis = raw as { baselineComparison?: { overallGrowthRate?: number } };
+      const rate = analysis?.baselineComparison?.overallGrowthRate;
+      if (rate !== undefined) {
+        const color = rate > 0 ? 'text-emerald-600' : rate < 0 ? 'text-red-600' : 'text-gray-600';
+        return { label: '연간', value: `${rate > 0 ? '+' : ''}${rate}%`, color };
+      }
+    }
+
+    if (reportType === 'self_analysis') {
+      const analysis = raw as { comparisonWithHistory?: { overallTrend?: string } };
+      const trend = analysis?.comparisonWithHistory?.overallTrend;
+      if (trend) {
+        const emoji = trend === 'improving' ? '📈' : trend === 'stable' ? '➡️' : '📌';
+        return { label: '추세', value: emoji, color: 'text-gray-700' };
+      }
+    }
+
+    return null;
+  };
+
   // 최근 10개 시험의 점수 추이 계산 (차트용)
   const getScoreTrend = (reports: Report[]) => {
     return reports
@@ -209,6 +262,35 @@ export default function ParentDashboard() {
       .reduce((a, b) => a + b, 0) / (testReports.length - Math.min(5, Math.floor(testReports.length / 2)));
 
     return Math.round(recentAvg - pastAvg);
+  };
+
+  // 최근 8주 학습 습관 데이터 추출 (주간 리포트 기반)
+  const getHabitTrendData = (reports: Report[]) => {
+    const weeklyReports = reports
+      .filter(r => r.report_type === 'weekly' && r.analysis_data)
+      .slice(0, 8)
+      .reverse();
+
+    if (weeklyReports.length === 0) return [];
+
+    return weeklyReports.map((report, idx) => {
+      const raw = report.analysis_data as unknown as Record<string, unknown>;
+      const analysis = (raw?.aiAnalysis ?? raw) as WeeklyReportAnalysis | null;
+      const habitScore = analysis?.habitScore?.score ?? analysis?.microLoopFeedback?.continuityScore ?? 0;
+      const breakdown = analysis?.habitScore?.breakdown;
+
+      const weekDate = report.test_date ? new Date(report.test_date) : new Date(report.created_at);
+      const weekLabel = weekDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+
+      return {
+        weekNumber: idx + 1,
+        weekLabel,
+        habitScore,
+        assignmentCompletion: breakdown?.assignmentCompletion,
+        focusLevel: breakdown?.focusLevel,
+        understandingLevel: breakdown?.understandingLevel,
+      };
+    });
   };
 
   // 평균 점수 계산
@@ -345,6 +427,18 @@ export default function ParentDashboard() {
                   growthRate={getGrowthRate(selectedChild.reports)}
                 />
 
+                {/* 학습 습관 추이 (최근 8주) */}
+                {getHabitTrendData(selectedChild.reports).length > 0 && (
+                  <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">📚 학습 습관 추이</h3>
+                    <HabitTrendChart
+                      data={getHabitTrendData(selectedChild.reports)}
+                      showBreakdown={true}
+                      compact={false}
+                    />
+                  </div>
+                )}
+
                 {/* 아이 풀이 분석받기 배너 */}
                 <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-5 mb-6 text-white">
                   <div className="flex items-center justify-between gap-4">
@@ -433,12 +527,20 @@ export default function ParentDashboard() {
                                       {report.test_date || new Date(report.created_at).toLocaleDateString('ko-KR')}
                                     </p>
                                   </div>
-                                  {report.total_score !== null && report.max_score && (
+                                  {report.total_score !== null && report.max_score ? (
                                     <div className="text-right shrink-0">
                                       <div className="text-2xl font-bold text-indigo-600">{report.total_score}</div>
                                       <div className="text-xs text-gray-500">/ {report.max_score}점</div>
                                     </div>
-                                  )}
+                                  ) : (() => {
+                                    const metric = getReportKeyMetric(report);
+                                    return metric ? (
+                                      <div className="text-right shrink-0">
+                                        <div className={`text-xl font-bold ${metric.color}`}>{metric.value}</div>
+                                        <div className="text-xs text-gray-500">{metric.label}</div>
+                                      </div>
+                                    ) : null;
+                                  })()}
                                 </div>
                               </a>
                             ))}
