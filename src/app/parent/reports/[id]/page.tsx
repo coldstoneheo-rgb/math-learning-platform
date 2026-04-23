@@ -149,7 +149,13 @@ export default function ParentReportDetailPage() {
   // 타입별 분석 데이터 캐스팅
   const testAnalysis = (reportType === 'test' || reportType === 'consolidated') ? report.analysis_data as AnalysisData : null;
   const levelTestAnalysis = reportType === 'level_test' ? report.analysis_data as LevelTestAnalysis : null;
-  const weeklyAnalysis = reportType === 'weekly' ? report.analysis_data as WeeklyReportAnalysis : null;
+  // analysis_data 구조: { period, studentName, ..., aiAnalysis: WeeklyReportAnalysis }
+  // aiAnalysis 필드가 있으면 언래핑, 없으면 flat 구조로 폴백
+  const weeklyAnalysis = (() => {
+    if (reportType !== 'weekly') return null;
+    const raw = report.analysis_data as unknown as Record<string, unknown>;
+    return (raw?.aiAnalysis as WeeklyReportAnalysis) ?? (raw as unknown as WeeklyReportAnalysis);
+  })();
   const monthlyAnalysis = reportType === 'monthly' ? report.analysis_data as MonthlyReportAnalysis : null;
   const semiAnnualAnalysis = reportType === 'semi_annual' ? report.analysis_data as SemiAnnualReportAnalysis : null;
   const annualAnalysis = reportType === 'annual' ? report.analysis_data as AnnualReportAnalysis : null;

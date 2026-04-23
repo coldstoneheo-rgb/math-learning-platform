@@ -529,8 +529,13 @@ export default function NewMonthlyReportPage() {
                           <span className="text-yellow-600">
                             개선 {report.improvements.length}개
                           </span>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                            연속성 {report.continuityScore}점
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            report.continuityScore >= 70 ? 'bg-green-100 text-green-700' :
+                            report.continuityScore >= 50 ? 'bg-blue-100 text-blue-700' :
+                            report.continuityScore > 0 ? 'bg-amber-100 text-amber-700' :
+                            'bg-gray-100 text-gray-500'
+                          }`}>
+                            학습 습관 {report.continuityScore > 0 ? `${report.continuityScore}점` : '미집계'}
                           </span>
                         </div>
                       </div>

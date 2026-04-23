@@ -762,28 +762,40 @@ export default function NewWeeklyReportPage() {
                   </button>
                 </div>
 
-                {/* Micro Loop 피드백 (편집 가능) */}
+                {/* 학습 습관 점수 & 성장 모멘텀 (편집 가능) */}
                 <div className="p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium text-blue-800 mb-3">🔄 Micro Loop 피드백</h4>
+                  <h4 className="font-medium text-blue-800 mb-3">📊 학습 습관 & 성장 모멘텀</h4>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs text-blue-700 mb-1">연속성 점수 (0-100)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={editableAnalysis.continuityScore}
-                        onChange={(e) =>
-                          setEditableAnalysis((prev) => ({
-                            ...prev,
-                            continuityScore: Number(e.target.value),
-                          }))
-                        }
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                      />
+                      <label className="block text-xs text-blue-700 mb-1">
+                        학습 습관 점수 (0-100)
+                        <span className="ml-1 text-blue-500 font-normal">— AI 자동 계산됨</span>
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={editableAnalysis.continuityScore}
+                          onChange={(e) =>
+                            setEditableAnalysis((prev) => ({
+                              ...prev,
+                              continuityScore: Number(e.target.value),
+                            }))
+                          }
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                        <span className={`text-sm font-bold flex-shrink-0 ${
+                          editableAnalysis.continuityScore >= 70 ? 'text-green-600' :
+                          editableAnalysis.continuityScore >= 50 ? 'text-blue-600' : 'text-amber-600'
+                        }`}>
+                          {editableAnalysis.continuityScore >= 70 ? '😊 우수' :
+                           editableAnalysis.continuityScore >= 50 ? '🙂 양호' : '💪 개선 필요'}
+                        </span>
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-blue-700 mb-1">모멘텀 상태</label>
+                      <label className="block text-xs text-blue-700 mb-1">성장 모멘텀</label>
                       <select
                         value={editableAnalysis.momentumStatus}
                         onChange={(e) =>
@@ -794,10 +806,10 @@ export default function NewWeeklyReportPage() {
                         }
                         className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                       >
-                        <option value="accelerating">🚀 가속 중</option>
-                        <option value="maintaining">➡️ 유지</option>
-                        <option value="slowing">⬇️ 둔화</option>
-                        <option value="recovering">↩️ 회복 중</option>
+                        <option value="accelerating">🚀 빠르게 성장 중</option>
+                        <option value="maintaining">📈 꾸준히 성장 중</option>
+                        <option value="slowing">💪 조금 더 힘내볼까요</option>
+                        <option value="recovering">🌱 다시 활기를 찾는 중</option>
                       </select>
                     </div>
                   </div>

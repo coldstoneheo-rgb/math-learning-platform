@@ -113,9 +113,11 @@ export default function ReportDetailPage() {
   const levelTestAnalysis = report?.report_type === 'level_test'
     ? (report?.analysis_data as LevelTestAnalysis)
     : null;
-  const weeklyAnalysis = report?.report_type === 'weekly'
-    ? (report?.analysis_data as WeeklyReportAnalysis)
-    : null;
+  const weeklyAnalysis = (() => {
+    if (report?.report_type !== 'weekly') return null;
+    const raw = report?.analysis_data as unknown as Record<string, unknown>;
+    return (raw?.aiAnalysis as WeeklyReportAnalysis) ?? (raw as unknown as WeeklyReportAnalysis);
+  })();
   const monthlyAnalysis = report?.report_type === 'monthly'
     ? (report?.analysis_data as MonthlyReportAnalysis)
     : null;
@@ -1037,8 +1039,10 @@ export default function ReportDetailPage() {
                   <div className="text-2xl font-bold text-green-700">{weeklyAnalysis.assignmentCompletion?.rate || 0}%</div>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4 text-center">
-                  <div className="text-sm text-purple-600">연속성 점수</div>
-                  <div className="text-2xl font-bold text-purple-700">{weeklyAnalysis.microLoopFeedback?.continuityScore || 0}</div>
+                  <div className="text-sm text-purple-600">학습 습관 점수</div>
+                  <div className="text-2xl font-bold text-purple-700">
+                    {weeklyAnalysis.habitScore?.score || weeklyAnalysis.microLoopFeedback?.continuityScore || 0}
+                  </div>
                 </div>
               </div>
             </div>

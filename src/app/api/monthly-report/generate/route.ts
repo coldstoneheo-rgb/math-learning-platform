@@ -138,11 +138,31 @@ export async function POST(
     const sessionStats = calculateSessionStats(classSessions || []);
 
     // 10. 주간 리포트 요약 생성
+    // analysis_data 구조: { ..., aiAnalysis: WeeklyReportAnalysis } 또는 flat WeeklyReportAnalysis
     const weeklyReportsSummary = (weeklyReports || []).map((wr, index) => {
-      const data = wr.analysis_data as Record<string, unknown> || {};
+      const raw = wr.analysis_data as Record<string, unknown> || {};
+      // aiAnalysis 래퍼가 있으면 언래핑
+      const data = (raw.aiAnalysis as Record<string, unknown>) ?? raw;
+      const microLoop = data.microLoopFeedback as Record<string, unknown> | undefined;
+
+      // continuityScore: AI 값이 있으면 사용, 없으면 숙제완료율 + 이해도 기반 계산
+      const aiContinuityScore = microLoop?.continuityScore as number | undefined;
+      const assignmentCompletion = data.assignmentCompletion as { rate?: number } | undefined;
+      const sessions = data.classSessions as Array<{ understandingLevel?: number; attentionLevel?: number }> | undefined;
+      const avgUnderstanding = sessions?.length
+        ? sessions.reduce((s, c) => s + (c.understandingLevel ?? 3), 0) / sessions.length
+        : 3;
+      const computedScore = Math.round(
+        (assignmentCompletion?.rate ?? 70) * 0.4 +
+        ((avgUnderstanding - 1) / 4) * 60
+      );
+      const continuityScore = (aiContinuityScore && aiContinuityScore > 0)
+        ? aiContinuityScore
+        : computedScore;
+
       return {
         weekNumber: index + 1,
-        continuityScore: (data.microLoopFeedback as Record<string, number>)?.continuityScore || 70,
+        continuityScore,
         achievements: (data.weeklyAchievements as string[]) || [],
         challenges: (data.areasForImprovement as string[]) || [],
       };
@@ -167,9 +187,9 @@ export async function POST(
       weeklyReports: weeklyReportsSummary.length > 0 ? weeklyReportsSummary : [
         {
           weekNumber: 1,
-          continuityScore: 75,
-          achievements: ['데이터 수집 중'],
-          challenges: ['주간 리포트 미생성'],
+          continuityScore: 0,  // 데이터 없음을 0으로 명시
+          achievements: ['주간 리포트 미생성'],
+          challenges: ['주간 학습 데이터 없음'],
         }
       ],
       testResults: testResults.length > 0 ? testResults : undefined,

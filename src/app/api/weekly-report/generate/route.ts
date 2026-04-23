@@ -215,6 +215,29 @@ export async function POST(
 
     console.log('[Weekly Report] AI analysis generated successfully');
 
+    // 13. continuityScore 검증 및 서버사이드 계산 (AI가 0 반환 시 보정)
+    if (!analysis.microLoopFeedback) {
+      analysis.microLoopFeedback = { lastWeekGoalAchievement: [], continuityScore: 0, momentumStatus: 'maintaining' };
+    }
+    if (!analysis.microLoopFeedback.continuityScore) {
+      const completedCount = weeklyInput.assignments.completed;
+      const totalCount = weeklyInput.assignments.total || 1;
+      const completionRate = completedCount / totalCount;
+      const avgUnderstanding = weeklyInput.classSessions.length
+        ? weeklyInput.classSessions.reduce((s, c) => s + c.understandingLevel, 0) / weeklyInput.classSessions.length
+        : 3;
+      const avgFocus = weeklyInput.classSessions.length
+        ? weeklyInput.classSessions.reduce((s, c) => s + c.attentionLevel, 0) / weeklyInput.classSessions.length
+        : 3;
+      const computed = Math.round(
+        completionRate * 40 +
+        ((avgFocus - 1) / 4) * 30 +
+        ((avgUnderstanding - 1) / 4) * 30
+      );
+      analysis.microLoopFeedback.continuityScore = Math.max(computed, 10);
+      console.log(`[Weekly Report] continuityScore computed server-side: ${analysis.microLoopFeedback.continuityScore}`);
+    }
+
     return NextResponse.json({
       success: true,
       analysis,
