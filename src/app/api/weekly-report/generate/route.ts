@@ -238,6 +238,50 @@ export async function POST(
       console.log(`[Weekly Report] continuityScore computed server-side: ${analysis.microLoopFeedback.continuityScore}`);
     }
 
+    // 14. areasForImprovement 검증 (빈 배열 방지)
+    if (!analysis.areasForImprovement || analysis.areasForImprovement.length === 0) {
+      console.log('[Weekly Report] areasForImprovement was empty, generating defaults...');
+      const defaultAreas = [];
+
+      // 수업 데이터 기반 개선 영역 생성
+      const avgUnderstanding = weeklyInput.classSessions.length
+        ? weeklyInput.classSessions.reduce((s, c) => s + c.understandingLevel, 0) / weeklyInput.classSessions.length
+        : 3;
+      const avgFocus = weeklyInput.classSessions.length
+        ? weeklyInput.classSessions.reduce((s, c) => s + c.attentionLevel, 0) / weeklyInput.classSessions.length
+        : 3;
+      const completionRate = weeklyInput.assignments.total > 0
+        ? weeklyInput.assignments.completed / weeklyInput.assignments.total
+        : 0;
+
+      if (avgUnderstanding < 4) {
+        const topics = weeklyInput.classSessions.flatMap(s => s.keywords).filter(k => k !== '데이터 수집 중');
+        if (topics.length > 0) {
+          defaultAreas.push(`${topics[0]} 개념 복습 및 심화 학습 필요`);
+        } else {
+          defaultAreas.push('이번 주 학습 개념 복습 필요');
+        }
+      }
+
+      if (avgFocus < 4) {
+        defaultAreas.push('수업 집중도 향상을 위한 환경 조성 필요');
+      }
+
+      if (completionRate < 0.8) {
+        defaultAreas.push('숙제 완료율 향상 - 매일 정해진 시간에 학습하는 습관 형성');
+      }
+
+      // 최소 2개 보장
+      if (defaultAreas.length < 2) {
+        defaultAreas.push('풀이 과정을 단계별로 기록하는 습관 형성');
+        if (defaultAreas.length < 2) {
+          defaultAreas.push('오답 노트 작성으로 실수 패턴 파악하기');
+        }
+      }
+
+      analysis.areasForImprovement = defaultAreas;
+    }
+
     return NextResponse.json({
       success: true,
       analysis,

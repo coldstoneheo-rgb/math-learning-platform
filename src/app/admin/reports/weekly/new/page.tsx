@@ -570,49 +570,86 @@ export default function NewWeeklyReportPage() {
               </div>
             </div>
 
-            {/* 자동 로드된 수업 일정 표시 */}
+            {/* 수업 일정 (편집 가능) */}
             {selectedStudentId && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">수업 일정 (자동 로드)</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    이번 주 수업일 <span className="text-red-500">*</span>
+                  </label>
                   {loadingSchedules && <span className="text-xs text-gray-500">로딩 중...</span>}
                 </div>
 
-                {studentSchedules.length > 0 ? (
-                  <div className="space-y-2">
+                {studentSchedules.length > 0 && (
+                  <div className="mb-3 pb-3 border-b border-gray-200">
+                    <p className="text-xs text-gray-500 mb-2">📅 등록된 정기 일정:</p>
                     <div className="flex flex-wrap gap-2">
                       {studentSchedules.map((schedule) => (
                         <span
                           key={schedule.id}
-                          className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
+                          className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs"
                         >
                           {getDayLabel(schedule.day_of_week)} {schedule.start_time}-{schedule.end_time}
                         </span>
                       ))}
                     </div>
-
-                    {formData.classDates.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs text-gray-600 mb-1">이번 주 수업일:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.classDates.map((date, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"
-                            >
-                              {date}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    등록된 수업 일정이 없습니다.{' '}
+                )}
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-2">
+                    실제 진행한 수업일을 자유롭게 추가/수정할 수 있습니다. (보충 수업, 변경된 일정 반영)
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {formData.classDates.map((date, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded"
+                      >
+                        <input
+                          type="date"
+                          value={date}
+                          onChange={(e) => {
+                            const newDates = [...formData.classDates];
+                            newDates[idx] = e.target.value;
+                            setFormData((prev) => ({ ...prev, classDates: newDates.sort() }));
+                          }}
+                          className="text-xs bg-transparent border-none focus:ring-0 p-0 w-28"
+                        />
+                        <button
+                          onClick={() => {
+                            const newDates = formData.classDates.filter((_, i) => i !== idx);
+                            setFormData((prev) => ({ ...prev, classDates: newDates }));
+                          }}
+                          className="text-blue-500 hover:text-red-500 text-sm font-bold"
+                          title="삭제"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      const today = new Date().toISOString().split('T')[0];
+                      setFormData((prev) => ({
+                        ...prev,
+                        classDates: [...prev.classDates, today].sort(),
+                      }));
+                    }}
+                    className="text-sm text-green-600 hover:text-green-700 font-medium"
+                  >
+                    + 수업일 추가
+                  </button>
+                </div>
+
+                {formData.classDates.length === 0 && (
+                  <p className="text-sm text-amber-600 mt-2">
+                    ⚠️ 수업일이 없습니다. 수업일을 추가하거나{' '}
                     <a href="/admin/schedules" className="text-green-600 hover:underline">
-                      일정 등록하기
+                      정기 일정을 등록
                     </a>
+                    해주세요.
                   </p>
                 )}
               </div>
@@ -793,6 +830,12 @@ export default function NewWeeklyReportPage() {
                            editableAnalysis.continuityScore >= 50 ? '🙂 양호' : '💪 개선 필요'}
                         </span>
                       </div>
+                      <p className="text-xs text-blue-600 mt-2 leading-relaxed">
+                        <strong>점수 해석:</strong> 숙제 완료율(40%) + 집중도(30%) + 이해도(30%)로 계산됩니다.<br/>
+                        • <strong>70점 이상:</strong> 학습 습관이 잘 형성됨<br/>
+                        • <strong>50-69점:</strong> 습관 형성 중, 꾸준히 유지 필요<br/>
+                        • <strong>50점 미만:</strong> 습관 개선 필요, 작은 목표부터 시작
+                      </p>
                     </div>
                     <div>
                       <label className="block text-xs text-blue-700 mb-1">성장 모멘텀</label>
