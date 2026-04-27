@@ -12,8 +12,15 @@ import {
   GrowthLoopIndicator,
   BaselineReferenceCard,
   VisionDistanceFooter,
+  MomentumGauge,
+  HabitTrendChart,
 } from '@/components/report';
 import { exportReportToPdf } from '@/lib/pdf-export';
+import {
+  calculateHabitScore,
+  convertMomentumStatus,
+  generateWeeklyComparison,
+} from '@/lib/report-utils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -1099,37 +1106,73 @@ export default function ReportDetailPage() {
               </div>
             )}
 
-            {/* 마이크로 루프 피드백 */}
-            {weeklyAnalysis.microLoopFeedback && (
-              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">🔄 마이크로 루프 피드백</h3>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-600">모멘텀 상태</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    weeklyAnalysis.microLoopFeedback.momentumStatus === 'accelerating' ? 'bg-green-100 text-green-700' :
-                    weeklyAnalysis.microLoopFeedback.momentumStatus === 'maintaining' ? 'bg-blue-100 text-blue-700' :
-                    weeklyAnalysis.microLoopFeedback.momentumStatus === 'recovering' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-orange-100 text-orange-700'
-                  }`}>
-                    {weeklyAnalysis.microLoopFeedback.momentumStatus === 'accelerating' ? '🚀 가속 중' :
-                     weeklyAnalysis.microLoopFeedback.momentumStatus === 'maintaining' ? '✅ 유지 중' :
-                     weeklyAnalysis.microLoopFeedback.momentumStatus === 'recovering' ? '🔧 회복 중' : '⚠️ 감속 중'}
-                  </span>
-                </div>
-                {weeklyAnalysis.microLoopFeedback.lastWeekGoalAchievement && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700">지난주 목표 달성</div>
-                    {weeklyAnalysis.microLoopFeedback.lastWeekGoalAchievement.map((goal, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        <span>{goal.achieved ? '✅' : '❌'}</span>
-                        <span>{goal.goal}</span>
-                        {goal.notes && <span className="text-gray-500">- {goal.notes}</span>}
+            {/* 마이크로 루프 피드백 — MomentumGauge */}
+            {(() => {
+              const sessions = weeklyAnalysis.classSessions || [];
+              const avgUnderstanding = sessions.length > 0
+                ? sessions.reduce((sum, s) => sum + (s.understandingLevel || 3), 0) / sessions.length
+                : 3;
+              const avgFocus = sessions.length > 0
+                ? sessions.reduce((sum, s) => sum + (s.attentionLevel || 3), 0) / sessions.length
+                : 3;
+              const habitScoreResult = weeklyAnalysis.habitScore || calculateHabitScore({
+                assignmentTotal: weeklyAnalysis.assignmentCompletion?.total || 0,
+                assignmentCompleted: weeklyAnalysis.assignmentCompletion?.completed || 0,
+                averageUnderstanding: avgUnderstanding,
+                averageFocus: avgFocus,
+                classSessionCount: sessions.length,
+              });
+              const momentum = weeklyAnalysis.growthMomentum || convertMomentumStatus(
+                weeklyAnalysis.microLoopFeedback?.momentumStatus || '',
+                habitScoreResult.score
+              );
+
+              return (
+                <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">🔄 마이크로 루프 피드백</h3>
+                  <MomentumGauge
+                    status={momentum.status}
+                    habitScore={habitScoreResult.score}
+                    statusLabel={momentum.statusLabel}
+                    weeklyComparison={weeklyAnalysis.growthMomentum?.weeklyComparison || generateWeeklyComparison(habitScoreResult.score)}
+                  />
+
+                  {/* 습관 점수 breakdown */}
+                  {habitScoreResult.breakdown && (
+                    <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <div className="text-xs text-blue-600">숙제 완료</div>
+                        <div className="text-lg font-bold text-blue-700">{habitScoreResult.breakdown.assignmentCompletion}</div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                      <div className="bg-purple-50 rounded-lg p-3">
+                        <div className="text-xs text-purple-600">집중도</div>
+                        <div className="text-lg font-bold text-purple-700">{habitScoreResult.breakdown.focusLevel}</div>
+                      </div>
+                      <div className="bg-green-50 rounded-lg p-3">
+                        <div className="text-xs text-green-600">이해도</div>
+                        <div className="text-lg font-bold text-green-700">{habitScoreResult.breakdown.understandingLevel}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 지난주 목표 달성 */}
+                  {weeklyAnalysis.microLoopFeedback?.lastWeekGoalAchievement && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="text-sm font-medium text-gray-700 mb-2">지난주 목표 달성</div>
+                      <div className="space-y-2">
+                        {weeklyAnalysis.microLoopFeedback.lastWeekGoalAchievement.map((goal, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <span>{goal.achieved ? '✅' : '❌'}</span>
+                            <span>{goal.goal}</span>
+                            {goal.notes && <span className="text-gray-500">- {goal.notes}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* 다음 주 계획 */}
             {weeklyAnalysis.nextWeekPlan && (

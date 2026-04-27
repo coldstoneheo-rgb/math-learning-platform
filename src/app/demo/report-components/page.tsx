@@ -34,11 +34,11 @@ const habitTrendData = [
 ];
 
 const radarData = [
-  { subject: '개념 이해', current: 78, previous: 65, fullMark: 100 },
-  { subject: '문제 풀이', current: 72, previous: 68, fullMark: 100 },
-  { subject: '학습 습관', current: 85, previous: 70, fullMark: 100 },
-  { subject: '숙제 수행', current: 90, previous: 75, fullMark: 100 },
-  { subject: '시험 성과', current: 76, previous: 72, fullMark: 100 },
+  { subject: 'conceptUnderstanding', subjectLabel: '개념\n이해', current: 78, previous: 65, fullMark: 100 },
+  { subject: 'problemSolving', subjectLabel: '문제\n풀이', current: 72, previous: 68, fullMark: 100 },
+  { subject: 'learningHabit', subjectLabel: '학습\n습관', current: 85, previous: 70, fullMark: 100 },
+  { subject: 'assignmentPerformance', subjectLabel: '숙제\n수행', current: 90, previous: 75, fullMark: 100 },
+  { subject: 'testPerformance', subjectLabel: '시험\n성과', current: 76, previous: 72, fullMark: 100 },
 ];
 
 const weaknessItems = buildWeaknessItems(
@@ -127,15 +127,15 @@ export default function ReportComponentsDemo() {
               <div className="grid md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-xs text-gray-500 mb-2">상승 중 (Rising)</p>
-                  <MomentumGauge status="rising" habitScore={85} />
+                  <MomentumGauge status="rising" habitScore={85} statusLabel="빠르게 성장하고 있어요!" weeklyComparison="지난주 대비 습관 점수가 10점 올랐어요" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-2">유지 중 (Steady)</p>
-                  <MomentumGauge status="steady" habitScore={72} />
+                  <MomentumGauge status="steady" habitScore={72} statusLabel="꾸준히 유지하고 있어요" weeklyComparison="지난주와 비슷한 수준이에요" />
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-2">관심 필요 (Needs Attention)</p>
-                  <MomentumGauge status="needs_attention" habitScore={45} />
+                  <MomentumGauge status="needs_attention" habitScore={45} statusLabel="조금 더 집중이 필요해요" weeklyComparison="지난주 대비 습관 점수가 떨어졌어요" />
                 </div>
               </div>
             </div>
@@ -144,9 +144,9 @@ export default function ReportComponentsDemo() {
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="font-medium text-gray-700 mb-4">MomentumBadge — 인라인 배지</h3>
               <div className="flex gap-4 flex-wrap">
-                <MomentumBadge status="rising" />
-                <MomentumBadge status="steady" />
-                <MomentumBadge status="needs_attention" />
+                <MomentumBadge status="rising" label="상승 중" />
+                <MomentumBadge status="steady" label="유지 중" />
+                <MomentumBadge status="needs_attention" label="관심 필요" />
               </div>
             </div>
 
