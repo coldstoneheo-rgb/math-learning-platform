@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { generateMetaProfileUpdate } from '@/lib/gemini';
 import { updateStudentMetaProfile } from '@/lib/context-builder';
 import type { AnalysisData, ReportType, StudentMetaProfile } from '@/types';
@@ -69,16 +69,19 @@ export async function POST(
       );
     }
 
-    // 3. 현재 학생 메타프로필 조회
-    const { data: student, error: fetchError } = await supabase
+    // 3. 현재 학생 메타프로필 조회 (Admin client 사용 - RLS 우회)
+    // 교사 권한이 이미 확인되었으므로 admin client로 직접 조회
+    const adminSupabase = createAdminClient();
+    const { data: student, error: fetchError } = await adminSupabase
       .from('students')
       .select('meta_profile')
       .eq('id', studentId)
       .single();
 
     if (fetchError) {
+      console.error('[Meta Profile] Student fetch error:', fetchError.message, fetchError.code);
       return NextResponse.json(
-        { success: false, error: '학생 정보 조회 실패' },
+        { success: false, error: `학생 정보 조회 실패: ${fetchError.message}` },
         { status: 404 }
       );
     }
