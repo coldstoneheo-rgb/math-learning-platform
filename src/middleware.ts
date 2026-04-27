@@ -2,6 +2,11 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // 데모 페이지는 인증 없이 바로 통과 (Supabase 클라이언트 생성 전에 체크)
+  if (request.nextUrl.pathname.startsWith('/demo')) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -81,9 +86,10 @@ export async function middleware(request: NextRequest) {
                      request.nextUrl.pathname.startsWith('/signup');
   const isPublicPage = request.nextUrl.pathname === '/';
   const isApiRoute = request.nextUrl.pathname.startsWith('/api');
+  const isDemoPage = request.nextUrl.pathname.startsWith('/demo');
 
-  // API 라우트와 공개 페이지는 그대로 통과
-  if (isApiRoute || isPublicPage) {
+  // API 라우트, 공개 페이지, 데모 페이지는 그대로 통과
+  if (isApiRoute || isPublicPage || isDemoPage) {
     return supabaseResponse;
   }
 
