@@ -1,30 +1,37 @@
-const { chromium } = require('playwright');
+const { chromium } = require('@playwright/test');
+const fs = require('fs');
+
+const outputDir = 'C:\\Users\\colds\\.gemini\\antigravity\\brain\\f8fb9f01-be64-4dee-aa00-5a85b92b7c66';
 
 (async () => {
   const browser = await chromium.launch();
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  const page = await context.newPage();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 1080 } });
   
-  const baseUrl = 'http://localhost:3000';
-  
-  try {
-    console.log('Navigating to login...');
-    await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
-    
-    console.log('Filling form...');
-    await page.fill('input[type="email"]', 'teacher@test.com');
-    await page.fill('input[type="password"]', 'test1234');
-    await page.click('button[type="submit"]');
-    
-    console.log('Waiting for network/UI reaction...');
-    await page.waitForTimeout(3000);
-    
-    console.log('Tracking current URL:', page.url());
-    await page.screenshot({ path: 'scratch/login_attempt.png', fullPage: true });
+  console.log('Taking screenshot: weekly_report.png');
+  await page.goto('http://localhost:3000/admin/reports/weekly/new', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: `${outputDir}\\weekly_report.png`, fullPage: true });
 
-  } catch (error) {
-    console.error('Error:', error);
-  } finally {
-    await browser.close();
-  }
+  console.log('Taking screenshot: monthly_report.png');
+  await page.goto('http://localhost:3000/admin/reports/monthly/new', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: `${outputDir}\\monthly_report.png`, fullPage: true });
+
+  console.log('Taking screenshot: annual_report.png');
+  await page.goto('http://localhost:3000/admin/reports/annual/new', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: `${outputDir}\\annual_report.png`, fullPage: true });
+
+  console.log('Taking screenshot: parent_dashboard.png');
+  await page.goto('http://localhost:3000/parent', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: `${outputDir}\\parent_dashboard.png`, fullPage: true });
+
+  console.log('Taking screenshot: admin_dashboard.png');
+  await page.goto('http://localhost:3000/admin', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: `${outputDir}\\admin_dashboard.png`, fullPage: true });
+
+  await browser.close();
+  console.log('Done.');
 })();
