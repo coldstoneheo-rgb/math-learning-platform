@@ -19,8 +19,11 @@ export default function AuthErrorToast({ message, onClose }: AuthErrorToastProps
     const errorParam = searchParams.get('error');
 
     if (errorParam === 'session_expired') {
-      setDisplayMessage('세션이 만료되었습니다. 다시 로그인해 주세요.');
-      setVisible(true);
+      // 상태 업데이트를 다음 마이크로태스크로 지연
+      queueMicrotask(() => {
+        setDisplayMessage('세션이 만료되었습니다. 다시 로그인해 주세요.');
+        setVisible(true);
+      });
 
       // URL에서 error 파라미터 제거
       const newParams = new URLSearchParams(searchParams.toString());
@@ -30,8 +33,10 @@ export default function AuthErrorToast({ message, onClose }: AuthErrorToastProps
         : window.location.pathname;
       router.replace(newUrl);
     } else if (message) {
-      setDisplayMessage(message);
-      setVisible(true);
+      queueMicrotask(() => {
+        setDisplayMessage(message);
+        setVisible(true);
+      });
     }
   }, [searchParams, message, router]);
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateWeeklyReport, WeeklyReportInput } from '@/lib/gemini';
 import { buildAnalysisContext } from '@/lib/context-builder';
-import { applyRateLimit } from '@/lib/rate-limiter';
+import { applyRateLimitAsync } from '@/lib/rate-limiter';
 import { weeklyReportRequestSchema, validateRequest } from '@/lib/validations';
 import type { WeeklyReportAnalysis } from '@/types';
 
@@ -16,6 +16,11 @@ interface GenerateWeeklyReportRequest {
   startDate: string; // YYYY-MM-DD
   endDate: string;   // YYYY-MM-DD
   teacherNotes?: string;
+  attachments?: Array<{
+    name: string;
+    type: 'image' | 'document';
+    data: string;  // base64
+  }>;
 }
 
 interface GenerateWeeklyReportResponse {
@@ -36,7 +41,7 @@ export async function POST(
 ): Promise<NextResponse<GenerateWeeklyReportResponse>> {
   try {
     // 0. Rate Limiting: AI 분석은 분당 5회 제한
-    const rateLimitResult = applyRateLimit(request, 'AI_ANALYSIS');
+    const rateLimitResult = await applyRateLimitAsync(request, 'AI_ANALYSIS');
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { success: false, error: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' },
@@ -79,6 +84,9 @@ export async function POST(
       );
     }
     const { studentId, year, weekNumber, startDate, endDate, teacherNotes } = validation.data;
+
+    // 첨부파일 추출 (Zod 스키마에 없으면 rawBody에서 직접)
+    const attachments = rawBody.attachments as GenerateWeeklyReportRequest['attachments'];
 
     // 3. 학생 정보 조회
     const { data: student, error: studentError } = await supabase
@@ -166,6 +174,8 @@ export async function POST(
         completed: completedAssignments,
       },
       teacherNotes: teacherNotes || '주간 종합 평가 요청',
+      // 첨부파일 (스캔본, 문제 풀이 이미지 등)
+      attachments: attachments,
     };
 
     // 11. 컨텍스트 데이터 구성
@@ -204,6 +214,73 @@ export async function POST(
     const analysis = await generateWeeklyReport(weeklyInput, context);
 
     console.log('[Weekly Report] AI analysis generated successfully');
+
+    // 13. continuityScore 검증 및 서버사이드 계산 (AI가 0 반환 시 보정)
+    if (!analysis.microLoopFeedback) {
+      analysis.microLoopFeedback = { lastWeekGoalAchievement: [], continuityScore: 0, momentumStatus: 'maintaining' };
+    }
+    if (!analysis.microLoopFeedback.continuityScore) {
+      const completedCount = weeklyInput.assignments.completed;
+      const totalCount = weeklyInput.assignments.total || 1;
+      const completionRate = completedCount / totalCount;
+      const avgUnderstanding = weeklyInput.classSessions.length
+        ? weeklyInput.classSessions.reduce((s, c) => s + c.understandingLevel, 0) / weeklyInput.classSessions.length
+        : 3;
+      const avgFocus = weeklyInput.classSessions.length
+        ? weeklyInput.classSessions.reduce((s, c) => s + c.attentionLevel, 0) / weeklyInput.classSessions.length
+        : 3;
+      const computed = Math.round(
+        completionRate * 40 +
+        ((avgFocus - 1) / 4) * 30 +
+        ((avgUnderstanding - 1) / 4) * 30
+      );
+      analysis.microLoopFeedback.continuityScore = Math.max(computed, 10);
+      console.log(`[Weekly Report] continuityScore computed server-side: ${analysis.microLoopFeedback.continuityScore}`);
+    }
+
+    // 14. areasForImprovement 검증 (빈 배열 방지)
+    if (!analysis.areasForImprovement || analysis.areasForImprovement.length === 0) {
+      console.log('[Weekly Report] areasForImprovement was empty, generating defaults...');
+      const defaultAreas = [];
+
+      // 수업 데이터 기반 개선 영역 생성
+      const avgUnderstanding = weeklyInput.classSessions.length
+        ? weeklyInput.classSessions.reduce((s, c) => s + c.understandingLevel, 0) / weeklyInput.classSessions.length
+        : 3;
+      const avgFocus = weeklyInput.classSessions.length
+        ? weeklyInput.classSessions.reduce((s, c) => s + c.attentionLevel, 0) / weeklyInput.classSessions.length
+        : 3;
+      const completionRate = weeklyInput.assignments.total > 0
+        ? weeklyInput.assignments.completed / weeklyInput.assignments.total
+        : 0;
+
+      if (avgUnderstanding < 4) {
+        const topics = weeklyInput.classSessions.flatMap(s => s.keywords).filter(k => k !== '데이터 수집 중');
+        if (topics.length > 0) {
+          defaultAreas.push(`${topics[0]} 개념 복습 및 심화 학습 필요`);
+        } else {
+          defaultAreas.push('이번 주 학습 개념 복습 필요');
+        }
+      }
+
+      if (avgFocus < 4) {
+        defaultAreas.push('수업 집중도 향상을 위한 환경 조성 필요');
+      }
+
+      if (completionRate < 0.8) {
+        defaultAreas.push('숙제 완료율 향상 - 매일 정해진 시간에 학습하는 습관 형성');
+      }
+
+      // 최소 2개 보장
+      if (defaultAreas.length < 2) {
+        defaultAreas.push('풀이 과정을 단계별로 기록하는 습관 형성');
+        if (defaultAreas.length < 2) {
+          defaultAreas.push('오답 노트 작성으로 실수 패턴 파악하기');
+        }
+      }
+
+      analysis.areasForImprovement = defaultAreas;
+    }
 
     return NextResponse.json({
       success: true,

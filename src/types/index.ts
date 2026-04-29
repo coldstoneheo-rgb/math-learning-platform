@@ -32,7 +32,8 @@ export type ReportType =
   | 'monthly'        // 월간 리포트
   | 'semi_annual'    // 반기 리포트
   | 'annual'         // 연간 리포트
-  | 'consolidated';  // 레거시: 통합 리포트 (deprecated)
+  | 'consolidated'   // 레거시: 통합 리포트 (deprecated)
+  | 'self_analysis'; // 학생/학부모 자기 분석 (Self-Analysis)
 
 export interface TestInfo {
   testName: string;
@@ -141,6 +142,95 @@ export interface GrowthPrediction {
 }
 
 /**
+ * MetaCognitionAnalysis - 시험 풀이에서 관찰된 메타인지 분석
+ * AI가 시험지 이미지에서 추론한 학생의 메타인지 능력
+ */
+export interface MetaCognitionAnalysis {
+  // 전체 메타인지 점수 (AI 추정)
+  overallScore: number; // 0-100
+
+  // 오답 인식 능력 (풀이 과정에서 오류를 발견하고 수정한 흔적)
+  errorRecognition: {
+    score: number;
+    evidence: string[]; // "2번 문제에서 계산 오류를 발견하고 수정한 흔적"
+    analysis: string;
+  };
+
+  // 전략 선택 능력 (문제 유형에 맞는 풀이법 선택)
+  strategySelection: {
+    score: number;
+    optimalCount: number;
+    suboptimalCount: number;
+    analysis: string;
+  };
+
+  // 시간 관리 추정 (풀이 완성도, 문제별 시간 배분)
+  timeManagement: {
+    score: number;
+    completedProblems: number;
+    totalProblems: number;
+    analysis: string;
+  };
+
+  // 자기 점검 습관 (검산, 재확인 흔적)
+  selfChecking: {
+    score: number;
+    evidence: string[];
+    analysis: string;
+  };
+
+  // 메타인지 발달 단계
+  developmentStage: 'beginner' | 'developing' | 'competent' | 'proficient' | 'expert';
+
+  // 세부 개선 권장사항
+  recommendations: string[];
+}
+
+/**
+ * StaminaAnalysis - 시험 풀이 지구력 분석
+ * 단일 시험에서 관찰된 집중력과 지구력 패턴
+ */
+export interface StaminaAnalysis {
+  // 전체 지구력 점수 (0-100)
+  overallScore: number;
+
+  // 문제 순서별 정확도 분포
+  accuracyBySequence: {
+    range: string; // e.g., "1-5", "6-10"
+    correctCount: number;
+    totalCount: number;
+    accuracy: number;
+  }[];
+
+  // 피로도 패턴 분석
+  fatiguePattern: {
+    type: 'consistent' | 'early-fatigue' | 'mid-dip' | 'late-fatigue' | 'improving';
+    description: string;
+    peakPerformanceRange?: string; // 가장 잘한 구간
+    lowPerformanceRange?: string; // 가장 못한 구간
+  };
+
+  // 시간 배분 분석 (추정)
+  timeDistribution: {
+    estimatedTotalTime?: number; // 분
+    estimatedTimePerProblem?: number; // 분
+    rushedProblems?: string[]; // 급하게 푼 것 같은 문제
+    overthoughtProblems?: string[]; // 너무 오래 고민한 것 같은 문제
+    analysis: string;
+  };
+
+  // 집중력 유지 분석
+  focusAnalysis: {
+    score: number;
+    signs: string[]; // 집중/비집중 징후
+    analysis: string;
+  };
+
+  // 권장사항
+  recommendations: string[];
+}
+
+/**
  * TestAnalysisData - 시험 분석 리포트 데이터 (기본 형태)
  * report_type: 'test' 또는 'level_test'에 사용
  */
@@ -156,13 +246,79 @@ export interface TestAnalysisData {
   riskFactors?: RiskFactor[];
   growthPredictions?: GrowthPrediction[];
   trendComment?: string;
+  // 메타인지 분석 (시험 풀이에서 관찰된 메타인지 능력)
+  metaCognitionAnalysis?: MetaCognitionAnalysis;
+  // 지구력 분석 (시험 풀이 집중력 및 시간 배분)
+  staminaAnalysis?: StaminaAnalysis;
+}
+
+/**
+ * SelfAnalysisReport - 학생/학부모 자기 분석 리포트
+ * 교사 리포트와 별개로, 학생/학부모가 문제풀이 스캔본을 업로드하여 AI 분석을 요청할 때 사용
+ */
+export type SelfAnalysisProblemType =
+  | '연습문제'
+  | '교재'
+  | '숙제'
+  | '시험대비'
+  | '자유학습';
+
+export interface SelfAnalysisProblemFeedback {
+  problemIdentifier?: string; // "3번", "p.42 4번" 등 문제 식별자
+  observation: string;       // 5관점에서 관찰한 내용
+  whatWentWell?: string;     // 잘한 점
+  suggestion?: string;       // 개선 제안
+  errorType?: string;        // 오류 유형 (오답인 경우)
+}
+
+export interface SelfAnalysisReport {
+  analysisDate: string;
+  problemType: SelfAnalysisProblemType;
+  topicTags: string[];       // ['일차방정식', '인수분해'] 등
+  studentNote?: string;      // 학생이 입력한 메모 (어려웠던 부분 등)
+  uploadedBy: 'student' | 'parent';
+
+  // AI 종합 평가
+  overallAssessment: string;
+  oneLineSummary: string;
+
+  // 잘한 점 (강화할 것)
+  strengthsObserved: string[];
+
+  // 개선할 점 (집중할 것)
+  areasToImprove: string[];
+
+  // 과거 데이터와의 비교 (누적 학습 데이터 기반)
+  comparisonWithHistory: {
+    improvements: string[];        // 과거 대비 나아진 점
+    persistentIssues: string[];    // 여전히 지속되는 이슈
+    newObservations: string[];     // 이번에 새로 발견된 패턴
+    overallTrend: 'improving' | 'stable' | 'needs_attention';
+    trendSummary: string;
+  };
+
+  // 문항별 피드백
+  problemFeedback: SelfAnalysisProblemFeedback[];
+
+  // 당장 실천할 수 있는 다음 단계
+  nextSteps: {
+    immediate: string[];           // 오늘 바로 할 수 있는 것
+    thisWeek: string[];            // 이번 주 목표
+    studyTip: string;              // AI가 제안하는 학습 팁
+  };
+
+  // 동기부여 메시지
+  encouragement: string;
+
+  // 성장 마일스톤 (이번 분석에서 눈에 띄는 성취)
+  milestone?: string;
 }
 
 /**
  * AnalysisData - 레거시 호환용 (TestAnalysisData와 동일)
  * @deprecated 새 코드에서는 AnyAnalysisData 또는 구체적 타입 사용 권장
  */
-export interface AnalysisData extends TestAnalysisData {}
+export type AnalysisData = TestAnalysisData;
 
 /**
  * AnyAnalysisData - 모든 리포트 타입의 분석 데이터 Union
@@ -175,6 +331,7 @@ export type AnyAnalysisData =
   | ({ _type: 'monthly' } & MonthlyReportAnalysis)
   | ({ _type: 'semi_annual' } & SemiAnnualReportAnalysis)
   | ({ _type: 'annual' } & AnnualReportAnalysis)
+  | ({ _type: 'self_analysis' } & SelfAnalysisReport)
   | ({ _type?: undefined } & TestAnalysisData); // 레거시 데이터 호환
 
 /**
@@ -836,8 +993,20 @@ export interface LevelTestAnalysis {
     characteristics: string[];
     recommendations: string[];
   };
-  // 초기 Baseline 설정
-  initialBaseline: Baseline;
+  // 초기 Baseline 설정 (AI가 반환하는 간소화된 형식)
+  initialBaseline: {
+    overallLevel: string;
+    strengths: string;
+    weaknesses: string;
+    errorPatterns: string;
+    learningPotential: string;
+    // 구조화된 오류 패턴 (primaryErrorTypes용)
+    detailedErrorPatterns?: {
+      type: '개념 오류' | '절차 오류' | '계산 오류' | '문제 오독' | '기타/부주의';
+      frequency: number;
+      description: string;
+    }[];
+  };
   // 맞춤 커리큘럼 제안
   suggestedCurriculum: {
     phase: string;
@@ -942,7 +1111,7 @@ export interface WeeklyReportAnalysis {
       achieved: boolean;
       notes: string;
     }[];
-    // 연속성 지표
+    // 연속성 지표 (내부용, UI에서는 habitScore 사용)
     continuityScore: number;
     // 모멘텀 상태
     momentumStatus: 'accelerating' | 'maintaining' | 'slowing' | 'recovering';
@@ -951,6 +1120,46 @@ export interface WeeklyReportAnalysis {
   encouragement: string;
   // 선생님 코멘트
   teacherComment: string;
+
+  // ===== 확장 필드 (Phase 1.2) =====
+
+  // 학습 습관 점수 (부모 친화적 용어)
+  // 0-100점, 숙제완료율 + 집중도 + 이해도 종합
+  habitScore?: {
+    score: number;  // 0-100
+    breakdown: {
+      assignmentCompletion: number;  // 숙제 완료 기여분 (0-40)
+      focusLevel: number;            // 집중도 기여분 (0-30)
+      understandingLevel: number;    // 이해도 기여분 (0-30)
+    };
+    trend: 'up' | 'stable' | 'down';  // 지난주 대비 추세
+    explanation: string;  // "숙제를 잘 수행하고 수업에 집중하고 있어요"
+  };
+
+  // 성장 모멘텀 (부모 친화적 용어로 변환)
+  growthMomentum?: {
+    status: 'rising' | 'steady' | 'needs_attention';  // 상승중 / 유지중 / 관심필요
+    statusLabel: string;  // "꾸준히 성장하고 있어요!" 등
+    weeklyComparison: string;  // "지난주 대비 이해도가 15% 향상되었습니다"
+  };
+
+  // 팩트 기반 근거 (이미지 분석 결과)
+  factBasedEvidence?: {
+    imageAnalysis?: string[];  // 이미지에서 관찰된 구체적 내용
+    dataPoints: string[];      // 데이터 기반 관찰 (수치, 비율 등)
+    teacherObservations: string[];  // 선생님 메모에서 추출된 관찰
+  };
+
+  // 성장 추적 데이터 (차트용)
+  growthTracking?: {
+    weeklyScores: {
+      weekNumber: number;
+      habitScore: number;
+      understandingAvg: number;
+      focusAvg: number;
+    }[];
+    improvementRate: number;  // 지난 4주 대비 개선율 (%)
+  };
 }
 
 /**
@@ -1038,6 +1247,41 @@ export interface MonthlyReportAnalysis {
   };
   // 선생님 종합 메시지
   teacherMessage: string;
+
+  // ===== 확장 필드 (Phase 2.3) =====
+
+  // 5개 역량 레이더 차트 데이터 (0-100)
+  capabilityScores?: {
+    conceptUnderstanding: number;  // 개념이해도
+    problemSolving: number;        // 문제풀이력
+    learningHabit: number;         // 학습습관
+    assignmentPerformance: number; // 숙제수행
+    testPerformanceScore: number;  // 시험성과
+  };
+
+  // 취약점 상태별 분류 (WeaknessResolutionMap 용)
+  weaknessStatusMap?: {
+    resolved: string[];   // 이번 달 해결됨
+    improving: string[];  // 개선 진행 중
+    ongoing: string[];    // 여전히 지속됨
+    newlyFound: string[]; // 이번 달 새로 발견
+  };
+
+  // 주간 습관 점수 추이 (HabitTrendChart 용)
+  weeklyHabitScores?: {
+    weekNumber: number;
+    score: number;
+    understandingAvg: number;
+    focusAvg: number;
+  }[];
+
+  // 월간 성장 한 줄 요약 (부모가 한눈에 볼 핵심)
+  monthlyGrowthSummary?: {
+    headline: string;          // "이번 달은 개념 이해가 크게 향상되었어요!"
+    growthEmoji: string;       // "🚀" | "📈" | "👍" | "💪"
+    keyAchievement: string;    // 가장 큰 성취 1문장
+    keyFocus: string;          // 다음 달 집중 포인트 1문장
+  };
 }
 
 /**
@@ -1169,6 +1413,13 @@ export interface SemiAnnualReportAnalysis {
   };
   // 선생님 반기 평가
   teacherAssessment: string;
+  // (선택) UI용 성장 서사 배너 — AI 또는 클라이언트에서 생성
+  growthSummaryBanner?: {
+    headline: string;
+    growthEmoji: string;
+    keyAchievement: string;
+    keyFocus: string;
+  };
 }
 
 /**
@@ -1348,6 +1599,13 @@ export interface AnnualReportAnalysis {
     areasForGrowth: string[];
     personalMessage: string;
   };
+  // (선택) UI용 성장 서사 배너 — AI 또는 클라이언트에서 생성
+  growthSummaryBanner?: {
+    headline: string;
+    growthEmoji: string;
+    keyAchievement: string;
+    keyFocus: string;
+  };
 }
 
 // ============================================
@@ -1482,6 +1740,52 @@ export interface AnalysisContextData {
     predictions: string[];
     actualOutcomes: string[];
     accuracy: number;
+  };
+  // 전략 피드백 데이터 (Phase 2: 피드백 루프)
+  strategyFeedback?: StrategyFeedbackContext;
+}
+
+/**
+ * StrategyFeedbackContext - AI 분석에 제공되는 전략 피드백 데이터
+ * 과거 전략의 효과를 분석하여 새로운 전략 제안에 활용
+ */
+export interface StrategyFeedbackContext {
+  // 효과적이었던 전략 (성공률 높은 순)
+  effectiveStrategies: {
+    type: string;
+    title: string;
+    concept?: string;
+    avgImprovement: number;
+    successRate: number;
+    usageCount: number;
+  }[];
+  // 효과 없었던 전략 (다른 접근 필요)
+  ineffectiveStrategies: {
+    type: string;
+    title: string;
+    concept?: string;
+    improvement: number;
+    feedback?: string;
+  }[];
+  // 개념별 개선 현황
+  conceptImprovements: {
+    concept: string;
+    totalImprovement: number;
+    occurrenceCount: number;
+  }[];
+  // 전략 유형별 통계
+  typeStats: {
+    type: string;
+    avgImprovement: number;
+    completionRate: number;
+    successRate: number;
+  }[];
+  // 전체 통계
+  overallStats: {
+    totalStrategies: number;
+    completedCount: number;
+    avgImprovement: number;
+    successRate: number;
   };
 }
 

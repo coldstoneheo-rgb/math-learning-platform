@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-
 interface PdfExportOptions {
   filename?: string;
   title?: string;
@@ -35,6 +32,12 @@ export async function exportToPdf(
       console.error('PDF 내보내기: 요소를 찾을 수 없습니다:', elementId);
       return false;
     }
+
+    // 동적 임포트로 번들 크기 최적화
+    const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+      import('jspdf'),
+      import('html2canvas'),
+    ]);
 
     // html2canvas 옵션 설정
     const canvasOptions = {
@@ -184,6 +187,7 @@ export async function captureChartAsImage(
     const element = document.getElementById(elementId);
     if (!element) return null;
 
+    const { default: html2canvas } = await import('html2canvas');
     const canvas = await html2canvas(element, {
       scale,
       useCORS: true,

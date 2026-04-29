@@ -43,11 +43,11 @@ export interface FeatureFlagConfig {
 const DEFAULT_FLAGS: Record<FeatureFlagKey, FeatureFlagConfig> = {
   // Phase 3.1
   [FEATURE_FLAGS.PARENT_NOTIFICATIONS]: {
-    status: 'disabled',
+    status: 'enabled',
     description: '학부모 이메일/푸시 알림 시스템',
-    enabledForRoles: ['parent'],
+    enabledForRoles: ['teacher', 'parent'],
     createdAt: '2025-01-01',
-    updatedAt: '2025-01-01',
+    updatedAt: '2026-04-21',
   },
   [FEATURE_FLAGS.PARENT_STUDY_CHECKLIST]: {
     status: 'disabled',
@@ -73,11 +73,11 @@ const DEFAULT_FLAGS: Record<FeatureFlagKey, FeatureFlagConfig> = {
     updatedAt: '2025-01-01',
   },
   [FEATURE_FLAGS.ACHIEVEMENT_BADGES]: {
-    status: 'disabled',
+    status: 'beta',
     description: '성취 배지 시스템',
     enabledForRoles: ['student'],
     createdAt: '2025-01-01',
-    updatedAt: '2025-01-01',
+    updatedAt: '2026-04-21',
   },
   [FEATURE_FLAGS.GAMIFICATION]: {
     status: 'disabled',

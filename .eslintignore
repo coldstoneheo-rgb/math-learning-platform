@@ -1,0 +1,17 @@
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Node modules
+node_modules/
+
+# Test files (Playwright)
+e2e/
+
+# Scripts (Node.js CommonJS)
+scripts/
+
+# Generated files
+*.generated.*

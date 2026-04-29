@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Report, Student, Schedule, ClassSession, Assignment, StudentWeakness } from '@/types';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface ReportWithStudent extends Report {
   students: Pick<Student, 'name' | 'grade'>;
@@ -193,11 +195,7 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
@@ -205,9 +203,9 @@ export default function AdminDashboard() {
       {/* 헤더 */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <a href="/" className="text-xl font-bold text-indigo-600 hover:text-indigo-700">
+          <Link href="/" className="text-xl font-bold text-indigo-600 hover:text-indigo-700">
             수학 학습 분석
-          </a>
+          </Link>
           <div className="flex items-center gap-4">
             <span className="text-gray-600">{user?.name} 선생님</span>
             <button
@@ -242,9 +240,9 @@ export default function AdminDashboard() {
                 {todayStudents.length}명
               </span>
             </div>
-            <a href="/admin/schedules" className="text-sm text-indigo-600 hover:text-indigo-700">
+            <Link href="/admin/schedules" className="text-sm text-indigo-600 hover:text-indigo-700">
               일정 관리 →
-            </a>
+            </Link>
           </div>
 
           {todayStudents.length === 0 ? (
@@ -327,9 +325,9 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900">최근 이벤트</h3>
-            <a href="/admin/reports" className="text-sm text-indigo-600 hover:text-indigo-700">
+            <Link href="/admin/reports" className="text-sm text-indigo-600 hover:text-indigo-700">
               전체 보기 →
-            </a>
+            </Link>
           </div>
 
           {recentReports.length === 0 ? (

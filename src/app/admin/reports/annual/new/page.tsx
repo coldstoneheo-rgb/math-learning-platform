@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import type { Student, User, AnnualReportAnalysis, AnalysisData } from '@/types';
 
 interface AnnualFormData {
@@ -20,6 +24,7 @@ export default function NewAnnualReportPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
   const [aiAnalysis, setAiAnalysis] = useState<AnnualReportAnalysis | null>(null);
@@ -116,7 +121,7 @@ export default function NewAnnualReportPage() {
 
       if (result.success && result.analysis) {
         setAiAnalysis(result.analysis);
-        alert('AI 분석이 생성되었습니다. 저장 시 함께 저장됩니다.');
+        addToast('AI 분석이 생성되었습니다. 저장 시 함께 저장됩니다.', 'success');
       } else {
         setError(result.error || 'AI 분석 생성에 실패했습니다.');
       }
@@ -212,7 +217,7 @@ export default function NewAnnualReportPage() {
         }
       }
 
-      alert('연간 리포트가 저장되었습니다.');
+      addToast('연간 리포트가 저장되었습니다.', 'success');
       router.push('/admin/reports');
     } catch (err: unknown) {
       console.error('저장 오류:', err);
@@ -259,21 +264,18 @@ export default function NewAnnualReportPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
-            </a>
+            </Link>
             <h1 className="text-xl font-bold text-gray-900">연간 종합 리포트 작성</h1>
           </div>
           <span className="text-gray-600">{user?.name} 선생님</span>

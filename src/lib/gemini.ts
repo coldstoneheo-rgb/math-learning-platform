@@ -11,6 +11,8 @@ import type {
   MonthlyReportAnalysis,
   SemiAnnualReportAnalysis,
   AnnualReportAnalysis,
+  SelfAnalysisReport,
+  SelfAnalysisProblemType,
 } from '@/types';
 import { routeModel, createRoutingLog, type ModelRoutingContext } from './model-router';
 
@@ -30,6 +32,14 @@ export class GeminiParseError extends Error {
 
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY;
+
+  // 디버깅: API 키 로딩 확인 (마스킹 처리)
+  if (apiKey) {
+    console.log(`[Gemini] API Key loaded: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)} (length: ${apiKey.length})`);
+  } else {
+    console.log('[Gemini] API Key is NOT loaded');
+  }
+
   if (!apiKey) {
     throw new GeminiApiError('GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.');
   }
@@ -62,6 +72,17 @@ const LEVEL_TEST_PROMPT = `${BASE_SYSTEM_PROMPT}
 4. **학습 성향 진단**: visual/verbal/logical 유형 파악
 5. **초기 오류 서명 추출**: 이 학생 고유의 오류 패턴 식별
 6. **맞춤 커리큘럼 제안**: 향후 6개월 학습 로드맵
+
+### 오류 패턴 분석 (중요!)
+답안지에서 오답을 찾아 아래 5가지 유형으로 분류하세요:
+- **개념 오류**: 수학 개념 자체를 잘못 이해함 (예: 분배법칙 미적용)
+- **절차 오류**: 풀이 순서나 방법이 틀림 (예: 이항 순서 오류)
+- **계산 오류**: 단순 연산 실수 (예: 7+8=14)
+- **문제 오독**: 문제 조건을 잘못 해석함 (예: "이상" vs "초과" 혼동)
+- **기타/부주의**: 풀이 누락, 답만 적음 등
+
+오답이 있다면 반드시 detailedErrorPatterns 배열에 각 유형별 빈도(%)를 포함하세요.
+오답이 없어도 답안 작성 습관에서 발견되는 잠재적 오류 패턴을 분석하세요.
 
 ### 출력 특징
 - 부정적 표현 최소화, 성장 가능성 강조
@@ -99,12 +120,27 @@ const WEEKLY_REPORT_PROMPT = `${BASE_SYSTEM_PROMPT}
 ## 주간 리포트 특별 지침 (Micro Loop - Weekly)
 주간 리포트는 빠른 피드백 사이클의 핵심입니다. 지난주 목표와 이번 주 성과를 연결하세요.
 
-### 필수 분석 항목
+### 필수 분석 항목 (모든 항목 반드시 채워야 함!)
 1. **수업 내용 평가**: 이번 주 다룬 개념들의 이해도
 2. **숙제 수행 분석**: 완료율, 질적 평가
-3. **주간 성취**: 이번 주의 구체적 성과
-4. **개선 필요 영역**: 다음 주 집중해야 할 부분
-5. **복습 과제**: 구체적인 복습 문제 지정
+3. **주간 성취 (weeklyAchievements)**: 이번 주의 구체적 성과 3-5개 (막연한 칭찬 금지)
+4. **개선 필요 영역 (areasForImprovement)**: ⚠️ 필수 2-3개! 다음 주 집중해야 할 구체적 영역
+5. **복습 과제 (reviewAssignments)**: 5요소 전략 포함 (무엇을, 어디서, 얼마나, 어떻게, 측정방법)
+6. **다음 주 계획 (nextWeekPlan)**: focus + goals 필수
+
+### ⚠️ 개선 필요 영역 작성 규칙 (CRITICAL!)
+areasForImprovement는 **절대로 빈 배열을 반환하지 마세요**. 반드시 2-3개 항목을 작성하세요.
+- 모든 학생에게는 개선할 부분이 있습니다
+- 잘하는 학생도 "더 잘할 수 있는 영역"을 작성하세요
+- 예시: "분수 나눗셈 역수 변환 연습 필요", "문장제 문제 독해 시간 단축", "풀이 과정 기록 습관화"
+
+### 첨부 이미지 분석 규칙
+이미지가 첨부된 경우 **반드시** 다음을 분석하고 결과에 반영하세요:
+1. **풀이 과정 관찰**: 어떤 방식으로 문제를 풀었는지 상세 분석
+2. **오류 패턴 탐지**: 반복되는 실수, 개념 오류 파악
+3. **강점 발견**: 잘 해결한 부분, 좋은 풀이 습관
+4. **구체적 근거 제시**: "이미지에서 [구체적 내용]을 확인" 형식
+5. **factBasedEvidence.imageAnalysis**: 이미지에서 발견한 내용 3개 이상 기록
 
 ### Micro Loop 연결
 - 지난주 목표 달성 여부 체크
@@ -224,6 +260,7 @@ const REPORT_TYPE_PROMPTS: Record<ReportType, string> = {
   semi_annual: SEMI_ANNUAL_REPORT_PROMPT,
   annual: ANNUAL_REPORT_PROMPT,
   consolidated: TEST_ANALYSIS_PROMPT, // 레거시 호환
+  self_analysis: TEST_ANALYSIS_PROMPT, // placeholder, 전용 함수 사용
 };
 
 // ============================================
@@ -333,6 +370,60 @@ ${pv.predictions.map((pred, i) =>
     ).join('\n')}`);
   }
 
+  // 8. 전략 피드백 (Phase 2: 피드백 루프)
+  if (context.strategyFeedback) {
+    const sf = context.strategyFeedback;
+    const feedbackParts: string[] = [];
+
+    // 효과적이었던 전략
+    if (sf.effectiveStrategies && sf.effectiveStrategies.length > 0) {
+      feedbackParts.push(`### 효과적이었던 전략 (유사한 방식 권장)
+${sf.effectiveStrategies.slice(0, 5).map((s, i) =>
+        `${i + 1}. **${s.type}**: ${s.title}
+   - 평균 개선율: ${s.avgImprovement}%, 성공률: ${s.successRate}%
+   - 적용 횟수: ${s.usageCount}회${s.concept ? `, 관련 개념: ${s.concept}` : ''}`
+      ).join('\n')}`);
+    }
+
+    // 효과 없었던 전략
+    if (sf.ineffectiveStrategies && sf.ineffectiveStrategies.length > 0) {
+      feedbackParts.push(`### 효과 없었던 전략 (다른 접근 필요)
+${sf.ineffectiveStrategies.slice(0, 5).map((s, i) =>
+        `${i + 1}. **${s.type}**: ${s.title}
+   - 개선율: ${s.improvement}%${s.feedback ? `, 피드백: ${s.feedback}` : ''}
+   - ⚠️ 이 유형의 전략은 피하고 다른 방법 시도 권장`
+      ).join('\n')}`);
+    }
+
+    // 개념별 개선 현황
+    if (sf.conceptImprovements && sf.conceptImprovements.length > 0) {
+      feedbackParts.push(`### 개념별 누적 개선 현황
+${sf.conceptImprovements.slice(0, 5).map(c =>
+        `- ${c.concept}: 총 ${c.totalImprovement}% 개선 (${c.occurrenceCount}회 시도)`
+      ).join('\n')}`);
+    }
+
+    // 전체 통계
+    if (sf.overallStats) {
+      feedbackParts.push(`### 전략 효과 전체 통계
+- 총 전략 수: ${sf.overallStats.totalStrategies}개
+- 완료율: ${Math.round((sf.overallStats.completedCount / Math.max(sf.overallStats.totalStrategies, 1)) * 100)}%
+- 평균 개선율: ${sf.overallStats.avgImprovement}%
+- 성공률 (10% 이상 개선): ${sf.overallStats.successRate}%`);
+    }
+
+    if (feedbackParts.length > 0) {
+      sections.push(`
+## 이전 전략 효과 분석 (피드백 루프 데이터) ⭐ 중요!
+아래 피드백을 반영하여 전략을 제안하세요:
+1. 효과적이었던 전략과 유사한 방식의 새 전략 제안
+2. 효과 없었던 전략은 완전히 다른 접근법으로 대체
+3. 개념별 개선 현황을 고려하여 아직 개선되지 않은 영역 우선 타겟
+
+${feedbackParts.join('\n\n')}`);
+    }
+  }
+
   return sections.length > 0 ? `
 # ===== 학생 컨텍스트 데이터 (AI 분석 참조용) =====
 ${sections.join('\n')}
@@ -357,6 +448,63 @@ const SYSTEM_PROMPT = `당신은 학생의 수학 학습을 종합적으로 컨�
 3️⃣ 계산 및 실수 패턴: 단순 계산 실수인가, 개념적 오류인가?
 4️⃣ 문제 해석 능력: 문제의 조건을 정확히 파악했는가?
 5️⃣ 풀이 습관 관찰: 풀이 과정을 단계적으로 기록했는가?
+
+## 메타인지 분석 (필수)
+시험지의 풀이 과정을 관찰하여 학생의 메타인지 능력을 분석하세요:
+
+1️⃣ 오답 인식 능력 (errorRecognition)
+   - 풀이 중 잘못을 발견하고 수정한 흔적 (지우개 자국, 수정 표시 등)
+   - 답을 고친 경우, 올바른 방향으로 수정했는지 여부
+   - 증거가 없으면 빈 배열, 있으면 구체적 사례 기술
+
+2️⃣ 전략 선택 능력 (strategySelection)
+   - 문제 유형에 맞는 효율적인 풀이법을 선택했는지
+   - 최적 풀이 vs 비효율적 풀이 (차선 풀이) 개수 분석
+   - 더 좋은 전략이 있었는지 분석
+
+3️⃣ 시간 관리 (timeManagement)
+   - 모든 문제를 풀었는지, 미완성 문제가 있는지
+   - 풀이 완성도 (계산만 하고 답을 안 쓴 경우 등)
+   - 어려운 문제에 너무 많은 시간을 쓴 흔적
+
+4️⃣ 자기 점검 습관 (selfChecking)
+   - 검산 흔적 (= 사용, 대입 확인 등)
+   - 답에 밑줄 치거나 강조한 흔적
+   - 문제 조건 체크 표시
+
+5️⃣ 발달 단계 (developmentStage)
+   - beginner: 메타인지 흔적 거의 없음
+   - developing: 가끔 수정하거나 검산함
+   - competent: 정기적으로 점검하지만 일관성 부족
+   - proficient: 체계적으로 점검하고 수정함
+   - expert: 높은 정확도로 자기 점검 및 전략 조정
+
+## 지구력 분석 (staminaAnalysis) - 필수
+시험 전체에 걸친 집중력과 지구력 패턴을 분석하세요:
+
+1️⃣ 문제 순서별 정확도 (accuracyBySequence)
+   - 문제를 5개 단위로 나눠서 정확도 분석 (예: 1-5번, 6-10번, 11-15번...)
+   - 각 구간별 맞은 문제 수, 전체 문제 수, 정확도(%) 계산
+
+2️⃣ 피로도 패턴 (fatiguePattern)
+   - consistent: 시험 전체에 걸쳐 일관된 성과
+   - early-fatigue: 초반은 좋으나 후반 급격히 하락
+   - mid-dip: 중반에 슬럼프, 후반 회복
+   - late-fatigue: 후반부로 갈수록 점점 하락
+   - improving: 후반으로 갈수록 오히려 향상
+   - peakPerformanceRange: 가장 높은 정확도 구간
+   - lowPerformanceRange: 가장 낮은 정확도 구간
+
+3️⃣ 시간 배분 분석 (timeDistribution)
+   - 풀이 흔적에서 시간 배분 추정
+   - 급하게 푼 문제 (rushedProblems): 풀이가 너무 간단하거나 불완전
+   - 오래 고민한 문제 (overthoughtProblems): 많은 수정, 여러 시도 흔적
+
+4️⃣ 집중력 분석 (focusAnalysis)
+   - 풀이 글씨체 변화 (흐트러짐, 크기 변화)
+   - 빈 공간이나 낙서 흔적
+   - 문제 건너뛰기 패턴
+   - signs: 관찰된 집중/비집중 징후 목록
 
 ## 개선 전략 5요소 (모든 전략에 필수 포함)
 - 무엇을: 구체적 교재, 자료
@@ -465,7 +613,95 @@ const ANALYSIS_SCHEMA = {
     learningHabits: { type: 'array', items: { type: 'object', properties: { type: { type: 'string', enum: ['good', 'bad'] }, description: { type: 'string' }, frequency: { type: 'string', enum: ['always', 'often', 'sometimes'] } } } },
     riskFactors: { type: 'array', items: { type: 'object', properties: { factor: { type: 'string' }, severity: { type: 'string', enum: ['high', 'medium', 'low'] }, recommendation: { type: 'string' } } } },
     growthPredictions: { type: 'array', items: { type: 'object', properties: { timeframe: { type: 'string' }, predictedScore: { type: 'number' }, confidenceLevel: { type: 'number' }, assumptions: { type: 'array', items: { type: 'string' } } } } },
-    trendComment: { type: 'string' }
+    trendComment: { type: 'string' },
+    metaCognitionAnalysis: {
+      type: 'object',
+      properties: {
+        overallScore: { type: 'number' },
+        errorRecognition: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            evidence: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' }
+          }
+        },
+        strategySelection: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            optimalCount: { type: 'number' },
+            suboptimalCount: { type: 'number' },
+            analysis: { type: 'string' }
+          }
+        },
+        timeManagement: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            completedProblems: { type: 'number' },
+            totalProblems: { type: 'number' },
+            analysis: { type: 'string' }
+          }
+        },
+        selfChecking: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            evidence: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' }
+          }
+        },
+        developmentStage: { type: 'string', enum: ['beginner', 'developing', 'competent', 'proficient', 'expert'] },
+        recommendations: { type: 'array', items: { type: 'string' } }
+      }
+    },
+    staminaAnalysis: {
+      type: 'object',
+      properties: {
+        overallScore: { type: 'number' },
+        accuracyBySequence: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              range: { type: 'string' },
+              correctCount: { type: 'number' },
+              totalCount: { type: 'number' },
+              accuracy: { type: 'number' }
+            }
+          }
+        },
+        fatiguePattern: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', enum: ['consistent', 'early-fatigue', 'mid-dip', 'late-fatigue', 'improving'] },
+            description: { type: 'string' },
+            peakPerformanceRange: { type: 'string' },
+            lowPerformanceRange: { type: 'string' }
+          }
+        },
+        timeDistribution: {
+          type: 'object',
+          properties: {
+            estimatedTotalTime: { type: 'number' },
+            estimatedTimePerProblem: { type: 'number' },
+            rushedProblems: { type: 'array', items: { type: 'string' } },
+            overthoughtProblems: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' }
+          }
+        },
+        focusAnalysis: {
+          type: 'object',
+          properties: {
+            score: { type: 'number' },
+            signs: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' }
+          }
+        },
+        recommendations: { type: 'array', items: { type: 'string' } }
+      }
+    }
   },
   required: ['testInfo', 'testResults', 'detailedAnalysis', 'macroAnalysis', 'actionablePrescription']
 };
@@ -619,7 +855,7 @@ interface FileData {
 export async function analyzeLevelTest(
   studentName: string,
   grade: number,
-  testFiles: FileData[],  // { data, mimeType }[] 형식 (이미지 + PDF 지원)
+  testImages: string[],  // base64 이미지 배열 (시험 분석과 동일한 형식)
   additionalInfo?: {
     school?: string;
     previousExperience?: string;
@@ -628,13 +864,13 @@ export async function analyzeLevelTest(
 ): Promise<LevelTestAnalysis> {
   const ai = getGeminiClient();
 
-  // ===== 모델 라우팅: level_test = Pro 모델 =====
+  // ===== 모델 라우팅: level_test = Flash 모델 (타임아웃 방지) =====
   const selectedModel = routeModel({ reportType: 'level_test', studentGrade: grade });
   console.log('[Model Routing] level_test ->', selectedModel);
 
-  // 파일별로 올바른 MIME 타입 적용
-  const fileParts = testFiles.map(file => ({
-    inlineData: { data: file.data, mimeType: file.mimeType }
+  // 시험 분석과 동일하게 이미지만 지원 (image/jpeg 고정)
+  const imageParts = testImages.map(base64 => ({
+    inlineData: { data: base64, mimeType: 'image/jpeg' }
   }));
 
   const userPrompt = `
@@ -653,6 +889,8 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
 5. 초기 오류 서명 추출
 6. 맞춤 커리큘럼 제안 (6개월)
 7. 부모님 브리핑
+
+**중요: 모든 'analysis' 필드는 간결하고 요약된 형태로 작성하세요. 토큰 제한으로 인한 응답 잘림을 방지하기 위해 긴 단락 대신 핵심만 전달하세요. 각 분석 항목은 2-3문장 이내로 작성하세요.**
 
 응답은 LevelTestAnalysis 스키마를 따라주세요.`;
 
@@ -688,8 +926,9 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
             domain: { type: 'string' },
             score: { type: 'number' },
             maxScore: { type: 'number' },
-            level: { type: 'string' },
-            analysis: { type: 'string' }
+            percentile: { type: 'number' },
+            gradeEquivalent: { type: 'string' },
+            diagnosis: { type: 'string' }
           }
         }
       },
@@ -697,10 +936,9 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
         type: 'object',
         properties: {
           currentGrade: { type: 'number' },
-          assessedLevel: { type: 'string' },
-          gradeEquivalent: { type: 'number' },
-          percentile: { type: 'number' },
-          analysis: { type: 'string' }
+          assessedLevel: { type: 'number' },
+          gap: { type: 'number' },
+          explanation: { type: 'string' }
         }
       },
       prerequisiteGaps: {
@@ -709,19 +947,20 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
           type: 'object',
           properties: {
             concept: { type: 'string' },
-            expectedGrade: { type: 'number' },
-            severity: { type: 'string' },
-            recommendation: { type: 'string' }
+            expectedLevel: { type: 'string' },
+            actualLevel: { type: 'string' },
+            priority: { type: 'string', enum: ['critical', 'important', 'minor'] },
+            remedyPlan: { type: 'string' }
           }
         }
       },
       learningStyleDiagnosis: {
         type: 'object',
         properties: {
-          primaryStyle: { type: 'string' },
-          secondaryStyle: { type: 'string' },
-          characteristics: { type: 'string' },
-          recommendations: { type: 'string' }
+          style: { type: 'string', enum: ['visual', 'verbal', 'logical', 'mixed'] },
+          confidence: { type: 'number' },
+          characteristics: { type: 'array', items: { type: 'string' } },
+          recommendations: { type: 'array', items: { type: 'string' } }
         }
       },
       initialBaseline: {
@@ -731,7 +970,19 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
           strengths: { type: 'string' },
           weaknesses: { type: 'string' },
           errorPatterns: { type: 'string' },
-          learningPotential: { type: 'string' }
+          learningPotential: { type: 'string' },
+          // 구조화된 오류 패턴 (primaryErrorTypes용)
+          detailedErrorPatterns: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: { type: 'string', enum: ['개념 오류', '절차 오류', '계산 오류', '문제 오독', '기타/부주의'] },
+                frequency: { type: 'number' },
+                description: { type: 'string' }
+              }
+            }
+          }
         }
       },
       suggestedCurriculum: {
@@ -739,10 +990,10 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
         items: {
           type: 'object',
           properties: {
-            month: { type: 'number' },
+            phase: { type: 'string' },
+            duration: { type: 'string' },
             focus: { type: 'string' },
-            goals: { type: 'string' },
-            materials: { type: 'string' }
+            goals: { type: 'array', items: { type: 'string' } }
           }
         }
       },
@@ -752,14 +1003,14 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
 
   try {
     console.log(`[Gemini] Calling model: ${selectedModel}`);
-    console.log(`[Gemini] Files count: ${fileParts.length}`);
+    console.log(`[Gemini] Images count: ${imageParts.length}`);
 
     const response = await ai.models.generateContent({
       model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: LEVEL_TEST_PROMPT }] },
         { role: 'model', parts: [{ text: '네, 레벨 테스트 분석을 시작합니다. Baseline 설정에 집중하여 학생의 현재 상태를 종합적으로 진단하겠습니다.' }] },
-        { role: 'user', parts: [{ text: userPrompt }, ...fileParts] }
+        { role: 'user', parts: [{ text: userPrompt }, ...imageParts] }
       ],
       config: {
         responseMimeType: 'application/json',
@@ -771,7 +1022,8 @@ ${additionalInfo?.parentExpectations ? `- 학부모 기대: ${additionalInfo.par
     const text = response.text;
     if (!text) throw new GeminiApiError('Gemini API 응답이 비어있습니다.');
 
-    return JSON.parse(text) as LevelTestAnalysis;
+    console.log('[Gemini] Response length:', text.length);
+    return cleanAndParseJSON<LevelTestAnalysis>(text);
   } catch (error) {
     console.error('[Gemini] Error in analyzeLevelTest:', error);
     console.error('[Gemini] Error type:', error?.constructor?.name);
@@ -804,6 +1056,12 @@ export interface WeeklyReportInput {
     completed: number;
   };
   teacherNotes: string;
+  // 첨부파일 (스캔본, 문제 풀이 이미지 등)
+  attachments?: Array<{
+    name: string;
+    type: 'image' | 'document';
+    data: string;  // base64
+  }>;
 }
 
 export async function generateWeeklyReport(
@@ -817,6 +1075,62 @@ export async function generateWeeklyReport(
   console.log('[Model Routing] weekly ->', selectedModel);
 
   const contextPrompt = buildContextPrompt(context);
+
+  // ===== 첨부파일(이미지) 처리 =====
+  const imageParts: Array<{ inlineData: { data: string; mimeType: string } }> = [];
+  const imageDescriptions: string[] = [];
+
+  if (input.attachments && input.attachments.length > 0) {
+    input.attachments.forEach((attachment, idx) => {
+      if (attachment.type === 'image' && attachment.data) {
+        // Base64 이미지를 Gemini 형식으로 변환
+        const mimeType = attachment.name.toLowerCase().endsWith('.png')
+          ? 'image/png'
+          : attachment.name.toLowerCase().endsWith('.gif')
+          ? 'image/gif'
+          : 'image/jpeg';
+
+        imageParts.push({
+          inlineData: { data: attachment.data, mimeType }
+        });
+        imageDescriptions.push(`- 이미지 ${idx + 1}: ${attachment.name}`);
+      }
+    });
+
+    if (imageParts.length > 0) {
+      console.log(`[Weekly Report] Processing ${imageParts.length} images for multimodal analysis`);
+    }
+  }
+
+  // 이미지 분석 지시 (이미지가 있을 때만)
+  const imageAnalysisSection = imageParts.length > 0 ? `
+## 첨부된 학습 자료 분석 (매우 중요! - 필수 분석)
+아래 ${imageParts.length}개의 이미지가 첨부되어 있습니다. 각 이미지를 꼼꼼히 분석하세요.
+${imageDescriptions.join('\n')}
+
+### 이미지 분석 지침 (필수 수행!)
+1. **문제 유형 파악**: 어떤 단원/개념의 문제인지 파악
+2. **풀이 과정 분석**: 학생이 어떤 단계로 문제를 풀었는지 상세 분석
+   - 올바른 접근법을 사용했는가?
+   - 풀이를 단계별로 기록했는가?
+   - 계산 과정은 정확한가?
+3. **오류 패턴 탐지**:
+   - 개념적 오류: 공식/정의를 잘못 이해한 경우
+   - 계산 실수: 단순 연산 오류
+   - 풀이 습관: 과정 생략, 검산 미실시 등
+4. **강점 발견**: 정확하게 풀이한 문제, 창의적 접근, 깔끔한 정리 등
+5. **구체적 기록**: 반드시 다음 필드에 기록하세요
+   - factBasedEvidence.imageAnalysis: ["이미지1에서 분수 나눗셈 역수 변환 오류 발견", "이미지2에서 단계별 풀이 습관 확인"] 형식
+   - weeklyAchievements: 이미지에서 관찰된 성취 포함
+   - areasForImprovement: 이미지에서 발견된 개선점 포함
+
+### 이미지 분석 결과 반영 필수 항목
+- factBasedEvidence.imageAnalysis에 최소 3개 이상의 관찰 기록
+- 이미지에서 발견된 오류는 areasForImprovement에 반영
+- 이미지에서 발견된 강점은 weeklyAchievements에 반영
+
+⚠️ 이미지가 첨부되었으면 반드시 이미지 내용을 우선적으로 분석하고, 선생님 메모와 함께 종합 분석하세요.
+` : '';
 
   const userPrompt = `
 ${contextPrompt}
@@ -841,15 +1155,24 @@ ${input.classSessions.map((s, i) => `
 
 ## 선생님 메모
 ${input.teacherNotes}
+${imageAnalysisSection}
+## 생성 항목 (모든 항목에 구체적 근거 포함!)
+1. **학습 내용 평가 (learningContent)**: 이번 주 다룬 개념별 이해도 (이미지 분석 근거 포함)
+2. **주간 성취 (weeklyAchievements)**: 구체적이고 측정 가능한 성취 3-5개 (막연한 표현 금지)
+3. **개선 필요 영역 (areasForImprovement)**: ⚠️ 필수 2-3개! 빈 배열 금지!
+   - 예시: ["분수 나눗셈에서 역수 변환 실수 빈번 - 역수 개념 재학습 필요", "문장제 문제 조건 파악 미흡 - 밑줄 긋기 습관화", "풀이 과정 생략 경향 - 단계별 풀이 연습"]
+4. **복습 과제 (reviewAssignments)**: 5요소 전략 (source, page, number, concept, reason)
+5. **학습 습관 점수 (habitScore)**: 숙제 완료율(40점), 집중도(30점), 이해도(30점) 종합 (0-100점)
+   - score: 계산된 점수
+   - explanation: "숙제 완료율 80%, 집중도 4/5, 이해도 4/5 기준으로 산출"
+6. **다음 주 계획 (nextWeekPlan)**: focus + 구체적 goals 2-3개
+7. **격려 메시지 (encouragement)**: 학부모가 읽기 쉬운 따뜻한 메시지
+8. **팩트 기반 근거 (factBasedEvidence)**: 이미지 분석 결과, 데이터 기반 관찰, 선생님 메모 기반 내용
 
-## 생성 항목
-1. 학습 내용 평가
-2. 주간 성취 정리
-3. 개선 필요 영역
-4. 복습 과제 지정
-5. Micro Loop 피드백 (지난주 목표 점검, 연속성 점수)
-6. 다음 주 계획
-7. 격려 메시지
+⚠️ 필수 확인 사항:
+- areasForImprovement: 절대 빈 배열([])을 반환하지 마세요. 반드시 2-3개 작성!
+- 모든 분석은 입력 데이터(수업 키워드, 선생님 메모, 첨부 이미지)에 기반해야 합니다.
+- 일반적이거나 막연한 표현 대신 구체적인 사실과 관찰을 작성하세요.
 
 응답은 WeeklyReportAnalysis 스키마를 따라주세요.`;
 
@@ -860,26 +1183,133 @@ ${input.teacherNotes}
       weekNumber: { type: 'number' },
       studentName: { type: 'string' },
       studentGrade: { type: 'string' },
-      classSessions: { type: 'array' },
-      learningContent: { type: 'array' },
-      assignmentCompletion: { type: 'object' },
+      classSessions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            date: { type: 'string' },
+            duration: { type: 'number' },
+            keywords: { type: 'array', items: { type: 'string' } },
+            understandingLevel: { type: 'number' },
+            attentionLevel: { type: 'number' }
+          }
+        }
+      },
+      learningContent: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            topic: { type: 'string' },
+            evaluation: { type: 'string' },
+            details: { type: 'string' }
+          }
+        }
+      },
+      assignmentCompletion: {
+        type: 'object',
+        properties: {
+          total: { type: 'number' },
+          completed: { type: 'number' },
+          rate: { type: 'number' },
+          quality: { type: 'string' }
+        }
+      },
       weeklyAchievements: { type: 'array', items: { type: 'string' } },
       areasForImprovement: { type: 'array', items: { type: 'string' } },
-      reviewAssignments: { type: 'array' },
-      nextWeekPlan: { type: 'object' },
-      microLoopFeedback: { type: 'object' },
+      reviewAssignments: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            source: { type: 'string' },
+            page: { type: 'string' },
+            number: { type: 'string' },
+            concept: { type: 'string' },
+            reason: { type: 'string' }
+          }
+        }
+      },
+      nextWeekPlan: {
+        type: 'object',
+        properties: {
+          focus: { type: 'string' },
+          goals: { type: 'array', items: { type: 'string' } },
+          assignments: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      microLoopFeedback: {
+        type: 'object',
+        properties: {
+          lastWeekGoalAchievement: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                goal: { type: 'string' },
+                achieved: { type: 'boolean' },
+                notes: { type: 'string' }
+              }
+            }
+          },
+          continuityScore: { type: 'number' },
+          momentumStatus: { type: 'string' }
+        }
+      },
       encouragement: { type: 'string' },
-      teacherComment: { type: 'string' }
+      teacherComment: { type: 'string' },
+      // ===== 확장 필드 (Phase 1.2) =====
+      habitScore: {
+        type: 'object',
+        properties: {
+          score: { type: 'number' },
+          breakdown: {
+            type: 'object',
+            properties: {
+              assignmentCompletion: { type: 'number' },
+              focusLevel: { type: 'number' },
+              understandingLevel: { type: 'number' }
+            }
+          },
+          trend: { type: 'string' },
+          explanation: { type: 'string' }
+        }
+      },
+      growthMomentum: {
+        type: 'object',
+        properties: {
+          status: { type: 'string' },
+          statusLabel: { type: 'string' },
+          weeklyComparison: { type: 'string' }
+        }
+      },
+      factBasedEvidence: {
+        type: 'object',
+        properties: {
+          imageAnalysis: { type: 'array', items: { type: 'string' } },
+          dataPoints: { type: 'array', items: { type: 'string' } },
+          teacherObservations: { type: 'array', items: { type: 'string' } }
+        }
+      }
     }
   };
 
   try {
+    // 멀티모달 요청 구성: 텍스트 + 이미지
+    const userParts: Array<{ text: string } | { inlineData: { data: string; mimeType: string } }> = [
+      { text: userPrompt },
+      ...imageParts  // 첨부된 이미지들 추가
+    ];
+
     const response = await ai.models.generateContent({
       model: selectedModel,  // 동적 모델 선택 (Hybrid Routing)
       contents: [
         { role: 'user', parts: [{ text: WEEKLY_REPORT_PROMPT }] },
-        { role: 'model', parts: [{ text: '네, 주간 리포트를 생성합니다. Micro Loop 관점에서 지난주와의 연속성을 유지하며 분석하겠습니다.' }] },
-        { role: 'user', parts: [{ text: userPrompt }] }
+        { role: 'model', parts: [{ text: imageParts.length > 0
+          ? '네, 주간 리포트를 생성합니다. 첨부된 이미지를 분석하고, Micro Loop 관점에서 지난주와의 연속성을 유지하며 구체적인 분석을 제공하겠습니다.'
+          : '네, 주간 리포트를 생성합니다. Micro Loop 관점에서 지난주와의 연속성을 유지하며 분석하겠습니다.' }] },
+        { role: 'user', parts: userParts }
       ],
       config: {
         responseMimeType: 'application/json',
@@ -977,38 +1407,166 @@ ${input.testResults.map(t => `- ${t.testName}: ${t.score}/${t.maxScore}`).join('
 ## 선생님 메모
 ${input.teacherNotes}
 
-## 생성 항목
-1. 커리큘럼 진도 평가
-2. 학습 내용 종합 (우수/양호/도전 분류)
-3. 월간 성취 정리
-4. 해결된 취약점
-5. 새로운 도전
+## 생성 항목 (모든 항목에 구체적 데이터 기반 분석 필수!)
+1. 커리큘럼 진도 평가 — 구체적인 단원/개념 언급
+2. 학습 내용 종합 (우수/양호/도전 분류) — 실제 키워드 기반
+3. 월간 성취 정리 — 측정 가능한 성과 3-5개
+4. 해결된 취약점 — 이전 주간 리포트 대비 개선된 것
+5. 새로운 도전 — 이번 달 새로 발견된 취약점
 6. Micro Loop 월간 점검
 7. 부모님 보고 섹션
 8. 다음 달 계획
-9. 단기 비전
 
+## 추가 필수 생성 항목 ⭐
+9. **capabilityScores** (0-100): 5개 역량 점수를 데이터 기반으로 계산
+   - conceptUnderstanding: 수업 이해도 평균을 0-100으로 변환
+   - problemSolving: 문제 풀이 능력 (시험 성과 + 수업 이해도 종합)
+   - learningHabit: 출석률 + 집중도로 계산
+   - assignmentPerformance: 숙제 완료율 그대로 사용
+   - testPerformanceScore: 시험 평균 점수 (없으면 50)
+
+10. **weaknessStatusMap**: 취약점 상태 분류
+    - resolved: 이번 달 극복한 취약점 목록
+    - improving: 개선 중인 취약점 목록
+    - ongoing: 지속되고 있는 취약점 목록
+    - newlyFound: 이번 달 새로 발견된 취약점 목록
+
+11. **monthlyGrowthSummary**: 월간 성장 핵심 요약
+    - headline: 부모가 한눈에 이해할 한 줄 핵심 요약
+    - growthEmoji: 성장 상태 이모지 (🚀/📈/👍/💪 중 하나)
+    - keyAchievement: 가장 큰 성취 1문장
+    - keyFocus: 다음 달 가장 중요한 집중 포인트 1문장
+
+⚠️ 모든 점수와 분석은 입력 데이터에 근거해야 합니다. 근거 없는 추상적 표현 금지.
 응답은 MonthlyReportAnalysis 스키마를 따라주세요.`;
 
   const monthlySchema = {
     type: 'object',
     properties: {
       period: { type: 'string' },
-      month: { type: 'object' },
+      month: {
+        type: 'object',
+        properties: {
+          year: { type: 'number' },
+          month: { type: 'number' }
+        }
+      },
       studentName: { type: 'string' },
-      classSessionsSummary: { type: 'object' },
-      curriculumProgress: { type: 'object' },
-      learningContentSummary: { type: 'object' },
-      testPerformance: { type: 'object' },
-      assignmentSummary: { type: 'object' },
+      classSessionsSummary: {
+        type: 'object',
+        properties: {
+          totalClasses: { type: 'number' },
+          totalHours: { type: 'number' },
+          attendanceRate: { type: 'number' },
+          averageUnderstanding: { type: 'number' },
+          averageAttention: { type: 'number' }
+        }
+      },
+      curriculumProgress: {
+        type: 'object',
+        properties: {
+          startUnit: { type: 'string' },
+          endUnit: { type: 'string' },
+          completionRate: { type: 'number' },
+          paceAssessment: { type: 'string' },
+          paceAdjustmentNeeded: { type: 'string' }
+        }
+      },
+      learningContentSummary: {
+        type: 'object',
+        properties: {
+          excellentTopics: { type: 'array', items: { type: 'string' } },
+          goodTopics: { type: 'array', items: { type: 'string' } },
+          challengingTopics: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      testPerformance: {
+        type: 'object',
+        properties: {
+          testCount: { type: 'number' },
+          averageScore: { type: 'number' },
+          highestScore: { type: 'number' },
+          lowestScore: { type: 'number' },
+          trend: { type: 'string' }
+        }
+      },
+      assignmentSummary: {
+        type: 'object',
+        properties: {
+          totalAssigned: { type: 'number' },
+          completionRate: { type: 'number' },
+          averageQuality: { type: 'number' },
+          consistencyScore: { type: 'number' }
+        }
+      },
       monthlyAchievements: { type: 'array', items: { type: 'string' } },
       resolvedWeaknesses: { type: 'array', items: { type: 'string' } },
       newChallenges: { type: 'array', items: { type: 'string' } },
-      parentReport: { type: 'object' },
-      microLoopMonthlyReview: { type: 'object' },
-      nextMonthPlan: { type: 'object' },
-      shortTermVision: { type: 'object' },
-      teacherMessage: { type: 'string' }
+      parentReport: {
+        type: 'object',
+        properties: {
+          highlights: { type: 'array', items: { type: 'string' } },
+          concerns: { type: 'array', items: { type: 'string' } },
+          recommendations: { type: 'array', items: { type: 'string' } },
+          costInfo: { type: 'string' }
+        }
+      },
+      microLoopMonthlyReview: {
+        type: 'object',
+        properties: {
+          monthlyGoalAchievement: { type: 'number' },
+          weeklyConsistency: { type: 'number' },
+          growthMomentum: { type: 'string' },
+          adjustmentNeeded: { type: 'boolean' },
+          adjustmentRecommendations: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      nextMonthPlan: {
+        type: 'object',
+        properties: {
+          mainGoals: { type: 'array', items: { type: 'string' } },
+          focusAreas: { type: 'array', items: { type: 'string' } },
+          expectedCoverage: { type: 'string' }
+        }
+      },
+      shortTermVision: {
+        type: 'object',
+        properties: {
+          predictedProgress: { type: 'string' },
+          keyMilestones: { type: 'array', items: { type: 'string' } },
+          potentialChallenges: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      teacherMessage: { type: 'string' },
+      // ===== 확장 필드 (Phase 2.3) =====
+      capabilityScores: {
+        type: 'object',
+        properties: {
+          conceptUnderstanding: { type: 'number' },
+          problemSolving: { type: 'number' },
+          learningHabit: { type: 'number' },
+          assignmentPerformance: { type: 'number' },
+          testPerformanceScore: { type: 'number' }
+        }
+      },
+      weaknessStatusMap: {
+        type: 'object',
+        properties: {
+          resolved: { type: 'array', items: { type: 'string' } },
+          improving: { type: 'array', items: { type: 'string' } },
+          ongoing: { type: 'array', items: { type: 'string' } },
+          newlyFound: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      monthlyGrowthSummary: {
+        type: 'object',
+        properties: {
+          headline: { type: 'string' },
+          growthEmoji: { type: 'string' },
+          keyAchievement: { type: 'string' },
+          keyFocus: { type: 'string' }
+        }
+      }
     }
   };
 
@@ -1121,16 +1679,110 @@ ${input.metaProfile ? `
       halfYear: { type: 'string' },
       year: { type: 'number' },
       studentName: { type: 'string' },
-      periodSummary: { type: 'object' },
-      growthTrajectory: { type: 'object' },
-      metaProfileEvolution: { type: 'object' },
-      weaknessReview: { type: 'object' },
-      strengthDevelopment: { type: 'object' },
-      macroLoopAnalysis: { type: 'object' },
-      levelReassessment: { type: 'object' },
-      nextHalfStrategy: { type: 'object' },
-      longTermVisionUpdate: { type: 'object' },
-      parentComprehensiveReport: { type: 'object' },
+      periodSummary: {
+        type: 'object',
+        properties: {
+          totalClasses: { type: 'number' },
+          totalHours: { type: 'number' },
+          totalTests: { type: 'number' },
+          averageScore: { type: 'number' },
+          scoreImprovement: { type: 'number' }
+        }
+      },
+      growthTrajectory: {
+        type: 'object',
+        properties: {
+          startingPoint: { type: 'object', properties: { date: { type: 'string' }, score: { type: 'number' }, level: { type: 'string' } } },
+          currentPoint: { type: 'object', properties: { date: { type: 'string' }, score: { type: 'number' }, level: { type: 'string' } } },
+          growthCurve: { type: 'array', items: { type: 'object', properties: { month: { type: 'string' }, score: { type: 'number' }, milestone: { type: 'string' } } } },
+          growthRate: { type: 'number' },
+          growthType: { type: 'string' }
+        }
+      },
+      metaProfileEvolution: {
+        type: 'object',
+        properties: {
+          errorSignatureChange: {
+            type: 'object',
+            properties: {
+              resolvedPatterns: { type: 'array', items: { type: 'string' } },
+              persistentPatterns: { type: 'array', items: { type: 'string' } },
+              newPatterns: { type: 'array', items: { type: 'string' } },
+              overallTrend: { type: 'string' }
+            }
+          },
+          absorptionRateChange: { type: 'object', properties: { previous: { type: 'number' }, current: { type: 'number' }, trend: { type: 'string' } } },
+          staminaChange: { type: 'object', properties: { previous: { type: 'number' }, current: { type: 'number' }, trend: { type: 'string' } } },
+          metaCognitionChange: { type: 'object', properties: { previous: { type: 'number' }, current: { type: 'number' }, trend: { type: 'string' } } }
+        }
+      },
+      weaknessReview: {
+        type: 'object',
+        properties: {
+          startingWeaknesses: { type: 'array', items: { type: 'string' } },
+          resolved: { type: 'array', items: { type: 'string' } },
+          improved: { type: 'array', items: { type: 'string' } },
+          persistent: { type: 'array', items: { type: 'string' } },
+          new: { type: 'array', items: { type: 'string' } },
+          resolutionRate: { type: 'number' }
+        }
+      },
+      strengthDevelopment: {
+        type: 'object',
+        properties: {
+          consolidatedStrengths: { type: 'array', items: { type: 'string' } },
+          emergingStrengths: { type: 'array', items: { type: 'string' } },
+          leveragedFor: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      macroLoopAnalysis: {
+        type: 'object',
+        properties: {
+          goalAchievementRate: { type: 'number' },
+          monthlyConsistency: { type: 'array', items: { type: 'object', properties: { month: { type: 'string' }, score: { type: 'number' } } } },
+          learningEfficiency: { type: 'number' },
+          strategicAdjustments: {
+            type: 'array',
+            items: { type: 'object', properties: { area: { type: 'string' }, currentApproach: { type: 'string' }, suggestedChange: { type: 'string' }, expectedImpact: { type: 'string' } } }
+          }
+        }
+      },
+      levelReassessment: {
+        type: 'object',
+        properties: {
+          previousLevel: { type: 'string' },
+          currentLevel: { type: 'string' },
+          gradeGrowth: { type: 'number' },
+          comparisonToStandard: { type: 'string' }
+        }
+      },
+      nextHalfStrategy: {
+        type: 'object',
+        properties: {
+          primaryGoals: { type: 'array', items: { type: 'string' } },
+          focusDomains: { type: 'array', items: { type: 'string' } },
+          targetScore: { type: 'number' },
+          keyMilestones: { type: 'array', items: { type: 'object', properties: { month: { type: 'number' }, milestone: { type: 'string' } } } },
+          riskMitigation: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      longTermVisionUpdate: {
+        type: 'object',
+        properties: {
+          yearEndProjection: { type: 'string' },
+          nextYearOutlook: { type: 'string' },
+          potentialPaths: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      parentComprehensiveReport: {
+        type: 'object',
+        properties: {
+          executiveSummary: { type: 'string' },
+          detailedAnalysis: { type: 'string' },
+          investmentReturn: { type: 'string' },
+          recommendations: { type: 'array', items: { type: 'string' } }
+        }
+      },
       teacherAssessment: { type: 'string' }
     }
   };
@@ -1256,19 +1908,118 @@ ${input.metaProfile ? `
       studentName: { type: 'string' },
       startGrade: { type: 'number' },
       endGrade: { type: 'number' },
-      annualStatistics: { type: 'object' },
-      growthStory: { type: 'object' },
-      baselineComparison: { type: 'object' },
-      metaProfileAnnualEvolution: { type: 'object' },
-      weaknessFinalReview: { type: 'object' },
-      strengthFinalReview: { type: 'object' },
-      gradeAchievement: { type: 'object' },
-      annualMacroLoopSummary: { type: 'object' },
-      nextYearPreparation: { type: 'object' },
-      longTermPath: { type: 'object' },
-      growthNarrativeFinal: { type: 'object' },
-      parentAnnualReport: { type: 'object' },
-      teacherAnnualAssessment: { type: 'object' }
+      annualStatistics: {
+        type: 'object',
+        properties: {
+          totalClasses: { type: 'number' },
+          totalHours: { type: 'number' },
+          totalTests: { type: 'number' },
+          totalReports: { type: 'number' },
+          averageScore: { type: 'number' },
+          scoreImprovement: { type: 'number' },
+          attendanceRate: { type: 'number' }
+        }
+      },
+      growthStory: {
+        type: 'object',
+        properties: {
+          beginningState: { type: 'object', properties: { date: { type: 'string' }, description: { type: 'string' } } },
+          majorMilestones: { type: 'array', items: { type: 'object', properties: { date: { type: 'string' }, milestone: { type: 'string' }, significance: { type: 'string' } } } },
+          turningPoints: { type: 'array', items: { type: 'object', properties: { date: { type: 'string' }, event: { type: 'string' }, impact: { type: 'string' } } } },
+          endingState: { type: 'object', properties: { date: { type: 'string' }, description: { type: 'string' } } },
+          narrativeSummary: { type: 'string' }
+        }
+      },
+      baselineComparison: {
+        type: 'object',
+        properties: {
+          currentMetrics: { type: 'array', items: { type: 'object', properties: { domain: { type: 'string' }, initial: { type: 'number' }, current: { type: 'number' }, growth: { type: 'number' }, growthRate: { type: 'number' } } } },
+          overallGrowthRate: { type: 'number' },
+          growthCategory: { type: 'string' }
+        }
+      },
+      metaProfileAnnualEvolution: {
+        type: 'object',
+        properties: {
+          errorSignature: { type: 'object', properties: { improvements: { type: 'array', items: { type: 'string' } }, persistentIssues: { type: 'array', items: { type: 'string' } } } },
+          absorptionRate: { type: 'object', properties: { trend: { type: 'array', items: { type: 'object', properties: { month: { type: 'string' }, score: { type: 'number' } } } }, improvement: { type: 'number' }, assessment: { type: 'string' } } },
+          solvingStamina: { type: 'object', properties: { improvement: { type: 'number' }, assessment: { type: 'string' } } },
+          metaCognition: { type: 'object', properties: { improvement: { type: 'number' }, assessment: { type: 'string' } } }
+        }
+      },
+      weaknessFinalReview: {
+        type: 'object',
+        properties: {
+          totalIdentified: { type: 'number' },
+          resolved: { type: 'array', items: { type: 'string' } },
+          persistent: { type: 'array', items: { type: 'string' } },
+          resolutionRate: { type: 'number' }
+        }
+      },
+      strengthFinalReview: {
+        type: 'object',
+        properties: {
+          coreStrengths: { type: 'array', items: { type: 'string' } },
+          developedStrengths: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      gradeAchievement: {
+        type: 'object',
+        properties: {
+          startLevel: { type: 'string' },
+          endLevel: { type: 'string' },
+          gradeImprovement: { type: 'number' },
+          assessment: { type: 'string' }
+        }
+      },
+      annualMacroLoopSummary: {
+        type: 'object',
+        properties: {
+          goalAchievementRate: { type: 'number' },
+          learningEfficiency: { type: 'number' },
+          keyAccomplishments: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      nextYearPreparation: {
+        type: 'object',
+        properties: {
+          primaryObjectives: { type: 'array', items: { type: 'string' } },
+          prerequisiteGaps: { type: 'array', items: { type: 'string' } },
+          recommendedApproach: { type: 'string' }
+        }
+      },
+      longTermPath: {
+        type: 'object',
+        properties: {
+          threeYearVision: { type: 'string' },
+          potentialTrajectories: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      growthNarrativeFinal: {
+        type: 'object',
+        properties: {
+          headline: { type: 'string' },
+          story: { type: 'string' },
+          keyTheme: { type: 'string' }
+        }
+      },
+      parentAnnualReport: {
+        type: 'object',
+        properties: {
+          executiveSummary: { type: 'string' },
+          highlights: { type: 'array', items: { type: 'string' } },
+          areasOfGrowth: { type: 'array', items: { type: 'string' } },
+          recommendations: { type: 'array', items: { type: 'string' } }
+        }
+      },
+      teacherAnnualAssessment: {
+        type: 'object',
+        properties: {
+          overallEvaluation: { type: 'string' },
+          characterGrowth: { type: 'string' },
+          academicGrowth: { type: 'string' }
+        }
+      }
     }
   };
 
@@ -1353,5 +2104,206 @@ ${JSON.stringify(analysisData, null, 2)}
     // 메타프로필 업데이트 실패 시 빈 객체 반환 (치명적 오류 아님)
     console.error('메타프로필 업데이트 생성 실패');
     return {};
+  }
+}
+
+// ============================================
+// Self-Analysis (학생/학부모 자기 분석)
+// ============================================
+
+const SELF_ANALYSIS_SCHEMA = {
+  type: 'object',
+  properties: {
+    analysisDate: { type: 'string' },
+    problemType: { type: 'string' },
+    topicTags: { type: 'array', items: { type: 'string' } },
+    uploadedBy: { type: 'string' },
+    overallAssessment: { type: 'string' },
+    oneLineSummary: { type: 'string' },
+    strengthsObserved: { type: 'array', items: { type: 'string' } },
+    areasToImprove: { type: 'array', items: { type: 'string' } },
+    comparisonWithHistory: {
+      type: 'object',
+      properties: {
+        improvements: { type: 'array', items: { type: 'string' } },
+        persistentIssues: { type: 'array', items: { type: 'string' } },
+        newObservations: { type: 'array', items: { type: 'string' } },
+        overallTrend: { type: 'string', enum: ['improving', 'stable', 'needs_attention'] },
+        trendSummary: { type: 'string' },
+      },
+    },
+    problemFeedback: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          problemIdentifier: { type: 'string' },
+          observation: { type: 'string' },
+          whatWentWell: { type: 'string' },
+          suggestion: { type: 'string' },
+          errorType: { type: 'string' },
+        },
+      },
+    },
+    nextSteps: {
+      type: 'object',
+      properties: {
+        immediate: { type: 'array', items: { type: 'string' } },
+        thisWeek: { type: 'array', items: { type: 'string' } },
+        studyTip: { type: 'string' },
+      },
+    },
+    encouragement: { type: 'string' },
+    milestone: { type: 'string' },
+  },
+  required: [
+    'analysisDate', 'problemType', 'topicTags', 'uploadedBy',
+    'overallAssessment', 'oneLineSummary', 'strengthsObserved',
+    'areasToImprove', 'comparisonWithHistory', 'problemFeedback',
+    'nextSteps', 'encouragement',
+  ],
+};
+
+/**
+ * 학생/학부모 자기 분석 - 문제풀이 스캔본 분석
+ * @param studentName 학생 이름
+ * @param images 문제풀이 스캔 이미지 (base64)
+ * @param problemType 문제 유형
+ * @param topicTags 주제 태그
+ * @param studentNote 학생 메모
+ * @param uploadedBy 업로드 주체
+ * @param context 누적 학습 컨텍스트
+ */
+export async function analyzeSelfStudy(
+  studentName: string,
+  images: string[],
+  problemType: SelfAnalysisProblemType,
+  topicTags: string[],
+  studentNote: string | undefined,
+  uploadedBy: 'student' | 'parent',
+  context?: AnalysisContextData
+): Promise<SelfAnalysisReport> {
+  const ai = getGeminiClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  const contextPrompt = buildContextPrompt(context);
+
+  const systemPrompt = `당신은 학생의 수학 학습을 따뜻하게 지원하는 AI 학습 코치입니다.
+학생이나 학부모가 직접 업로드한 문제풀이 스캔본을 분석하여,
+학생이 자신의 성장을 느끼고 다음 단계로 나아갈 수 있도록 격려하는 피드백을 제공합니다.
+
+## 핵심 원칙
+1. **격려 우선**: 잘한 점을 먼저, 구체적으로 칭찬할 것
+2. **성장 관점**: 틀린 것이 아니라 "아직 배우는 중"으로 표현
+3. **실용적 피드백**: 당장 실천 가능한 구체적 다음 단계 제시
+4. **개인화**: 누적 학습 데이터를 활용하여 "저번보다", "이번엔" 같은 개인화된 표현 사용
+5. **부모 친화적**: 학부모가 읽어도 이해할 수 있는 평이한 언어
+
+## 분석 관점 (5가지)
+1️⃣ 풀이 접근 방식: 문제를 어떤 방식으로 시도했는가?
+2️⃣ 개념 이해도: 핵심 개념을 얼마나 이해하고 있는가?
+3️⃣ 오류 패턴: 반복되는 실수나 오해가 있는가?
+4️⃣ 풀이 습관: 과정을 체계적으로 기록하고 있는가?
+5️⃣ 성장 신호: 이전 분석 대비 나아진 점은 무엇인가?
+
+## 비교 분석 (누적 데이터 활용)
+- 이전에 있던 문제가 해결되었으면 반드시 언급
+- 새로운 성장 신호가 보이면 구체적으로 칭찬
+- 여전히 지속되는 문제는 개선 방향과 함께 부드럽게 언급`;
+
+  const userPrompt = `${contextPrompt}
+
+## 자기 분석 요청 정보
+- 학생 이름: ${studentName}
+- 분석 날짜: ${today}
+- 문제 유형: ${problemType}
+- 학습 주제: ${topicTags.length > 0 ? topicTags.join(', ') : '지정 없음'}
+- 업로드 주체: ${uploadedBy === 'student' ? '학생 본인' : '학부모'}
+${studentNote ? `- 학생/학부모 메모: "${studentNote}"` : ''}
+
+위 문제풀이 스캔 이미지를 분석하여 ${studentName} 학생을 위한 개인화된 학습 피드백을 제공해주세요.
+학생이 자신의 성장을 체감하고 동기부여를 받을 수 있도록 따뜻하고 구체적인 피드백을 작성해주세요.
+
+출력 형식: JSON (SELF_ANALYSIS_SCHEMA 구조)
+- analysisDate: "${today}"
+- problemType: "${problemType}"
+- topicTags: ${JSON.stringify(topicTags)}
+- uploadedBy: "${uploadedBy}"
+- 나머지 필드: 분석 결과에 따라 작성`;
+
+  const imageParts = images.map((img) => ({
+    inlineData: {
+      data: img,
+      mimeType: 'image/jpeg' as const,
+    },
+  }));
+
+  const routingCtx: ModelRoutingContext = {
+    reportType: 'self_analysis',
+  };
+  const selectedModel = routeModel(routingCtx);
+  createRoutingLog(routingCtx);
+
+  try {
+    const response = await ai.models.generateContent({
+      model: selectedModel,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: systemPrompt + '\n\n' + userPrompt },
+            ...imageParts,
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: SELF_ANALYSIS_SCHEMA,
+      },
+    });
+
+    const text = response.text;
+    if (!text) throw new GeminiApiError('AI 응답이 비어있습니다.');
+
+    const result = cleanAndParseJSON<SelfAnalysisReport>(text);
+    return {
+      ...result,
+      analysisDate: today,
+      problemType,
+      topicTags,
+      uploadedBy,
+    };
+  } catch (error) {
+    if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
+    throw new GeminiApiError('자기 분석 중 오류가 발생했습니다.', error);
+  }
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Helper function to extract and parse JSON from AI response.
+ * Handles Markdown code blocks and provides better error logging for truncated responses.
+ */
+function cleanAndParseJSON<T>(text: string): T {
+  // 1. Remove Markdown code blocks (```json ... ```)
+  let cleanText = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+
+  // 2. Trim whitespace
+  cleanText = cleanText.trim();
+
+  try {
+    return JSON.parse(cleanText) as T;
+  } catch (error) {
+    // Log detailed info for debugging truncation issues
+    console.error('[Gemini Parse Error] Failed to parse JSON.');
+    console.error('[Gemini Parse Error] Text length:', cleanText.length);
+    console.error('[Gemini Parse Error] Last 100 chars:', cleanText.slice(-100));
+    throw new GeminiParseError(
+      `JSON 파싱 실패 (응답 길이: ${cleanText.length}자). 응답이 잘렸을 수 있습니다.`,
+      cleanText
+    );
   }
 }

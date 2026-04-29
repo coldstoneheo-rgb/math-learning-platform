@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import { generateStudyPlanFromPrescription } from '@/lib/study-plan-generator';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
 import type { Student, User, LevelTestAnalysis, StudentMetaProfile, AnalysisData } from '@/types';
 
@@ -15,8 +20,10 @@ export default function NewLevelTestPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
+  const [testDate, setTestDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState({
     previousExperience: '',
@@ -61,22 +68,19 @@ export default function NewLevelTestPage() {
     setLoading(false);
   };
 
-  // 업로드된 파일에서 이미지/PDF base64와 MIME 타입 추출
-  const getFileDataList = (): { data: string; mimeType: string }[] => {
+  // 업로드된 이미지에서 base64 추출 (시험 분석과 동일한 형식)
+  const getImageBase64List = (): string[] => {
     return uploadedFiles
-      .filter(f => f.type === 'image' || f.type === 'pdf')
+      .filter(f => f.type === 'image')
       .map(f => {
-        // data:image/jpeg;base64,xxxx 또는 data:application/pdf;base64,xxxx 형식에서 base64 부분만 추출
-        const base64Data = f.data.split(',')[1] || f.data;
-        // MIME 타입 결정
-        const mimeType = f.type === 'pdf' ? 'application/pdf' : 'image/jpeg';
-        return { data: base64Data, mimeType };
+        // data:image/jpeg;base64,xxxx 형식에서 base64 부분만 추출
+        return f.data.split(',')[1] || f.data;
       });
   };
 
-  // 분석 가능한 파일이 있는지 확인
-  const hasAnalyzableFiles = (): boolean => {
-    return uploadedFiles.some(f => f.type === 'image' || f.type === 'pdf');
+  // 분석 가능한 이미지가 있는지 확인
+  const hasAnalyzableImages = (): boolean => {
+    return uploadedFiles.some(f => f.type === 'image');
   };
 
   const handleAnalyze = async () => {
@@ -87,21 +91,21 @@ export default function NewLevelTestPage() {
       return;
     }
 
-    if (!hasAnalyzableFiles()) {
-      setError('테스트 이미지 또는 PDF를 업로드해주세요.');
+    if (!hasAnalyzableImages()) {
+      setError('테스트 이미지를 업로드해주세요. (PDF는 이미지로 변환 후 업로드)');
       return;
     }
 
     setAnalyzing(true);
 
     try {
-      const testFiles = getFileDataList();
+      const testImages = getImageBase64List();
       const response = await fetch('/api/level-test/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: selectedStudentId,
-          testFiles: testFiles,  // { data, mimeType }[] 형식으로 전송
+          testImages: testImages,  // base64 이미지 배열 (시험 분석과 동일)
           additionalInfo: {
             previousExperience: additionalInfo.previousExperience || undefined,
             parentExpectations: additionalInfo.parentExpectations || undefined,
@@ -156,7 +160,7 @@ export default function NewLevelTestPage() {
           student_id: selectedStudentId,
           report_type: 'level_test',
           test_name: `${student?.name} 레벨 테스트`,
-          test_date: new Date().toISOString().split('T')[0],
+          test_date: testDate,  // 선택한 날짜 사용
           total_score: analysisResult.testResults?.totalScore || 0,
           max_score: analysisResult.testResults?.maxScore || 100,
           analysis_data: analysisResult,
@@ -167,20 +171,71 @@ export default function NewLevelTestPage() {
       if (insertError) throw insertError;
 
       // 2. [Anchor Loop] 메타프로필 Baseline 설정
-      if (insertedReport?.id && analysisResult.initialBaseline) {
+      if (insertedReport?.id) {
         try {
+          const now = new Date().toISOString();
+          const testDateISO = new Date(testDate).toISOString();
+
+          // Baseline 데이터 구성 (TypeScript Baseline 타입에 맞게)
+          const baseline = {
+            assessmentDate: testDateISO,  // 선택한 테스트 날짜 사용
+            levelTestReportId: insertedReport.id,
+            initialLevel: {
+              grade: analysisResult.gradeLevelAssessment?.assessedLevel || student?.grade || 7,
+              percentile: analysisResult.domainDiagnosis?.reduce((sum, d) => sum + (d.percentile || 0), 0) /
+                         (analysisResult.domainDiagnosis?.length || 1) || 50,
+              evaluatedAt: testDateISO,  // 선택한 테스트 날짜 사용
+            },
+            domainScores: analysisResult.domainDiagnosis?.map(d => ({
+              domain: d.domain,
+              score: d.score,
+              maxScore: d.maxScore,
+              percentile: d.percentile,
+            })) || [],
+            initialStrengths: analysisResult.initialBaseline?.strengths
+              ? [analysisResult.initialBaseline.strengths]
+              : [],
+            initialWeaknesses: analysisResult.initialBaseline?.weaknesses
+              ? [analysisResult.initialBaseline.weaknesses]
+              : [],
+            initialLearningStyle: analysisResult.learningStyleDiagnosis?.style || 'mixed',
+          };
+
           // 직접 학생의 meta_profile 업데이트 (Baseline 설정)
+          // detailedErrorPatterns를 primaryErrorTypes 형식으로 변환
+          const primaryErrorTypes = (analysisResult.initialBaseline?.detailedErrorPatterns || []).map(ep => ({
+            type: ep.type,
+            frequency: ep.frequency,
+            recentTrend: 'stable' as const, // 초기값은 stable
+          }));
+
+          // 오답이 있는지 점수로 판단
+          const scorePercent = analysisResult.testResults?.totalScore && analysisResult.testResults?.maxScore
+            ? (analysisResult.testResults.totalScore / analysisResult.testResults.maxScore) * 100
+            : 100;
+          const hasErrors = scorePercent < 100;
+
           const newMetaProfile: Partial<StudentMetaProfile> = {
-            baseline: analysisResult.initialBaseline,
+            baseline,
             errorSignature: {
-              primaryErrorTypes: [],
-              signaturePatterns: [],
+              primaryErrorTypes: primaryErrorTypes.length > 0 ? primaryErrorTypes : [
+                // AI가 패턴을 못 찾았으면 점수 기반으로 추론
+                ...(hasErrors ? [{
+                  type: '기타/부주의' as const,
+                  frequency: Math.round(100 - scorePercent),
+                  recentTrend: 'stable' as const,
+                }] : [])
+              ],
+              signaturePatterns: [
+                ...(analysisResult.initialBaseline?.errorPatterns ? [analysisResult.initialBaseline.errorPatterns] : []),
+                ...(analysisResult.initialBaseline?.detailedErrorPatterns?.map(ep => ep.description) || []),
+              ].filter(Boolean),
               domainVulnerability: analysisResult.domainDiagnosis?.map(d => ({
                 domain: d.domain,
-                vulnerabilityScore: 100 - d.percentile,
-                lastAssessed: new Date().toISOString(),
+                vulnerabilityScore: 100 - (d.percentile || 50),
+                lastAssessed: now,
               })) || [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: now,
             },
             absorptionRate: {
               overallScore: 50, // 초기값
@@ -189,7 +244,7 @@ export default function NewLevelTestPage() {
                            analysisResult.learningStyleDiagnosis?.style === 'logical' ? 'slow-but-deep' : 'steady-grower',
               optimalConditions: analysisResult.learningStyleDiagnosis?.recommendations || [],
               recentTrend: [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: now,
             },
             solvingStamina: {
               overallScore: 50, // 초기값
@@ -197,7 +252,7 @@ export default function NewLevelTestPage() {
               accuracyBySequence: [],
               fatiguePattern: 'consistent',
               recoveryStrategies: [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: now,
             },
             metaCognitionLevel: {
               overallScore: 50, // 초기값
@@ -209,8 +264,10 @@ export default function NewLevelTestPage() {
               },
               developmentStage: 'developing',
               improvementAreas: [],
-              lastUpdated: new Date().toISOString(),
+              lastUpdated: now,
             },
+            lastUpdated: now,
+            version: '1.0',
           };
 
           const { error: updateError } = await supabase
@@ -250,9 +307,30 @@ export default function NewLevelTestPage() {
         } catch (metaError) {
           console.warn('[Level Test] Meta profile API error:', metaError);
         }
+
+        // [Study Plan] AI 처방 → 학습 계획 자동 생성
+        const analysisAsAny = analysisResult as unknown as Record<string, unknown>;
+        const prescriptions = Array.isArray(analysisAsAny?.actionablePrescription)
+          ? analysisAsAny.actionablePrescription as Parameters<typeof generateStudyPlanFromPrescription>[2]
+          : null;
+        if (prescriptions && prescriptions.length > 0) {
+          try {
+            const planResult = await generateStudyPlanFromPrescription(
+              selectedStudentId,
+              insertedReport.id,
+              prescriptions,
+              `${student?.name} 레벨 테스트`
+            );
+            if (planResult.success) {
+              console.log('[Study Plan] 레벨 테스트 학습 계획 생성 완료:', planResult.planId);
+            }
+          } catch (planError) {
+            console.warn('[Study Plan] 학습 계획 생성 오류:', planError);
+          }
+        }
       }
 
-      alert('레벨 테스트 리포트가 저장되었습니다. Baseline이 설정되었습니다.');
+      addToast('레벨 테스트 리포트가 저장되었습니다. Baseline이 설정되었습니다.', 'success');
       router.push('/admin/reports');
     } catch (err: unknown) {
       console.error('저장 오류:', err);
@@ -276,21 +354,18 @@ export default function NewLevelTestPage() {
   const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
-            </a>
+            </Link>
             <h1 className="text-xl font-bold text-gray-900">레벨 테스트 (Baseline 설정)</h1>
           </div>
           <span className="text-gray-600">{user?.name} 선생님</span>
@@ -356,9 +431,26 @@ export default function NewLevelTestPage() {
             )}
           </div>
 
+          {/* 테스트 날짜 선택 */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              2. 테스트 날짜 <span className="text-red-500">*</span>
+            </h2>
+            <p className="text-sm text-gray-500 mb-3">
+              레벨 테스트를 실시한 날짜를 선택하세요. 과거 날짜도 선택 가능합니다.
+            </p>
+            <input
+              type="date"
+              value={testDate}
+              onChange={(e) => setTestDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
           {/* 추가 정보 */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">2. 추가 정보 (선택)</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">3. 추가 정보 (선택)</h2>
 
             <div className="space-y-4">
               <div>
@@ -398,7 +490,7 @@ export default function NewLevelTestPage() {
           {/* 테스트 파일 업로드 */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              3. 테스트 파일 업로드 <span className="text-red-500">*</span>
+              4. 테스트 파일 업로드 <span className="text-red-500">*</span>
             </h2>
 
             <MultiFileUpload
@@ -417,7 +509,7 @@ export default function NewLevelTestPage() {
           {!analysisResult && (
             <button
               onClick={handleAnalyze}
-              disabled={analyzing || !selectedStudentId || !hasAnalyzableFiles()}
+              disabled={analyzing || !selectedStudentId || !hasAnalyzableImages()}
               className="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {analyzing ? (
@@ -437,6 +529,103 @@ export default function NewLevelTestPage() {
           {/* 분석 결과 */}
           {analysisResult && (
             <div className="space-y-6">
+              {/* 분석 완료 헤더 */}
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">✅</span>
+                  <div>
+                    <h3 className="font-semibold text-green-800">AI 분석 완료</h3>
+                    <p className="text-sm text-green-600">아래 결과를 확인 후 저장 버튼을 눌러주세요.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 테스트 점수 요약 */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 테스트 점수</h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    {(() => {
+                      const totalScore = analysisResult.testResults?.totalScore ?? 0;
+                      const maxScore = analysisResult.testResults?.maxScore || 100;
+                      const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+                      return (
+                        <>
+                          <div className="text-4xl font-bold text-indigo-600">
+                            {totalScore}
+                            <span className="text-xl text-gray-400">/{maxScore}점</span>
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            정답률 {percentage}%
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="text-right text-sm text-gray-500">
+                    테스트 일자: {testDate}
+                  </div>
+                </div>
+              </div>
+
+              {/* 오류 패턴 분석 */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 파악된 오류 패턴</h3>
+
+                {analysisResult.initialBaseline?.detailedErrorPatterns && analysisResult.initialBaseline.detailedErrorPatterns.length > 0 ? (
+                  <div className="space-y-3">
+                    {analysisResult.initialBaseline.detailedErrorPatterns.map((pattern, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                            pattern.type === '개념 오류' ? 'bg-red-100 text-red-700' :
+                            pattern.type === '절차 오류' ? 'bg-yellow-100 text-yellow-700' :
+                            pattern.type === '계산 오류' ? 'bg-blue-100 text-blue-700' :
+                            pattern.type === '문제 오독' ? 'bg-purple-100 text-purple-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {pattern.type}
+                          </span>
+                          <span className="text-gray-700">{pattern.description}</span>
+                        </div>
+                        <span className="text-sm font-medium text-orange-600">{pattern.frequency}%</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : analysisResult.initialBaseline?.errorPatterns ? (
+                  <p className="text-gray-600 p-3 bg-gray-50 rounded-lg">
+                    {analysisResult.initialBaseline.errorPatterns}
+                  </p>
+                ) : (
+                  <p className="text-gray-400 p-3 bg-gray-50 rounded-lg italic">
+                    오답이 없거나 오류 패턴이 감지되지 않았습니다.
+                  </p>
+                )}
+              </div>
+
+              {/* 초기 진단 요약 */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 초기 진단 요약 (Baseline)</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <h4 className="font-medium text-green-700 mb-2">💪 강점</h4>
+                    <p className="text-sm text-green-600">{analysisResult.initialBaseline?.strengths || '분석 결과 없음'}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg">
+                    <h4 className="font-medium text-red-700 mb-2">📌 개선 필요</h4>
+                    <p className="text-sm text-red-600">{analysisResult.initialBaseline?.weaknesses || '분석 결과 없음'}</p>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-700 mb-2">📊 현재 수준</h4>
+                    <p className="text-sm text-blue-600">{analysisResult.initialBaseline?.overallLevel || '분석 결과 없음'}</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <h4 className="font-medium text-purple-700 mb-2">🚀 성장 잠재력</h4>
+                    <p className="text-sm text-purple-600">{analysisResult.initialBaseline?.learningPotential || '분석 결과 없음'}</p>
+                  </div>
+                </div>
+              </div>
+
               {/* 학년 수준 평가 */}
               {analysisResult.gradeLevelAssessment && (
                 <div className="bg-white rounded-xl shadow-sm p-6">

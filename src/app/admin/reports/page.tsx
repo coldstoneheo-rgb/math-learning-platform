@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Report, Student, ReportType } from '@/types';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 
 interface ReportWithStudent extends Report {
   students: Pick<Student, 'name' | 'student_id' | 'grade'>;
@@ -24,6 +28,7 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<ReportWithStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState<Set<ReportType | 'all'>>(new Set(['all']));
+  const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
     checkAuthAndLoadReports();
@@ -113,7 +118,7 @@ export default function ReportsPage() {
       .eq('id', report.id);
 
     if (error) {
-      alert('삭제 중 오류가 발생했습니다.');
+      addToast('삭제 중 오류가 발생했습니다.', 'error');
       return;
     }
 
@@ -137,15 +142,12 @@ export default function ReportsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -185,26 +187,26 @@ export default function ReportsPage() {
         {filteredReports.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center">
             <p className="text-gray-500 mb-4">생성된 리포트가 없습니다.</p>
-            <a href="/admin/reports/create" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            <Link href="/admin/reports/create" className="text-indigo-600 hover:text-indigo-700 font-medium">
               첫 리포트 생성하기
-            </a>
+            </Link>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full">
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden overflow-x-auto">
+            <table className="w-full min-w-[500px]">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">학생</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성일</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">관리</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학생</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">제목</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">유형</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">작성일</th>
+                  <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredReports.map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+                    <td className="px-4 md:px-6 py-3 md:py-4">
                       <div className="text-sm font-medium text-gray-900">
                         {report.students?.name || '알 수 없음'}
                       </div>
@@ -212,11 +214,11 @@ export default function ReportsPage() {
                         {report.students && getGradeLabel(report.students.grade)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {report.test_name || getReportTypeLabel(report.report_type)}
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-900 hidden sm:table-cell">
+                      <span className="line-clamp-1">{report.test_name || getReportTypeLabel(report.report_type)}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs rounded ${
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${
                         report.report_type === 'test' ? 'bg-blue-100 text-blue-700' :
                         report.report_type === 'weekly' ? 'bg-green-100 text-green-700' :
                         report.report_type === 'monthly' ? 'bg-purple-100 text-purple-700' :
@@ -225,13 +227,13 @@ export default function ReportsPage() {
                         {getReportTypeLabel(report.report_type)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden md:table-cell whitespace-nowrap">
                       {new Date(report.created_at).toLocaleDateString('ko-KR')}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right whitespace-nowrap">
                       <a
                         href={`/admin/reports/${report.id}`}
-                        className="text-indigo-600 hover:text-indigo-800 text-sm mr-3"
+                        className="text-indigo-600 hover:text-indigo-800 text-sm mr-2 md:mr-3"
                       >
                         보기
                       </a>

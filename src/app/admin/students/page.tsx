@@ -4,12 +4,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Student, User } from '@/types';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 
 export default function StudentsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toasts, addToast, removeToast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [formData, setFormData] = useState({
@@ -138,9 +142,9 @@ export default function StudentsPage() {
 
       await loadStudents();
       closeModal();
-    } catch (err: any) {
+    } catch (err) {
       console.error('저장 오류:', err);
-      setError(err.message || '저장 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '저장 중 오류가 발생���습니다.');
     } finally {
       setSaving(false);
     }
@@ -172,9 +176,9 @@ export default function StudentsPage() {
 
       if (error) throw error;
       await loadStudents();
-    } catch (err: any) {
+    } catch (err) {
       console.error('삭제 오류:', err);
-      alert('삭제 중 오류가 발생했습니다.');
+      addToast(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -204,15 +208,12 @@ export default function StudentsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -251,27 +252,27 @@ export default function StudentsPage() {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full">
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">학생 ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">학년</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">학교</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">시작일</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">관리</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학생 ID</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">이름</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학년</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">학교</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">시작일</th>
+                  <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {students.map((student) => (
                   <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-mono text-gray-500">{student.student_id}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{student.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{getGradeLabel(student.grade)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{student.school || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{student.start_date || '-'}</td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm font-mono text-gray-500">{student.student_id}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm font-medium text-gray-900">{student.name}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600">{getGradeLabel(student.grade)}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden sm:table-cell">{student.school || '-'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden md:table-cell">{student.start_date || '-'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-right">
                       <button
                         onClick={() => handleEdit(student)}
                         className="text-indigo-600 hover:text-indigo-800 text-sm mr-3"
@@ -378,7 +379,7 @@ export default function StudentsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">학습 스타일</label>
                 <select
                   value={formData.learning_style}
-                  onChange={(e) => setFormData({ ...formData, learning_style: e.target.value as any })}
+                  onChange={(e) => setFormData({ ...formData, learning_style: e.target.value as 'visual' | 'verbal' | 'logical' | '' })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                 >
                   <option value="">선택 안 함</option>

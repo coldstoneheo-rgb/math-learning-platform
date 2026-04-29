@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Student, Report, AnalysisData } from '@/types';
+import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis } from '@/types';
+import { HabitTrendChart } from '@/components/report';
 import {
   LineChart,
   Line,
@@ -21,6 +22,7 @@ import {
   Radar,
   Legend,
 } from 'recharts';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface StudentWithReports extends Student {
   reports: Report[];
@@ -32,6 +34,7 @@ export default function ParentDashboard() {
   const [children, setChildren] = useState<StudentWithReports[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState<StudentWithReports | null>(null);
+  const [reportTypeFilter, setReportTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -88,20 +91,21 @@ export default function ParentDashboard() {
       return;
     }
 
-    // 각 자녀의 리포트 조회
-    const childrenWithReports: StudentWithReports[] = [];
-    for (const student of studentData || []) {
-      const { data: reports } = await supabase
+    // 각 자녀의 리포트 병렬 조회 (성능 최적화)
+    const reportPromises = (studentData || []).map(student =>
+      supabase
         .from('reports')
         .select('*')
         .eq('student_id', student.id)
-        .order('test_date', { ascending: false });
+        .order('test_date', { ascending: false })
+    );
 
-      childrenWithReports.push({
-        ...student,
-        reports: reports || [],
-      });
-    }
+    const reportResults = await Promise.all(reportPromises);
+
+    const childrenWithReports: StudentWithReports[] = (studentData || []).map((student, index) => ({
+      ...student,
+      reports: reportResults[index]?.data || [],
+    }));
 
     setChildren(childrenWithReports);
     if (childrenWithReports.length > 0) {
@@ -130,6 +134,7 @@ export default function ParentDashboard() {
       semi_annual: '반기 종합',
       annual: '연간 종합',
       consolidated: '통합 분석',
+      self_analysis: '내 풀이 분석',
     };
     return labels[type] || type;
   };
@@ -143,8 +148,61 @@ export default function ParentDashboard() {
       semi_annual: 'bg-indigo-100 text-indigo-700',
       annual: 'bg-amber-100 text-amber-700',
       consolidated: 'bg-orange-100 text-orange-700',
+      self_analysis: 'bg-emerald-100 text-emerald-700',
     };
     return colors[type] || 'bg-gray-100 text-gray-700';
+  };
+
+  // 리포트 타입별 핵심 지표 추출
+  const getReportKeyMetric = (report: Report): { label: string; value: string; color: string } | null => {
+    const raw = report.analysis_data as unknown as Record<string, unknown>;
+    const reportType = report.report_type;
+
+    if (reportType === 'weekly') {
+      const analysis = (raw?.aiAnalysis ?? raw) as WeeklyReportAnalysis | null;
+      const score = analysis?.habitScore?.score ?? analysis?.microLoopFeedback?.continuityScore;
+      if (score) {
+        const color = score >= 70 ? 'text-green-600' : score >= 50 ? 'text-blue-600' : 'text-amber-600';
+        return { label: '습관', value: `${score}점`, color };
+      }
+    }
+
+    if (reportType === 'monthly') {
+      const analysis = raw as { aiAnalysis?: { monthlyGrowthSummary?: { growthEmoji?: string } } };
+      const emoji = analysis?.aiAnalysis?.monthlyGrowthSummary?.growthEmoji;
+      if (emoji) {
+        return { label: '성장', value: emoji, color: 'text-gray-700' };
+      }
+    }
+
+    if (reportType === 'semi_annual') {
+      const analysis = raw as { growthTrajectory?: { growthRate?: number } };
+      const rate = analysis?.growthTrajectory?.growthRate;
+      if (rate !== undefined) {
+        const color = rate > 0 ? 'text-emerald-600' : rate < 0 ? 'text-red-600' : 'text-gray-600';
+        return { label: '성장률', value: `${rate > 0 ? '+' : ''}${rate}%`, color };
+      }
+    }
+
+    if (reportType === 'annual') {
+      const analysis = raw as { baselineComparison?: { overallGrowthRate?: number } };
+      const rate = analysis?.baselineComparison?.overallGrowthRate;
+      if (rate !== undefined) {
+        const color = rate > 0 ? 'text-emerald-600' : rate < 0 ? 'text-red-600' : 'text-gray-600';
+        return { label: '연간', value: `${rate > 0 ? '+' : ''}${rate}%`, color };
+      }
+    }
+
+    if (reportType === 'self_analysis') {
+      const analysis = raw as { comparisonWithHistory?: { overallTrend?: string } };
+      const trend = analysis?.comparisonWithHistory?.overallTrend;
+      if (trend) {
+        const emoji = trend === 'improving' ? '📈' : trend === 'stable' ? '➡️' : '📌';
+        return { label: '추세', value: emoji, color: 'text-gray-700' };
+      }
+    }
+
+    return null;
   };
 
   // 최근 10개 시험의 점수 추이 계산 (차트용)
@@ -206,6 +264,35 @@ export default function ParentDashboard() {
     return Math.round(recentAvg - pastAvg);
   };
 
+  // 최근 8주 학습 습관 데이터 추출 (주간 리포트 기반)
+  const getHabitTrendData = (reports: Report[]) => {
+    const weeklyReports = reports
+      .filter(r => r.report_type === 'weekly' && r.analysis_data)
+      .slice(0, 8)
+      .reverse();
+
+    if (weeklyReports.length === 0) return [];
+
+    return weeklyReports.map((report, idx) => {
+      const raw = report.analysis_data as unknown as Record<string, unknown>;
+      const analysis = (raw?.aiAnalysis ?? raw) as WeeklyReportAnalysis | null;
+      const habitScore = analysis?.habitScore?.score ?? analysis?.microLoopFeedback?.continuityScore ?? 0;
+      const breakdown = analysis?.habitScore?.breakdown;
+
+      const weekDate = report.test_date ? new Date(report.test_date) : new Date(report.created_at);
+      const weekLabel = weekDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+
+      return {
+        weekNumber: idx + 1,
+        weekLabel,
+        habitScore,
+        assignmentCompletion: breakdown?.assignmentCompletion,
+        focusLevel: breakdown?.focusLevel,
+        understandingLevel: breakdown?.understandingLevel,
+      };
+    });
+  };
+
   // 평균 점수 계산
   const getAverageScore = (reports: Report[]) => {
     const testReports = reports.filter(r => r.report_type === 'test' && r.total_score && r.max_score);
@@ -219,11 +306,7 @@ export default function ParentDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
@@ -344,48 +427,126 @@ export default function ParentDashboard() {
                   growthRate={getGrowthRate(selectedChild.reports)}
                 />
 
-                {/* 최근 리포트 목록 */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">리포트 목록</h3>
+                {/* 학습 습관 추이 (최근 8주) */}
+                {getHabitTrendData(selectedChild.reports).length > 0 && (
+                  <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">📚 학습 습관 추이</h3>
+                    <HabitTrendChart
+                      data={getHabitTrendData(selectedChild.reports)}
+                      showBreakdown={true}
+                      compact={false}
+                    />
+                  </div>
+                )}
 
-                  {selectedChild.reports.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">
-                      아직 생성된 리포트가 없습니다.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {selectedChild.reports.map((report) => (
-                        <a
-                          key={report.id}
-                          href={`/parent/reports/${report.id}`}
-                          className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                {/* 아이 풀이 분석받기 배너 */}
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-5 mb-6 text-white">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">📸</span>
+                      <div>
+                        <h3 className="font-bold mb-0.5">아이 풀이를 AI가 분석해드려요</h3>
+                        <p className="text-emerald-100 text-xs">
+                          풀이 사진을 올리면 누적 학습 데이터와 비교하여 성장 분석을 제공합니다.
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href="/parent/self-analysis/new"
+                      className="flex-shrink-0 px-4 py-2 bg-white text-emerald-700 font-semibold rounded-lg hover:bg-emerald-50 transition-colors text-sm"
+                    >
+                      분석받기 →
+                    </a>
+                  </div>
+                </div>
+
+                {/* 리포트 목록 */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      리포트 목록
+                      <span className="ml-2 text-sm font-normal text-gray-400">
+                        ({selectedChild.reports.filter(r => reportTypeFilter === 'all' || r.report_type === reportTypeFilter).length}개)
+                      </span>
+                    </h3>
+                    {/* 타입 필터 */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { value: 'all', label: '전체' },
+                        { value: 'test', label: '시험' },
+                        { value: 'level_test', label: '레벨테스트' },
+                        { value: 'weekly', label: '주간' },
+                        { value: 'monthly', label: '월간' },
+                        { value: 'semi_annual', label: '반기' },
+                        { value: 'annual', label: '연간' },
+                        { value: 'self_analysis', label: '내 풀이' },
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setReportTypeFilter(opt.value)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            reportTypeFilter === opt.value
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
                         >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <span className={`inline-block px-2 py-1 text-xs font-medium rounded mb-2 ${getReportTypeBadgeColor(report.report_type)}`}>
-                                {getReportTypeLabel(report.report_type)}
-                              </span>
-                              <h4 className="font-medium text-gray-900">
-                                {report.test_name || '리포트'}
-                              </h4>
-                              <p className="text-sm text-gray-500 mt-1">
-                                {report.test_date || new Date(report.created_at).toLocaleDateString('ko-KR')}
-                              </p>
-                            </div>
-                            {report.total_score !== null && report.max_score && (
-                              <div className="text-right">
-                                <div className="text-2xl font-bold text-indigo-600">
-                                  {report.total_score}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  / {report.max_score}점
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </a>
+                          {opt.label}
+                        </button>
                       ))}
                     </div>
+                  </div>
+
+                  {selectedChild.reports.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">아직 생성된 리포트가 없습니다.</p>
+                  ) : (
+                    <>
+                      {selectedChild.reports.filter(r => reportTypeFilter === 'all' || r.report_type === reportTypeFilter).length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <p className="text-sm">해당 유형의 리포트가 없습니다.</p>
+                          <button onClick={() => setReportTypeFilter('all')} className="mt-2 text-xs text-indigo-500 hover:underline">
+                            전체 보기
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {selectedChild.reports
+                            .filter(r => reportTypeFilter === 'all' || r.report_type === reportTypeFilter)
+                            .map((report) => (
+                              <a
+                                key={report.id}
+                                href={`/parent/reports/${report.id}`}
+                                className="block p-4 border border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                              >
+                                <div className="flex justify-between items-start gap-3">
+                                  <div className="min-w-0">
+                                    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded mb-1.5 ${getReportTypeBadgeColor(report.report_type)}`}>
+                                      {getReportTypeLabel(report.report_type)}
+                                    </span>
+                                    <h4 className="font-medium text-gray-900 truncate">{report.test_name || '리포트'}</h4>
+                                    <p className="text-sm text-gray-500 mt-0.5">
+                                      {report.test_date || new Date(report.created_at).toLocaleDateString('ko-KR')}
+                                    </p>
+                                  </div>
+                                  {report.total_score !== null && report.max_score ? (
+                                    <div className="text-right shrink-0">
+                                      <div className="text-2xl font-bold text-indigo-600">{report.total_score}</div>
+                                      <div className="text-xs text-gray-500">/ {report.max_score}점</div>
+                                    </div>
+                                  ) : (() => {
+                                    const metric = getReportKeyMetric(report);
+                                    return metric ? (
+                                      <div className="text-right shrink-0">
+                                        <div className={`text-xl font-bold ${metric.color}`}>{metric.value}</div>
+                                        <div className="text-xs text-gray-500">{metric.label}</div>
+                                      </div>
+                                    ) : null;
+                                  })()}
+                                </div>
+                              </a>
+                            ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </>

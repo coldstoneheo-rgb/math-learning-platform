@@ -186,8 +186,8 @@ export default function StrategiesPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-4 flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
+        <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0 sm:min-w-[180px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">학생 선택</label>
             <select
               value={selectedStudent || ''}
@@ -203,7 +203,7 @@ export default function StrategiesPage() {
             </select>
           </div>
 
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1 min-w-0 sm:min-w-[180px]">
             <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
             <select
               value={selectedStatus}
@@ -364,18 +364,18 @@ function CompleteStrategyModal({ strategy, onClose, onSave }: CompleteStrategyMo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <h3 className="text-lg font-bold text-gray-800 mb-4">전략 완료 기록</h3>
 
           <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <p className="font-medium text-gray-800">{strategy.strategy_content?.title}</p>
+            <p className="font-medium text-gray-800 line-clamp-2">{strategy.strategy_content?.title}</p>
             <p className="text-sm text-gray-600">{strategy.students?.name}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   실행 전 점수 (%)

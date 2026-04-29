@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateAnnualReport, AnnualReportInput } from '@/lib/gemini';
 import { buildAnalysisContext } from '@/lib/context-builder';
-import { applyRateLimit } from '@/lib/rate-limiter';
+import { applyRateLimitAsync } from '@/lib/rate-limiter';
 import { annualReportRequestSchema, validateRequest } from '@/lib/validations';
 import type { AnnualReportAnalysis, StudentMetaProfile } from '@/types';
 
@@ -31,7 +31,7 @@ export async function POST(
 ): Promise<NextResponse<GenerateAnnualReportResponse>> {
   try {
     // 0. Rate Limiting: AI 분석은 분당 5회 제한
-    const rateLimitResult = applyRateLimit(request, 'AI_ANALYSIS');
+    const rateLimitResult = await applyRateLimitAsync(request, 'AI_ANALYSIS');
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { success: false, error: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' },

@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Student } from '@/types';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 
 interface ParentWithChildren extends User {
   students: Pick<Student, 'id' | 'name' | 'grade'>[];
@@ -15,6 +18,7 @@ export default function ParentsPage() {
   const [parents, setParents] = useState<ParentWithChildren[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toasts, addToast, removeToast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [selectedParent, setSelectedParent] = useState<ParentWithChildren | null>(null);
@@ -112,40 +116,28 @@ export default function ParentsPage() {
     setSaving(true);
 
     try {
-      const supabase = createClient();
-
-      // 1. Supabase Auth로 계정 생성
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('계정 생성 실패');
-
-      // 2. API Route를 통해 users 테이블에 레코드 생성 (service_role 사용)
-      const createUserResponse = await fetch('/api/auth/create-user', {
+      // 서버 사이드 API로 학부모 계정 생성 (현재 선생님 세션 유지)
+      const response = await fetch('/api/auth/create-parent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: authData.user.id,
           email: formData.email,
           name: formData.name,
-          role: 'parent',
+          password: formData.password,
         }),
       });
 
-      if (!createUserResponse.ok) {
-        const errorData = await createUserResponse.json();
-        throw new Error(errorData.error || 'Failed to create user profile');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '계정 생성에 실패했습니다.');
       }
 
       setSuccessMessage(`학부모 계정이 생성되었습니다. (${formData.email})`);
       await loadParents();
       closeModal();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('계정 생성 오류:', err);
-      setError(err.message || '계정 생성 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '계정 생성 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
@@ -170,9 +162,9 @@ export default function ParentsPage() {
       setSuccessMessage('자녀가 연결되었습니다.');
       await Promise.all([loadParents(), loadStudents()]);
       closeLinkModal();
-    } catch (err: any) {
+    } catch (err) {
       console.error('연결 오류:', err);
-      setError(err.message || '연결 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '연결 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
@@ -192,15 +184,15 @@ export default function ParentsPage() {
 
       setSuccessMessage('연결이 해제되었습니다.');
       await Promise.all([loadParents(), loadStudents()]);
-    } catch (err: any) {
+    } catch (err) {
       console.error('연결 해제 오류:', err);
-      alert('연결 해제 중 오류가 발생했습니다.');
+      addToast('연결 해제 중 오류가 발생했습니다.', 'error');
     }
   };
 
   const handleDeleteParent = async (parent: ParentWithChildren) => {
     if (parent.students.length > 0) {
-      alert('먼저 연결된 자녀를 모두 해제해주세요.');
+      addToast('먼저 연결된 자녀를 모두 해제해주세요.', 'warning');
       return;
     }
 
@@ -221,9 +213,9 @@ export default function ParentsPage() {
 
       setSuccessMessage('학부모 계정이 삭제되었습니다.');
       await loadParents();
-    } catch (err: any) {
+    } catch (err) {
       console.error('삭제 오류:', err);
-      alert(err.message || '삭제 중 오류가 발생했습니다.');
+      addToast(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -261,15 +253,12 @@ export default function ParentsPage() {
   const availableStudents = students.filter(s => !s.parent_id);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       {/* 헤더 */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">

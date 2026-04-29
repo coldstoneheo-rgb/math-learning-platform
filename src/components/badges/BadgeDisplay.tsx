@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Lock, PartyPopper, Trophy } from 'lucide-react';
 import type { Achievement } from '@/lib/badge-service';
 
 interface BadgeDisplayProps {
@@ -55,7 +56,7 @@ export default function BadgeDisplay({
         onMouseLeave={() => setShowTooltip(false)}
       >
         <span className={sizeStyle.icon}>
-          {isLocked ? '🔒' : achievement.icon}
+          {isLocked ? <Lock className="w-5 h-5 text-gray-400" /> : achievement.icon}
         </span>
 
         {/* 티어 표시 (lg 사이즈일 때만) */}
@@ -148,8 +149,8 @@ export function NewBadgeNotification({ achievement, onClose }: NewBadgeNotificat
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center animate-bounceIn">
         {/* 축하 이펙트 */}
-        <div className="text-6xl mb-4 animate-bounce">
-          🎊
+        <div className="mb-4 animate-bounce">
+          <PartyPopper className="w-16 h-16 text-amber-500 mx-auto" />
         </div>
 
         <h2 className="text-xl font-bold text-gray-800 mb-2">
@@ -213,7 +214,7 @@ export function BadgeSummaryCard({ totalBadges, totalPoints, recentBadges }: Bad
         </div>
       ) : (
         <div className="text-center py-4 text-gray-400">
-          <span className="text-2xl">🏆</span>
+          <Trophy className="w-8 h-8 mx-auto text-gray-300" />
           <p className="mt-2 text-sm">아직 획득한 배지가 없습니다</p>
         </div>
       )}

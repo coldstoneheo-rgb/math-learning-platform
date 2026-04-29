@@ -2,9 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import type { Student, User, WeeklyReportAnalysis, Schedule, AnalysisData } from '@/types';
 
 interface WeeklyFormData {
@@ -23,6 +27,12 @@ function getMonthWeekFormat(date: Date): string {
   const day = date.getDate();
   const weekOfMonth = Math.ceil(day / 7);
   return `${month}월 ${weekOfMonth}주차`;
+}
+
+// 주차 번호 추출 (1~5)
+function getWeekNumber(date: Date): number {
+  const day = date.getDate();
+  return Math.ceil(day / 7);
 }
 
 // 이번 주 시작/종료일 계산
@@ -47,15 +57,31 @@ function getDatesForDayOfWeek(
   endDate: string
 ): string[] {
   const dates: string[] = [];
+
+  // 날짜 유효성 검사
+  if (!startDate || !endDate) return dates;
+
   const start = new Date(startDate);
   const end = new Date(endDate);
 
+  // Invalid Date 체크
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return dates;
+
+  // 날짜 범위 제한 (최대 31일)
+  const maxDays = 31;
+  const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysDiff < 0 || daysDiff > maxDays) return dates;
+
   const current = new Date(start);
-  while (current <= end) {
+  let iterations = 0;
+  const maxIterations = maxDays + 1;
+
+  while (current <= end && iterations < maxIterations) {
     if (current.getDay() === dayOfWeek) {
       dates.push(current.toISOString().split('T')[0]);
     }
     current.setDate(current.getDate() + 1);
+    iterations++;
   }
 
   return dates;
@@ -68,6 +94,7 @@ export default function NewWeeklyReportPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
   const [studentSchedules, setStudentSchedules] = useState<Schedule[]>([]);
@@ -124,14 +151,15 @@ export default function NewWeeklyReportPage() {
         setStudentSchedules(schedules);
 
         // 해당 주의 수업 날짜 자동 계산
-        const classDates: string[] = [];
+        let classDates: string[] = [];
         schedules.forEach((schedule) => {
           const dates = getDatesForDayOfWeek(
             schedule.day_of_week,
             formData.startDate,
             formData.endDate
           );
-          classDates.push(...dates);
+          // spread 대신 concat 사용 (스택 오버플로우 방지)
+          classDates = classDates.concat(dates);
         });
 
         // 날짜 정렬
@@ -165,30 +193,47 @@ export default function NewWeeklyReportPage() {
 
   // 날짜 변경 시 monthWeek 및 수업일정 업데이트
   useEffect(() => {
-    const startDate = new Date(formData.startDate);
-    setFormData((prev) => ({
-      ...prev,
-      monthWeek: getMonthWeekFormat(startDate),
-      period: `${prev.startDate} ~ ${prev.endDate}`,
-    }));
+    // 날짜 유효성 검사
+    if (!formData.startDate || !formData.endDate) return;
 
-    // 학생이 선택되어 있으면 수업 일정 재계산
+    const startDate = new Date(formData.startDate);
+    if (isNaN(startDate.getTime())) return;
+
+    const newMonthWeek = getMonthWeekFormat(startDate);
+    const newPeriod = `${formData.startDate} ~ ${formData.endDate}`;
+
+    // 수업 일정 재계산
+    let newClassDates: string[] = [];
     if (selectedStudentId && studentSchedules.length > 0) {
-      const classDates: string[] = [];
       studentSchedules.forEach((schedule) => {
         const dates = getDatesForDayOfWeek(
           schedule.day_of_week,
           formData.startDate,
           formData.endDate
         );
-        classDates.push(...dates);
+        // spread 대신 concat 사용 (스택 오버플로우 방지)
+        newClassDates = newClassDates.concat(dates);
       });
-      classDates.sort();
-      setFormData((prev) => ({
-        ...prev,
-        classDates: classDates.length > 0 ? classDates : [],
-      }));
+      newClassDates.sort();
     }
+
+    // 한 번에 업데이트 (불필요한 리렌더 방지)
+    setFormData((prev) => {
+      // 변경이 없으면 업데이트하지 않음
+      if (
+        prev.monthWeek === newMonthWeek &&
+        prev.period === newPeriod &&
+        JSON.stringify(prev.classDates) === JSON.stringify(newClassDates)
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        monthWeek: newMonthWeek,
+        period: newPeriod,
+        classDates: newClassDates,
+      };
+    });
   }, [formData.startDate, formData.endDate, selectedStudentId, studentSchedules]);
 
   const checkAuthAndLoadData = async () => {
@@ -239,30 +284,28 @@ export default function NewWeeklyReportPage() {
     setGeneratingAi(true);
 
     try {
-      // 이미지 파일 추출
-      const imageFiles = uploadedFiles
-        .filter((f) => f.type === 'image')
-        .map((f) => f.data.split(',')[1]);
+      // 시작일 기준 주차 번호 계산
+      const startDateObj = new Date(formData.startDate);
+      const weekNumber = getWeekNumber(startDateObj);
 
-      // PDF와 CSV 파일 데이터 추출
-      const pdfFiles = uploadedFiles.filter((f) => f.type === 'pdf').map((f) => f.data);
-      const csvFiles = uploadedFiles.filter((f) => f.type === 'csv').map((f) => f.data);
+      // 첨부파일을 API에 전달 (이미지 분석을 위해)
+      const attachments = uploadedFiles.map(f => ({
+        name: f.name,
+        type: f.type.startsWith('image/') ? 'image' as const : 'document' as const,
+        data: f.data,  // base64
+      }));
 
       const response = await fetch('/api/weekly-report/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: selectedStudentId,
-          year: currentDate.getFullYear(),
-          monthWeek: formData.monthWeek,
+          year: startDateObj.getFullYear(),
+          weekNumber: weekNumber,
           startDate: formData.startDate,
           endDate: formData.endDate,
-          classDates: formData.classDates,
           teacherNotes: formData.classNotes || '주간 종합 평가 요청',
-          // 파일 데이터
-          imageFiles,
-          pdfFiles,
-          csvFiles,
+          attachments: attachments.length > 0 ? attachments : undefined,
         }),
       });
 
@@ -411,7 +454,7 @@ export default function NewWeeklyReportPage() {
         }
       }
 
-      alert('주간 리포트가 저장되었습니다.');
+      addToast('주간 리포트가 저장되었습니다.', 'success');
       router.push('/admin/reports');
     } catch (err: unknown) {
       console.error('저장 오류:', err);
@@ -433,21 +476,18 @@ export default function NewWeeklyReportPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
-            </a>
+            </Link>
             <h1 className="text-xl font-bold text-gray-900">주간 리포트 작성</h1>
           </div>
           <span className="text-gray-600">{user?.name} 선생님</span>
@@ -530,49 +570,86 @@ export default function NewWeeklyReportPage() {
               </div>
             </div>
 
-            {/* 자동 로드된 수업 일정 표시 */}
+            {/* 수업 일정 (편집 가능) */}
             {selectedStudentId && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">수업 일정 (자동 로드)</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    이번 주 수업일 <span className="text-red-500">*</span>
+                  </label>
                   {loadingSchedules && <span className="text-xs text-gray-500">로딩 중...</span>}
                 </div>
 
-                {studentSchedules.length > 0 ? (
-                  <div className="space-y-2">
+                {studentSchedules.length > 0 && (
+                  <div className="mb-3 pb-3 border-b border-gray-200">
+                    <p className="text-xs text-gray-500 mb-2">📅 등록된 정기 일정:</p>
                     <div className="flex flex-wrap gap-2">
                       {studentSchedules.map((schedule) => (
                         <span
                           key={schedule.id}
-                          className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
+                          className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs"
                         >
                           {getDayLabel(schedule.day_of_week)} {schedule.start_time}-{schedule.end_time}
                         </span>
                       ))}
                     </div>
-
-                    {formData.classDates.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs text-gray-600 mb-1">이번 주 수업일:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.classDates.map((date, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"
-                            >
-                              {date}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    등록된 수업 일정이 없습니다.{' '}
+                )}
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-2">
+                    실제 진행한 수업일을 자유롭게 추가/수정할 수 있습니다. (보충 수업, 변경된 일정 반영)
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {formData.classDates.map((date, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded"
+                      >
+                        <input
+                          type="date"
+                          value={date}
+                          onChange={(e) => {
+                            const newDates = [...formData.classDates];
+                            newDates[idx] = e.target.value;
+                            setFormData((prev) => ({ ...prev, classDates: newDates.sort() }));
+                          }}
+                          className="text-xs bg-transparent border-none focus:ring-0 p-0 w-28"
+                        />
+                        <button
+                          onClick={() => {
+                            const newDates = formData.classDates.filter((_, i) => i !== idx);
+                            setFormData((prev) => ({ ...prev, classDates: newDates }));
+                          }}
+                          className="text-blue-500 hover:text-red-500 text-sm font-bold"
+                          title="삭제"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      const today = new Date().toISOString().split('T')[0];
+                      setFormData((prev) => ({
+                        ...prev,
+                        classDates: [...prev.classDates, today].sort(),
+                      }));
+                    }}
+                    className="text-sm text-green-600 hover:text-green-700 font-medium"
+                  >
+                    + 수업일 추가
+                  </button>
+                </div>
+
+                {formData.classDates.length === 0 && (
+                  <p className="text-sm text-amber-600 mt-2">
+                    ⚠️ 수업일이 없습니다. 수업일을 추가하거나{' '}
                     <a href="/admin/schedules" className="text-green-600 hover:underline">
-                      일정 등록하기
+                      정기 일정을 등록
                     </a>
+                    해주세요.
                   </p>
                 )}
               </div>
@@ -722,28 +799,46 @@ export default function NewWeeklyReportPage() {
                   </button>
                 </div>
 
-                {/* Micro Loop 피드백 (편집 가능) */}
+                {/* 학습 습관 점수 & 성장 모멘텀 (편집 가능) */}
                 <div className="p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium text-blue-800 mb-3">🔄 Micro Loop 피드백</h4>
+                  <h4 className="font-medium text-blue-800 mb-3">📊 학습 습관 & 성장 모멘텀</h4>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs text-blue-700 mb-1">연속성 점수 (0-100)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={editableAnalysis.continuityScore}
-                        onChange={(e) =>
-                          setEditableAnalysis((prev) => ({
-                            ...prev,
-                            continuityScore: Number(e.target.value),
-                          }))
-                        }
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                      />
+                      <label className="block text-xs text-blue-700 mb-1">
+                        학습 습관 점수 (0-100)
+                        <span className="ml-1 text-blue-500 font-normal">— AI 자동 계산됨</span>
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={editableAnalysis.continuityScore}
+                          onChange={(e) =>
+                            setEditableAnalysis((prev) => ({
+                              ...prev,
+                              continuityScore: Number(e.target.value),
+                            }))
+                          }
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                        <span className={`text-sm font-bold flex-shrink-0 ${
+                          editableAnalysis.continuityScore >= 70 ? 'text-green-600' :
+                          editableAnalysis.continuityScore >= 50 ? 'text-blue-600' : 'text-amber-600'
+                        }`}>
+                          {editableAnalysis.continuityScore >= 70 ? '😊 우수' :
+                           editableAnalysis.continuityScore >= 50 ? '🙂 양호' : '💪 개선 필요'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2 leading-relaxed">
+                        <strong>점수 해석:</strong> 숙제 완료율(40%) + 집중도(30%) + 이해도(30%)로 계산됩니다.<br/>
+                        • <strong>70점 이상:</strong> 학습 습관이 잘 형성됨<br/>
+                        • <strong>50-69점:</strong> 습관 형성 중, 꾸준히 유지 필요<br/>
+                        • <strong>50점 미만:</strong> 습관 개선 필요, 작은 목표부터 시작
+                      </p>
                     </div>
                     <div>
-                      <label className="block text-xs text-blue-700 mb-1">모멘텀 상태</label>
+                      <label className="block text-xs text-blue-700 mb-1">성장 모멘텀</label>
                       <select
                         value={editableAnalysis.momentumStatus}
                         onChange={(e) =>
@@ -754,10 +849,10 @@ export default function NewWeeklyReportPage() {
                         }
                         className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                       >
-                        <option value="accelerating">🚀 가속 중</option>
-                        <option value="maintaining">➡️ 유지</option>
-                        <option value="slowing">⬇️ 둔화</option>
-                        <option value="recovering">↩️ 회복 중</option>
+                        <option value="accelerating">🚀 빠르게 성장 중</option>
+                        <option value="maintaining">📈 꾸준히 성장 중</option>
+                        <option value="slowing">💪 조금 더 힘내볼까요</option>
+                        <option value="recovering">🌱 다시 활기를 찾는 중</option>
                       </select>
                     </div>
                   </div>

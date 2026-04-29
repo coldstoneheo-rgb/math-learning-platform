@@ -12,9 +12,7 @@ import type {
   MicroLoopData,
   MacroLoopData,
   ReportType,
-  Report,
-  StudentWeakness,
-  StudentStrength,
+  StrategyFeedbackContext,
 } from '@/types';
 
 // ============================================
@@ -40,12 +38,14 @@ export async function buildAnalysisContext(
     activeWeaknesses,
     activeStrengths,
     growthLoopStatus,
+    strategyFeedback,
   ] = await Promise.all([
     getStudentMetaProfile(studentId),
     getRecentReports(studentId, reportType),
     getActiveWeaknesses(studentId),
     getActiveStrengths(studentId),
     getCurrentGrowthLoop(studentId, reportType),
+    getStrategyFeedback(studentId),
   ]);
 
   // 이전 비전 검증 데이터 가져오기
@@ -59,6 +59,7 @@ export async function buildAnalysisContext(
     currentMicroLoop: growthLoopStatus?.microLoop,
     currentMacroLoop: growthLoopStatus?.macroLoop,
     previousVision,
+    strategyFeedback,
   };
 }
 
@@ -877,4 +878,161 @@ export async function updateGrowthLoopPerformance(
   }
 
   return { success: true };
+}
+
+// ============================================
+// 전략 피드백 데이터 수집 (Phase 2: 피드백 루프)
+// ============================================
+
+/**
+ * 학생의 전략 피드백 데이터 조회
+ * AI 분석에서 과거 전략 효과를 참조하여 새로운 전략 제안에 활용
+ */
+async function getStrategyFeedback(
+  studentId: number
+): Promise<StrategyFeedbackContext | undefined> {
+  const supabase = createClient();
+
+  // 완료된 전략 데이터 조회
+  const { data: strategies, error } = await supabase
+    .from('strategy_tracking')
+    .select('*')
+    .eq('student_id', studentId)
+    .eq('execution_status', 'completed')
+    .order('completed_at', { ascending: false })
+    .limit(50);
+
+  if (error || !strategies || strategies.length === 0) {
+    return undefined;
+  }
+
+  // 효과적인 전략 타입 정의
+  interface EffectiveStrategyData {
+    type: string;
+    title: string;
+    concept: string | null;
+    improvements: number[];
+    count: number;
+  }
+
+  // 효과적인 전략 추출 (개선율 10% 이상)
+  const effectiveStrategies = strategies
+    .filter(s => (s.improvement_rate || 0) >= 10)
+    .reduce((acc, s) => {
+      const strategyContent = s.strategy_content as { type?: string; title?: string } | null;
+      const key = `${strategyContent?.type}|${strategyContent?.title}`;
+      const existing = acc.get(key);
+
+      if (existing) {
+        existing.improvements.push(s.improvement_rate || 0);
+        existing.count++;
+      } else {
+        acc.set(key, {
+          type: strategyContent?.type || 'unknown',
+          title: strategyContent?.title || 'unknown',
+          concept: s.target_concept,
+          improvements: [s.improvement_rate || 0],
+          count: 1,
+        });
+      }
+      return acc;
+    }, new Map<string, EffectiveStrategyData>());
+
+  const effectiveList = (Array.from(effectiveStrategies.values()) as EffectiveStrategyData[])
+    .filter(e => e.count >= 1)
+    .map(e => ({
+      type: e.type,
+      title: e.title,
+      concept: e.concept || undefined,
+      avgImprovement: Math.round(e.improvements.reduce((a, b) => a + b, 0) / e.improvements.length * 10) / 10,
+      successRate: 100, // 이미 10% 이상 필터링됨
+      usageCount: e.count,
+    }))
+    .sort((a, b) => b.avgImprovement - a.avgImprovement)
+    .slice(0, 5);
+
+  // 비효과적인 전략 추출 (개선율 5% 미만)
+  const ineffectiveStrategies = strategies
+    .filter(s => (s.improvement_rate || 0) < 5)
+    .slice(0, 5)
+    .map(s => {
+      const strategyContent = s.strategy_content as { type?: string; title?: string } | null;
+      return {
+        type: strategyContent?.type || 'unknown',
+        title: strategyContent?.title || 'unknown',
+        concept: s.target_concept || undefined,
+        improvement: s.improvement_rate || 0,
+        feedback: s.feedback || undefined,
+      };
+    });
+
+  // 개념별 개선 현황
+  const conceptMap = new Map<string, { total: number; count: number }>();
+  strategies.forEach(s => {
+    if (s.target_concept && s.improvement_rate !== null) {
+      const existing = conceptMap.get(s.target_concept) || { total: 0, count: 0 };
+      existing.total += s.improvement_rate;
+      existing.count++;
+      conceptMap.set(s.target_concept, existing);
+    }
+  });
+
+  const conceptImprovements = Array.from(conceptMap.entries())
+    .map(([concept, data]) => ({
+      concept,
+      totalImprovement: Math.round(data.total * 10) / 10,
+      occurrenceCount: data.count,
+    }))
+    .sort((a, b) => b.totalImprovement - a.totalImprovement)
+    .slice(0, 10);
+
+  // 전략 유형별 통계
+  const typeMap = new Map<string, { improvements: number[]; completed: number; total: number }>();
+  strategies.forEach(s => {
+    const strategyContent = s.strategy_content as { type?: string } | null;
+    const type = strategyContent?.type || 'unknown';
+    const existing = typeMap.get(type) || { improvements: [], completed: 0, total: 0 };
+    existing.total++;
+    if (s.execution_status === 'completed') {
+      existing.completed++;
+      if (s.improvement_rate !== null) {
+        existing.improvements.push(s.improvement_rate);
+      }
+    }
+    typeMap.set(type, existing);
+  });
+
+  const typeStats = Array.from(typeMap.entries()).map(([type, data]) => ({
+    type,
+    avgImprovement: data.improvements.length > 0
+      ? Math.round(data.improvements.reduce((a, b) => a + b, 0) / data.improvements.length * 10) / 10
+      : 0,
+    completionRate: Math.round((data.completed / Math.max(data.total, 1)) * 100),
+    successRate: data.improvements.length > 0
+      ? Math.round(data.improvements.filter(i => i >= 10).length / data.improvements.length * 100)
+      : 0,
+  }));
+
+  // 전체 통계
+  const completedStrategies = strategies.filter(s => s.execution_status === 'completed');
+  const withImprovement = completedStrategies.filter(s => s.improvement_rate !== null);
+
+  const overallStats = {
+    totalStrategies: strategies.length,
+    completedCount: completedStrategies.length,
+    avgImprovement: withImprovement.length > 0
+      ? Math.round(withImprovement.reduce((sum, s) => sum + (s.improvement_rate || 0), 0) / withImprovement.length * 10) / 10
+      : 0,
+    successRate: withImprovement.length > 0
+      ? Math.round(withImprovement.filter(s => (s.improvement_rate || 0) >= 10).length / withImprovement.length * 100)
+      : 0,
+  };
+
+  return {
+    effectiveStrategies: effectiveList,
+    ineffectiveStrategies,
+    conceptImprovements,
+    typeStats,
+    overallStats,
+  };
 }

@@ -9,11 +9,41 @@
  * - 성장 예측 차트
  */
 
+import { memo } from 'react';
+import { motion } from 'framer-motion';
+import { Sparkles, Eye, Calendar, CalendarDays, CalendarRange, Flame } from 'lucide-react';
 import type {
   FutureVisionExtended,
   GrowthPrediction,
   MacroAnalysis,
 } from '@/types';
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15 }
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const }
+  },
+};
+
+const encouragementVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { delay: 0.5, duration: 0.4 }
+  },
+};
 
 interface VisionFooterProps {
   // 확장된 미래 비전 (새 형식)
@@ -28,7 +58,7 @@ interface VisionFooterProps {
   compact?: boolean;
 }
 
-export default function VisionFooter({
+function VisionFooter({
   futureVision,
   legacyVision,
   growthPredictions,
@@ -45,9 +75,14 @@ export default function VisionFooter({
 
   if (compact) {
     return (
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 mt-6">
+      <motion.div
+        className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 mt-6"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
         <div className="flex items-start gap-3">
-          <span className="text-2xl">🌟</span>
+          <Sparkles className="w-6 h-6 text-emerald-500 flex-shrink-0" />
           <div>
             <h4 className="font-semibold text-gray-800 mb-1">성장 비전</h4>
             <p className="text-sm text-gray-600">
@@ -55,48 +90,59 @@ export default function VisionFooter({
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl p-6 mt-8 shadow-sm">
+    <motion.div
+      className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl p-6 mt-8 shadow-sm"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Header */}
       <div className="flex items-center gap-2 mb-6">
-        <span className="text-2xl">🔮</span>
+        <Eye className="w-6 h-6 text-teal-600" />
         <h3 className="text-lg font-bold text-gray-800">미래 성장 비전</h3>
       </div>
 
       {/* Vision Timeline */}
       {vision && (
         <div className="space-y-4 mb-6">
-          <VisionTimelineItem
-            timeframe="1개월"
-            icon="📅"
-            goals={vision.shortTerm?.goals || []}
-            predictedScore={vision.shortTerm?.predictedScore}
-            confidenceLevel={vision.shortTerm?.confidenceLevel}
-            milestones={vision.shortTerm?.milestones || []}
-            color="emerald"
-          />
-          <VisionTimelineItem
-            timeframe="3개월"
-            icon="📆"
-            goals={vision.midTerm?.goals || []}
-            predictedScore={vision.midTerm?.predictedScore}
-            confidenceLevel={vision.midTerm?.confidenceLevel}
-            milestones={vision.midTerm?.milestones || []}
-            color="teal"
-          />
-          <VisionTimelineItem
-            timeframe="6개월~1년"
-            icon="🗓️"
-            goals={vision.longTerm?.goals || []}
-            predictedScore={vision.longTerm?.predictedScore}
-            confidenceLevel={vision.longTerm?.confidenceLevel}
-            milestones={vision.longTerm?.milestones || []}
-            color="cyan"
-          />
+          <motion.div variants={itemVariants}>
+            <VisionTimelineItem
+              timeframe="1개월"
+              Icon={Calendar}
+              goals={vision.shortTerm?.goals || []}
+              predictedScore={vision.shortTerm?.predictedScore}
+              confidenceLevel={vision.shortTerm?.confidenceLevel}
+              milestones={vision.shortTerm?.milestones || []}
+              color="emerald"
+            />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <VisionTimelineItem
+              timeframe="3개월"
+              Icon={CalendarDays}
+              goals={vision.midTerm?.goals || []}
+              predictedScore={vision.midTerm?.predictedScore}
+              confidenceLevel={vision.midTerm?.confidenceLevel}
+              milestones={vision.midTerm?.milestones || []}
+              color="teal"
+            />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <VisionTimelineItem
+              timeframe="6개월~1년"
+              Icon={CalendarRange}
+              goals={vision.longTerm?.goals || []}
+              predictedScore={vision.longTerm?.predictedScore}
+              confidenceLevel={vision.longTerm?.confidenceLevel}
+              milestones={vision.longTerm?.milestones || []}
+              color="cyan"
+            />
+          </motion.div>
         </div>
       )}
 
@@ -129,9 +175,12 @@ export default function VisionFooter({
       )}
 
       {/* Encouragement Message */}
-      <div className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-lg p-4">
+      <motion.div
+        className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-lg p-4"
+        variants={encouragementVariants}
+      >
         <div className="flex items-start gap-3">
-          <span className="text-2xl">💪</span>
+          <Flame className="w-6 h-6 text-amber-500 flex-shrink-0" />
           <div>
             <h4 className="font-semibold text-amber-800 mb-1">
               {studentName} 학생에게
@@ -144,14 +193,16 @@ export default function VisionFooter({
             </p>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
+export default memo(VisionFooter);
+
 interface VisionTimelineItemProps {
   timeframe: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string }>;
   goals: string[];
   predictedScore?: number;
   confidenceLevel?: number;
@@ -161,7 +212,7 @@ interface VisionTimelineItemProps {
 
 function VisionTimelineItem({
   timeframe,
-  icon,
+  Icon,
   goals,
   predictedScore,
   confidenceLevel,
@@ -203,7 +254,7 @@ function VisionTimelineItem({
       <div className={`flex-1 ${colors.bg} rounded-lg p-4 border ${colors.border}`}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span>{icon}</span>
+            <Icon className={`w-4 h-4 ${colors.text}`} />
             <span className={`font-semibold ${colors.text}`}>{timeframe} 후</span>
           </div>
           {predictedScore && (

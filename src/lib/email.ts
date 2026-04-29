@@ -36,6 +36,7 @@ const REPORT_TYPE_NAMES: Record<ReportType, string> = {
   semi_annual: '반기 리포트',
   annual: '연간 리포트',
   consolidated: '종합 리포트',
+  self_analysis: '내 풀이 분석',
 };
 
 /**

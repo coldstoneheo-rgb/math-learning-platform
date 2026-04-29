@@ -2,9 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
+import Toast from '@/components/common/Toast';
+import { useToast } from '@/hooks/useToast';
 import type { Student, User, MonthlyReportAnalysis, Report, AnalysisData } from '@/types';
 
 interface MonthlyFormData {
@@ -33,6 +37,7 @@ export default function NewMonthlyReportPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
 
@@ -361,7 +366,7 @@ export default function NewMonthlyReportPage() {
         }
       }
 
-      alert('월간 리포트가 저장되었습니다.');
+      addToast('월간 리포트가 저장되었습니다.', 'success');
       router.push('/admin/reports');
     } catch (err: unknown) {
       console.error('저장 오류:', err);
@@ -378,21 +383,18 @@ export default function NewMonthlyReportPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toast toasts={toasts} onRemove={removeToast} />
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
-            </a>
+            </Link>
             <h1 className="text-xl font-bold text-gray-900">월간 리포트 작성</h1>
           </div>
           <span className="text-gray-600">{user?.name} 선생님</span>
@@ -527,8 +529,13 @@ export default function NewMonthlyReportPage() {
                           <span className="text-yellow-600">
                             개선 {report.improvements.length}개
                           </span>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                            연속성 {report.continuityScore}점
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            report.continuityScore >= 70 ? 'bg-green-100 text-green-700' :
+                            report.continuityScore >= 50 ? 'bg-blue-100 text-blue-700' :
+                            report.continuityScore > 0 ? 'bg-amber-100 text-amber-700' :
+                            'bg-gray-100 text-gray-500'
+                          }`}>
+                            학습 습관 {report.continuityScore > 0 ? `${report.continuityScore}점` : '미집계'}
                           </span>
                         </div>
                       </div>

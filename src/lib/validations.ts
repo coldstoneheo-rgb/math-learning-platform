@@ -100,7 +100,7 @@ export const analyzeRequestSchema = z.object({
 
 export const levelTestRequestSchema = z.object({
   studentId: positiveIntSchema,
-  testFiles: fileArraySchema,  // { data, mimeType }[] 형식 (이미지 + PDF 지원)
+  testImages: imageArraySchema,  // base64 이미지 배열 (시험 분석과 동일)
   additionalInfo: z.object({
     school: z.string().max(100).optional(),
     previousExperience: z.string().max(1000).optional(),
