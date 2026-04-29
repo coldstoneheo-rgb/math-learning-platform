@@ -759,6 +759,72 @@ interface StudentMetaProfile {
 | `/api/annual-report/generate` | POST | 연간 종합 AI 분석 |
 | `/api/meta-profile/update` | POST | Anchor Loop 실행 |
 
+### 6. Model Router (`src/lib/model-router.ts`) ✨ NEW
+
+AI 모델 라우팅 시스템으로 리포트 타입/학년/시험명에 따라 Pro/Flash 모델을 자동 선택합니다.
+
+```typescript
+import { routeModel, type ModelRoutingContext } from '@/lib/model-router';
+
+const context: ModelRoutingContext = {
+  reportType: 'level_test',
+  studentGrade: 10,
+  testName: '중간고사',
+};
+const modelName = routeModel(context); // Returns 'gemini-2.5-pro'
+```
+
+| 리포트 타입 | 모델 | 이유 |
+|------------|------|------|
+| level_test, semi_annual, annual | Pro | 중요도 높음 |
+| weekly, monthly | Flash | 빈번한 생성 |
+| test | Adaptive | 학년/시험 유형에 따라 분기 |
+
+### 7. Rate Limiter (`src/lib/rate-limiter.ts`) ✨ NEW
+
+Upstash Redis 기반 분산 Rate Limiter (In-memory fallback 지원)
+
+```typescript
+import { applyRateLimitAsync } from '@/lib/rate-limiter';
+
+// API Route에서 사용
+const result = await applyRateLimitAsync(request, 'AI_ANALYSIS');
+if (!result.success) {
+  return NextResponse.json({ error: '요청 한도 초과' }, { status: 429 });
+}
+```
+
+| 제한 유형 | 한도 | 윈도우 |
+|----------|------|--------|
+| AI_ANALYSIS | 5회 | 1분 |
+| GENERAL | 60회 | 1분 |
+
+### 8. Input Validation (`src/lib/validations.ts`) ✨ NEW
+
+Zod 스키마 기반 서버사이드 입력 검증
+
+```typescript
+import { validateRequest, weeklyReportRequestSchema } from '@/lib/validations';
+
+const validation = validateRequest(weeklyReportRequestSchema, rawBody);
+if (!validation.success) {
+  return NextResponse.json({ error: validation.error }, { status: 400 });
+}
+const { studentId, year, weekNumber } = validation.data;
+```
+
+### 9. Feature Flags (`src/lib/feature-flags.ts`) ✨ NEW
+
+기능 토글 시스템
+
+```typescript
+import { isFeatureEnabled } from '@/lib/feature-flags';
+
+if (isFeatureEnabled('parent_notifications')) {
+  await sendNotification(...);
+}
+```
+
 ---
 
 ## Development Workflow
@@ -1011,6 +1077,18 @@ export async function POST(request: Request) {
 }
 ```
 
+**2. Use Model Router for Hybrid Routing** ✨ NEW
+```typescript
+import { routeModel } from '@/lib/model-router';
+
+// Model is automatically selected based on report type and context
+const modelName = routeModel({
+  reportType: 'level_test',  // Pro model
+  studentGrade: 11,
+  testName: '모의고사',
+});
+```
+
 **2. Structured Output with JSON Schema**
 ```typescript
 const response = await ai.models.generateContent({
@@ -1085,6 +1163,39 @@ npm run build
 ### Linting
 ```bash
 npm run lint
+```
+
+### E2E Testing (Playwright) ✨ NEW
+
+```bash
+# Run all E2E tests
+npx playwright test
+
+# Run specific test file
+npx playwright test e2e/anchor-loop/anchor-loop.spec.ts
+
+# Run with UI
+npx playwright test --ui
+
+# Run with browser visible
+npx playwright test --headed
+```
+
+**Test Files:**
+| File | Purpose |
+|------|---------|
+| `e2e/admin.spec.ts` | 교사 관리자 기능 테스트 |
+| `e2e/auth.spec.ts` | 인증 플로우 테스트 |
+| `e2e/parent.spec.ts` | 학부모 대시보드 테스트 |
+| `e2e/anchor-loop/anchor-loop.spec.ts` | Anchor Loop 통합 테스트 |
+
+### Error Monitoring (Sentry) ✨ NEW
+
+Sentry를 통한 실시간 에러 모니터링이 설정되어 있습니다.
+
+```typescript
+// 에러는 자동으로 Sentry에 보고됩니다
+// 환경 변수: SENTRY_DSN (Vercel에서 설정)
 ```
 
 ---
@@ -1170,6 +1281,6 @@ git push -u origin claude/branch-name
 
 ---
 
-**Last Updated:** 2025-12-30
+**Last Updated:** 2026-04-29
 **Platform:** Next.js 16.1.0 + Supabase + Vercel
 **For questions, refer to PRD and other documentation files.**

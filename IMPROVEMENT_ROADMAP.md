@@ -3,9 +3,9 @@
 > **목표**: "종합 학습 컨설팅 시스템"으로 진화
 
 **작성일**: 2025-11-25
-**최종 업데이트**: 2025-12-30
+**최종 업데이트**: 2026-04-29
 **프로젝트**: Math Learning Platform (Next.js + Supabase + Vercel)
-**참고 문서**: CLAUDE.md, MathLearning_PRD_v3.2_Implementation.md, PROMPT_IMPROVEMENT_PROPOSAL.md
+**참고 문서**: CLAUDE.md, MathLearning_PRD_v3.2_Implementation.md, docs/ML_Engine_Enhancement_Plan_v1.0.md, docs/AI_HYBRID_ROUTING_PLAN.md
 
 ---
 
@@ -14,10 +14,11 @@
 1. [현재 상태 요약](#1-현재-상태-요약)
 2. [핵심 개선 방향](#2-핵심-개선-방향)
 3. [Phase 0: 긴급 개선 ✅ 완료](#3-phase-0-긴급-개선)
-4. [Phase 1: 품질 고도화 🔄 진행중](#4-phase-1-품질-고도화)
-5. [Phase 2: 데이터 기반 지능화 ⭐ 핵심](#5-phase-2-데이터-기반-지능화)
-6. [Phase 3: 플랫폼화](#6-phase-3-플랫폼화)
-7. [실행 체크리스트](#7-실행-체크리스트)
+4. [Phase 1: 품질 고도화 ✅ 완료](#4-phase-1-품질-고도화)
+5. [Phase 2: 데이터 기반 지능화 ✅ 완료](#5-phase-2-데이터-기반-지능화)
+6. [Phase 3: 플랫폼화 🔄 진행중](#6-phase-3-플랫폼화)
+7. [Phase 4: ML 엔진 고도화](#7-phase-4-ml-엔진-고도화)
+8. [실행 체크리스트](#8-실행-체크리스트)
 
 ---
 
@@ -802,7 +803,91 @@ export default async function AnalyticsDashboard() {
 
 ---
 
-## 7. 실행 체크리스트
+## 7. Phase 4: ML 엔진 고도화
+
+> **목표**: AI 기반 분석 고도화 및 개인화 학습 추천 강화
+> **참고 문서**: `docs/ML_Engine_Enhancement_Plan_v1.0.md`
+> **전략**: "LLM First, ML Later" - 현재 Gemini 품질 극대화 후 ML 도입
+
+### 7.1. 핵심 전략
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    핵심 전략: "LLM First, ML Later"          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1️⃣ 현재 LLM(Gemini) 기반 분석 품질 극대화                  │
+│  2️⃣ 구조화된 데이터 파이프라인 구축 (ML 준비)               │
+│  3️⃣ 데이터 충분 시 Knowledge Tracing 도입                  │
+│  4️⃣ RL은 사용자 1,000명+ 달성 시 재검토                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 7.2. ML 기법 도입 계획
+
+| 기법 | 우선순위 | 필요 데이터 | 현재 상태 |
+|------|---------|------------|----------|
+| **Knowledge Tracing (BKT)** | ⭐ P1 | 500+건/학생 | ⏳ 데이터 축적 중 |
+| **군집화 (K-means)** | ⭐ P1 | 충분 | ⏳ 구현 가능 |
+| **Apriori 연관규칙** | ⚠️ P3 | 1,000+ 트랜잭션 | ❌ 규칙 기반으로 대체 |
+| **강화학습 (RL)** | ⛔ P4 | 1,000+ 사용자 | ❌ 규모 부족 |
+
+### 7.3. AI 모델 라우팅 ✅ 구현 완료
+
+> **참고 문서**: `docs/AI_HYBRID_ROUTING_PLAN.md`
+
+| 리포트 타입 | 모델 | 이유 |
+|------------|------|------|
+| Level Test | Pro | 기준점 설정의 중요성 |
+| Semi-Annual | Pro | 장기 성장 분석 |
+| Annual | Pro | 종합 성장 스토리 |
+| Weekly/Monthly | Flash | 빈번한 생성, 비용 효율 |
+| Test Analysis | Flash | 빠른 분석 피드백 |
+
+**구현 파일**: `src/lib/model-router.ts`
+
+### 7.4. Knowledge Tracing 도입 조건
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Knowledge Tracing 도입 조건              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ✅ 도입 조건                                               │
+│  • 학생당 500+개 문항 응답 데이터                          │
+│  • item_response 테이블 구조화                             │
+│  • concept_graph (선수학습 관계) 정의                      │
+│                                                             │
+│  📌 현재 상태                                               │
+│  • 학생 25명 × 시험 10회 = 약 250개 데이터포인트            │
+│  • 문항 단위 데이터(item_response) 구조화 필요             │
+│                                                             │
+│  🎯 대안 (즉시 적용 가능)                                   │
+│  • 규칙 기반 마스터리: topic별 정답률 > 80% → 마스터       │
+│  • BKT (Bayesian Knowledge Tracing): 소규모 데이터 가능    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 7.5. VEHME 연동 계획 (장기)
+
+- **VEHME**: 벡터 기반 오류 패턴 모델링 시스템
+- **도입 조건**: API 접근성 확인 후 PoC 진행
+- **예상 효과**: 오류 패턴 자동 분류, 유사 학생 매칭
+
+### Phase 4 체크리스트
+
+- [x] AI 모델 라우팅 구현 (`model-router.ts`) ✅
+- [ ] item_response 테이블 설계 및 마이그레이션
+- [ ] 학생 유형 군집화 구현 (K-means)
+- [ ] BKT 기반 마스터리 추정 구현
+- [ ] concept_graph 선수학습 관계 정의
+- [ ] VEHME API 연동 PoC
+
+---
+
+## 8. 실행 체크리스트
 
 ### Phase 0: 긴급 개선 ✅ 완료
 
@@ -841,7 +926,7 @@ export default async function AnalyticsDashboard() {
 
 ---
 
-## 8. 성공 지표 대시보드
+## 9. 성공 지표 대시보드
 
 ### 진행 상황 추적
 
@@ -849,8 +934,9 @@ export default async function AnalyticsDashboard() {
 |---|---|---|---|
 | Phase 0 | 100% ✅ | 2025-12-22 | 완료 |
 | Phase 1 | 100% ✅ | 2025-12-30 | Growth Loop System 구축 완료 |
-| Phase 2 | 90% ✅ | 2025-12-30 | 피드백 루프, 예측 모델, 대시보드 완료 |
-| Phase 3 | 0% ⏳ | 2026-06-30 | 장기 목표 |
+| Phase 2 | 100% ✅ | 2025-12-30 | 피드백 루프, 예측 모델, 대시보드 완료 |
+| Phase 3 | 40% 🔄 | 진행 중 | Rate Limiting, Validation, E2E Tests 구현 완료 |
+| Phase 4 | 20% 🔄 | 진행 중 | AI 모델 라우팅 구현 완료 |
 
 ### Phase 1 완료 성과 ✨
 
@@ -872,6 +958,18 @@ export default async function AnalyticsDashboard() {
 | **분석 대시보드** | 성적 추이, 전략 효과, 예측 정확도 시각화 |
 | **Auth 에러 처리** | Refresh Token 만료 시 graceful 처리 |
 
+### Phase 3~4 진행 성과 ✨ (2026-04-29)
+
+| 구분 | 내용 |
+|---|---|
+| **Rate Limiting** | `src/lib/rate-limiter.ts` - Upstash Redis + In-memory fallback |
+| **Input Validation** | `src/lib/validations.ts` - Zod 스키마 기반 검증 |
+| **Sentry 모니터링** | `@sentry/nextjs` 설치 및 에러 트래킹 |
+| **E2E 테스트** | `e2e/` 디렉토리 - Playwright 기반 테스트 |
+| **AI 모델 라우팅** | `src/lib/model-router.ts` - Pro/Flash 하이브리드 |
+| **Feature Flags** | `src/lib/feature-flags.ts` - 기능 토글 시스템 |
+| **이메일 시스템** | `src/lib/email.ts` - Resend 연동 |
+
 ### KPI 추적
 
 | 지표 | 목표 | 현재 | 달성률 |
@@ -882,9 +980,23 @@ export default async function AnalyticsDashboard() {
 | 학생 성적 향상 | +10점/3개월 | TBD | - |
 | **Growth Loop 구현** | 100% (P1) | 100% | ✅ 100% |
 | **피드백 루프 구현** | 100% (P2) | 100% | ✅ 100% |
+| **보안 인프라 (P3)** | 100% | 100% | ✅ 100% |
+| **AI 모델 라우팅 (P4)** | 100% | 100% | ✅ 100% |
+| **Knowledge Tracing (P4)** | 100% | 0% | ⏳ 데이터 축적 중 |
+
+---
+
+## 변경 이력
+
+| 버전 | 날짜 | 변경 내용 |
+|------|------|----------|
+| v1.0 | 2025-11-25 | 최초 작성 |
+| v1.1 | 2025-12-22 | Phase 0 완료, Phase 1 진행 |
+| v1.2 | 2025-12-30 | Phase 1, 2 완료, Growth Loop 시스템 구축 |
+| v2.0 | 2026-04-29 | Phase 4 (ML 엔진 고도화) 추가, AI 모델 라우팅 구현 완료 |
 
 ---
 
 **작성일**: 2025-11-25
-**최종 업데이트**: 2025-12-30
-**다음 검토일**: Phase 3 계획 수립 시
+**최종 업데이트**: 2026-04-29
+**다음 검토일**: Knowledge Tracing 도입 검토 시
