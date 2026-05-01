@@ -96,7 +96,8 @@ This document provides comprehensive guidance for AI assistants working with the
 
 ### AI & Data Processing
 - **Google Gemini API** (`@google/genai`) - AI analysis engine
-  - Model: `gemini-2.5-flash` for speed and analysis
+  - Pro Model: `gemini-pro-latest` for high-stakes reports
+  - Flash Model: `gemini-flash-latest` for regular reports
 - **PapaParse 5.x** - CSV parsing for bulk imports
 
 ### Export
@@ -771,7 +772,7 @@ const context: ModelRoutingContext = {
   studentGrade: 10,
   testName: '중간고사',
 };
-const modelName = routeModel(context); // Returns 'gemini-2.5-pro'
+const modelName = routeModel(context); // Returns 'gemini-pro-latest'
 ```
 
 | 리포트 타입 | 모델 | 이유 |
@@ -1092,7 +1093,7 @@ const modelName = routeModel({
 **2. Structured Output with JSON Schema**
 ```typescript
 const response = await ai.models.generateContent({
-  model: 'gemini-2.5-flash',
+  model: modelName,  // dynamically selected via routeModel()
   contents: [{ role: 'user', parts: [{ text: prompt }, ...imageParts] }],
   config: {
     responseMimeType: 'application/json',

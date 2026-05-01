@@ -3,23 +3,22 @@
 ## 1. 개요
 
 ### 1.1 배경
-현재 플랫폼은 모든 AI 분석에 단일 모델(`gemini-2.5-flash`)을 사용하고 있습니다.
-상용화 시 비용 최적화와 분석 품질 균형을 위해 **리포트 중요도에 따른 모델 이원화**가 필요합니다.
+리포트 중요도에 따른 모델 이원화로 **비용 최적화와 분석 품질 균형**을 달성합니다.
 
 ### 1.2 핵심 원칙
 - **"Generate Once, Read Forever"**: 생성 시에만 비용 발생, 조회는 DB에서 무료
 - **중요도 기반 라우팅**: High-Stakes 리포트에는 Pro 모델, 정기 리포트에는 Flash 모델
 
-### 1.3 모델 이원화 정책
+### 1.3 모델 이원화 정책 (2026-05 업데이트)
 
-| 리포트 유형 | 모델 티어 | 사용 모델 | 비용 수준 | 이유 |
-|------------|----------|----------|----------|------|
-| `level_test` | Pro | gemini-2.5-pro | 높음 | Baseline 설정, 최초 진단 - 정확도 최우선 |
-| `semi_annual` | Pro | gemini-2.5-pro | 높음 | 6개월 종합 분석, 장기 전략 수립 |
-| `annual` | Pro | gemini-2.5-pro | 높음 | 연간 성장 스토리, 중요한 의사결정 지원 |
+| 리포트 유형 | 모델 티어 | 사용 모델 | Input/Output 비용 | 이유 |
+|------------|----------|----------|------------------|------|
+| `level_test` | Pro | gemini-pro-latest | $1.25 / $10.00 | Baseline 설정, 최초 진단 |
+| `semi_annual` | Pro | gemini-pro-latest | $1.25 / $10.00 | 6개월 종합 분석 |
+| `annual` | Pro | gemini-pro-latest | $1.25 / $10.00 | 연간 성장 스토리 |
 | `test` | Adaptive | Pro/Flash | 가변 | 학년/시험 중요도에 따라 분기 |
-| `weekly` | Flash | gemini-2.5-flash | 낮음 | 빈번한 생성, 속도 중요 |
-| `monthly` | Flash | gemini-2.5-flash | 낮음 | 정기 리포트, 비용 효율 |
+| `weekly` | Flash | gemini-flash-latest | $0.30 / $2.50 | 빈번한 생성 |
+| `monthly` | Flash | gemini-flash-latest | $0.30 / $2.50 | 정기 리포트 |
 
 ---
 
@@ -37,10 +36,10 @@ GEMINI_API_KEY=your_gemini_api_key
 
 # 모델 설정 (선택 - 기본값 있음)
 # Pro 모델: 고품질 분석 (level_test, semi_annual, annual)
-GEMINI_MODEL_PRO=gemini-2.5-pro
+GEMINI_MODEL_PRO=gemini-pro-latest
 
 # Flash 모델: 빠른 응답 (weekly, monthly)
-GEMINI_MODEL_FLASH=gemini-2.5-flash
+GEMINI_MODEL_FLASH=gemini-flash-latest
 
 # ============================================
 # 라우팅 정책 (선택)
@@ -62,8 +61,8 @@ GEMINI_PRO_TEST_TYPES=모의고사,수능,기말고사,중간고사
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
 | `GEMINI_API_KEY` | (필수) | Google AI Studio API 키 |
-| `GEMINI_MODEL_PRO` | `gemini-2.5-pro` | High-Stakes 리포트용 모델 |
-| `GEMINI_MODEL_FLASH` | `gemini-2.5-flash` | 정기 리포트용 모델 |
+| `GEMINI_MODEL_PRO` | `gemini-pro-latest` | High-Stakes 리포트용 모델 ($1.25/$10.00) |
+| `GEMINI_MODEL_FLASH` | `gemini-flash-latest` | 정기 리포트용 모델 ($0.30/$2.50) |
 | `GEMINI_TEST_DEFAULT_MODEL` | `flash` | test 타입 기본 모델 |
 | `GEMINI_PRO_GRADE_THRESHOLD` | `10` | Pro 사용 학년 임계값 (10=고1) |
 | `GEMINI_PRO_TEST_TYPES` | (설정 시) | Pro 강제 사용 시험 유형 |
@@ -102,8 +101,8 @@ export interface ModelRoutingContext {
  */
 function getModelConfig() {
   return {
-    proModel: process.env.GEMINI_MODEL_PRO || 'gemini-2.5-pro',
-    flashModel: process.env.GEMINI_MODEL_FLASH || 'gemini-2.5-flash',
+    proModel: process.env.GEMINI_MODEL_PRO || 'gemini-pro-latest',
+    flashModel: process.env.GEMINI_MODEL_FLASH || 'gemini-flash-latest',
     testDefaultModel: (process.env.GEMINI_TEST_DEFAULT_MODEL || 'flash') as ModelTier,
     proGradeThreshold: parseInt(process.env.GEMINI_PRO_GRADE_THRESHOLD || '10'),
     proTestTypes: (process.env.GEMINI_PRO_TEST_TYPES || '').split(',').filter(Boolean),

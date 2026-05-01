@@ -72,8 +72,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 # Optional - AI Model Routing
-GEMINI_MODEL_PRO=gemini-2.5-pro
-GEMINI_MODEL_FLASH=gemini-2.5-flash
+GEMINI_MODEL_PRO=gemini-pro-latest
+GEMINI_MODEL_FLASH=gemini-flash-latest
 ```
 
 ### Development | 개발

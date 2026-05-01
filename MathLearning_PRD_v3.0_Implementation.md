@@ -61,7 +61,7 @@ Vercel \+ Supabase 기반 웹 플랫폼 구축
 
 * 인증: Supabase Auth
 
-* AI: Google Gemini API (gemini-2.5-flash)
+* AI: Google Gemini API (gemini-pro-latest / gemini-flash-latest)
 
 * 도메인: \[프로젝트명\].vercel.app (무료)
 
@@ -168,7 +168,7 @@ Vercel \+ Supabase 기반 웹 플랫폼 구축
 | **Hosting** | Vercel | 무료 티어: 100GB 대역폭/월 |
 | **Database** | Supabase PostgreSQL | 무료 티어: 500MB DB |
 | **Auth** | Supabase Auth | 이메일/비밀번호 인증 |
-| **AI** | Google Gemini API | gemini-2.5-flash 모델 |
+| **AI** | Google Gemini API | gemini-pro-latest / gemini-flash-latest (하이브리드 라우팅) |
 | **Charts** | Recharts 2.12+ | 레이더, 선, 막대 차트 |
 | **Styling** | Tailwind CSS 3.4+ | 유틸리티 기반 스타일링 |
 
