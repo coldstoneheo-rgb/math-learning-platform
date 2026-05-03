@@ -78,6 +78,7 @@ const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   semi_annual: '반기 리포트',
   annual: '연간 리포트',
   consolidated: '통합 분석',
+  self_analysis: '자기 주도 분석',
 };
 
 function CountUpNumber({ value, duration = 1500 }: { value: number; duration?: number }) {

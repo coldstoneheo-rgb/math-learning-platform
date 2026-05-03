@@ -213,8 +213,8 @@ function JourneyStation({
                       }`}
                       style={{
                         backgroundColor: isActive ? stepConfig.color : undefined,
-                        ringColor: isCurrent ? stepConfig.color : undefined,
-                      }}
+                        '--tw-ring-color': isCurrent ? stepConfig.color : undefined,
+                      } as React.CSSProperties}
                     />
                     {i < STATUS_ORDER.length - 1 && (
                       <div
