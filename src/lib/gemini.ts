@@ -15,6 +15,8 @@ import type {
   SelfAnalysisProblemType,
 } from '@/types';
 import { routeModel, createRoutingLog, type ModelRoutingContext } from './model-router';
+import { generateKnowledgeTracingContext } from './knowledge-graph';
+import { generatePredictiveAnalysisContext } from './predictive-analysis';
 
 export class GeminiApiError extends Error {
   constructor(message: string, public readonly cause?: unknown) {
@@ -435,6 +437,22 @@ ${sf.conceptImprovements.slice(0, 5).map(c =>
 3. 개념별 개선 현황을 고려하여 아직 개선되지 않은 영역 우선 타겟
 
 ${feedbackParts.join('\n\n')}`);
+    }
+  } // closing brace for if (context.strategyFeedback)
+
+  // 9. 지식 추적 기반 하위 스킬 결손 검증 (Phase 2)
+  if (context.failedMicroSkills && context.failedMicroSkills.length > 0) {
+    const ktContext = generateKnowledgeTracingContext(context.failedMicroSkills);
+    if (ktContext) {
+      sections.push(ktContext);
+    }
+  }
+
+  // 10. 망각 곡선 기반 예방적 분석 (Phase 2)
+  if (context.masteredSkills && context.masteredSkills.length > 0) {
+    const paContext = generatePredictiveAnalysisContext(context.masteredSkills);
+    if (paContext) {
+      sections.push(paContext);
     }
   }
 
@@ -2337,3 +2355,136 @@ function cleanAndParseJSON<T>(text: string): T {
     );
   }
 }
+
+// ============================================
+// Phase 3: 레거시 데이터 마이그레이션 (Batch Ingestion)
+// ============================================
+
+export interface LegacyDataIngestionResult {
+  extractedSignals: {
+    id: string;
+    date: string;
+    sourceType: string;
+    affectedPillars: ('ErrorSignature' | 'AbsorptionRate' | 'SolvingStamina' | 'MetaCognition')[];
+    insight: string;
+    relatedConcepts: string[];
+    confidenceScore: number;
+  }[];
+  updatedMetaProfile: Partial<StudentMetaProfile>;
+}
+
+/**
+ * 과거 데이터(Legacy Data)를 분석하여 메타프로필을 업데이트하는 마이그레이션 함수
+ * @param studentName 학생 이름
+ * @param currentProfile 현재 메타프로필 상태
+ * @param images 과거 데이터 스캔본 (시험지, 교사 리포트, 퀴즈, 스프레드시트 캡처 등)
+ * @param documentDate 과거 데이터의 기준 날짜 (예: "2023-03-15")
+ * @param documentType 데이터 유형 태그 (예: "시험지", "월간리포트", "스프레드시트")
+ */
+export async function ingestLegacyData(
+  studentName: string,
+  currentProfile: StudentMetaProfile | null,
+  images: string[],
+  documentDate: string,
+  documentType: string
+): Promise<LegacyDataIngestionResult> {
+  const ai = getGeminiClient();
+
+  // 강제로 가장 강력한 모델(Pro) 라우팅
+  const routingCtx: ModelRoutingContext = {
+    reportType: 'annual', // Pro 모델을 사용하기 위한 우회 (isHighStakes: true)
+    isHighStakes: true,
+  };
+  const selectedModel = routeModel(routingCtx);
+  createRoutingLog(routingCtx);
+
+  const systemPrompt = `당신은 학생의 과거 학습 데이터를 심층 분석하여 성장 궤적(Meta-Profile)을 정밀하게 복원하는 최고 수준의 AI 데이터 엔지니어입니다.
+단순히 "연산 실수가 잦음" 수준의 1차원적인 텍스트 요약이 아니라, **학생 메타프로필의 5대 축(ErrorSignature, AbsorptionRate, SolvingStamina, MetaCognition) 각각에 직접적으로 영향을 줄 수 있는 고밀도(High-fidelity) 인사이트를 구조화**하여 추출해야 합니다.
+
+## 분석 소스 및 심층 파악 포인트
+- 시험지/퀴즈: 
+  - [ErrorSignature] 단순 계산 실수인지, 개념적 오개념인지, 문제 독해(문해력) 부족인지 파악.
+  - [AbsorptionRate] 특정 단원의 성취도를 통해 흡수율(개념 소화 속도) 파악.
+- 교사 리포트/스프레드시트: 
+  - [SolvingStamina] 문제 풀이 시 집중력 저하 시점, 포기 패턴 등의 지구력 지표.
+  - [MetaCognition] 검토(Re-check) 여부, 오답 노트 작성 유무, 자기 확신도 등.
+
+## 핵심 시그널(LegacySignals) 구조화 지침
+과거 자료(${documentDate})에서 식별된 중요한 발견을 다음 JSON 구조의 배열로 도출하세요:
+- insight: "단순 텍스트"가 아닌, 메타프로필을 변화시킬 만한 명확한 근거와 상태 설명. (예: "다항식의 곱셈에서 분배법칙 적용 시 부호 오류가 3회 이상 반복됨. 개념 이해보다는 절차적 숙련도 부족으로 판단됨.")
+- affectedPillars: 이 인사이트가 영향을 미치는 5대 축 배열 (예: ["ErrorSignature", "AbsorptionRate"])
+- relatedConcepts: 관련된 수학 개념/단원 태그 (예: ["다항식의 곱셈", "부호 연산"])
+- confidenceScore: 이 분석에 대한 확신도 (1-100)
+
+## 메타프로필 누적 업데이트(Incremental Update)
+현재 메타프로필(JSON)을 바탕으로, 방금 추출한 시그널들이 현재의 스코어(overallScore)나 패턴(signaturePatterns, conceptGraveyard)을 어떻게 변화시켜야 하는지 판단하고, 변경된 필드만 반환하세요.
+(예: 새로운 오개념이 발견되었다면 errorSignature.signaturePatterns 배열에 추가, 집중력 부족이 뚜렷하다면 solvingStamina.overallScore 삭감 등)`;
+
+  const userPrompt = `
+## 과거 데이터 정보
+- 학생 이름: ${studentName}
+- 데이터 날짜: ${documentDate}
+- 데이터 소스: ${documentType}
+
+## 현재 메타프로필 (이 데이터를 바탕으로 업데이트 진행)
+${currentProfile ? JSON.stringify(currentProfile, null, 2) : '현재 등록된 메타프로필이 없습니다. (초기 구축 단계)'}
+
+첨부된 이미지(과거 데이터)를 분석하여 고품질의 구조화된 시그널 배열을 추출하고, 메타프로필 업데이트 JSON을 반환하세요. ID는 랜덤한 UUID로 생성하세요.
+
+응답 형식 (JSON):
+{
+  "extractedSignals": [
+    {
+      "id": "uuid-v4-string",
+      "date": "${documentDate}",
+      "sourceType": "${documentType}",
+      "affectedPillars": ["ErrorSignature"],
+      "insight": "심층 분석 내용",
+      "relatedConcepts": ["개념1"],
+      "confidenceScore": 90
+    }
+  ],
+  "updatedMetaProfile": {
+    "errorSignature": { ... },
+    "absorptionRate": { ... },
+    "solvingStamina": { ... },
+    "metaCognitionLevel": { ... }
+  }
+}
+`;
+
+  const imageParts = images.map((img) => ({
+    inlineData: {
+      data: img,
+      mimeType: 'image/jpeg' as const, // PDF는 클라이언트에서 이미지로 변환되어 전달됨
+    },
+  }));
+
+  try {
+    const response = await ai.models.generateContent({
+      model: selectedModel,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: systemPrompt + '\n\n' + userPrompt },
+            ...imageParts,
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const text = response.text;
+    if (!text) throw new GeminiApiError('AI 응답이 비어있습니다.');
+
+    const result = cleanAndParseJSON<LegacyDataIngestionResult>(text);
+    return result;
+  } catch (error) {
+    if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
+    throw new GeminiApiError('레거시 데이터 잉제스천 중 오류가 발생했습니다.', error);
+  }
+}
+

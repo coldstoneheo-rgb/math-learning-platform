@@ -885,6 +885,16 @@ export interface StudentMetaProfile {
   solvingStamina: SolvingStamina;
   // 메타인지 수준
   metaCognitionLevel: MetaCognitionLevel;
+  // 과거 데이터 마이그레이션 핵심 시그널 (Phase 3 고도화)
+  legacySignals?: {
+    id: string;
+    date: string;
+    sourceType: string; // 시험지, 리포트 등
+    affectedPillars: ('ErrorSignature' | 'AbsorptionRate' | 'SolvingStamina' | 'MetaCognition')[];
+    insight: string; // 심층 분석 내용
+    relatedConcepts: string[]; // 관련 단원/개념
+    confidenceScore: number; // 추출에 대한 AI의 확신도 (1-100)
+  }[];
   // 마지막 업데이트 (any indicator)
   lastUpdated: string;
   // 프로필 버전 (스키마 변경 추적용)
@@ -1745,6 +1755,15 @@ export interface AnalysisContextData {
     concept: string;
     level: number;
     consistency: string;
+  }[];
+  // 지식 추적 기반 하위 스킬 검증 (Phase 2)
+  failedMicroSkills?: string[];
+  // 망각 곡선 적용 대상 스킬 (Phase 2)
+  masteredSkills?: {
+    skillId: string;
+    skillName: string;
+    lastMasteredDate: string;
+    memoryStrength: number;
   }[];
   // 현재 마이크로 루프 상태
   currentMicroLoop?: MicroLoopData;
