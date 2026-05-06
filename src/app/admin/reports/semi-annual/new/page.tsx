@@ -15,6 +15,11 @@ interface SemiAnnualFormData {
   halfYear: '상반기' | '하반기';
   teacherAssessment: string;
   additionalNotes: string;
+  teacherComments?: {
+    attitudeAndFocus?: string;         // 반기 동안의 학습 태도 변화
+    semiAnnualGoalAchievement?: string; // 반기 장기 목표 달성 관찰
+    specialNote?: string;              // 기타 특이사항
+  };
 }
 
 export default function NewSemiAnnualReportPage() {
@@ -323,30 +328,62 @@ export default function NewSemiAnnualReportPage() {
             </div>
           </div>
 
-          {/* 선생님 평가 */}
+          {/* 교사 관찰 코멘트 (선택) */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">2. 선생님 평가 (선택)</h2>
-
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">2. 교사 관찰 코멘트 (선택)</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              AI가 반기 리포트를 분석할 때 참고할 장기적 관찰 항목을 입력합니다. (비워두어도 무방합니다)
+            </p>
+            
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">반기 종합 평가</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">반기 종합 평가 (기존)</label>
                 <textarea
                   value={formData.teacherAssessment}
                   onChange={(e) => setFormData(prev => ({ ...prev, teacherAssessment: e.target.value }))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  rows={4}
+                  rows={2}
                   placeholder="6개월간의 학습 과정에 대한 종합 평가..."
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">추가 메모</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">반기 동안의 학습 태도 변화</label>
                 <textarea
-                  value={formData.additionalNotes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                  value={formData.teacherComments?.attitudeAndFocus || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), attitudeAndFocus: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  placeholder="예: 학기 초반 대비 후반부의 집중력 변화, 자기주도적 학습 태도 형성 등"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">반기 장기 목표 달성 관찰</label>
+                <textarea
+                  value={formData.teacherComments?.semiAnnualGoalAchievement || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), semiAnnualGoalAchievement: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  placeholder="예: 이번 반기 핵심 목표였던 '중학 수학 기초 확립'에 대한 교사의 평가 등"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">추가 메모 (기타 특이사항)</label>
+                <textarea
+                  value={formData.teacherComments?.specialNote || formData.additionalNotes}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    additionalNotes: e.target.value,
+                    teacherComments: { ...(prev.teacherComments || {}), specialNote: e.target.value }
+                  }))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   rows={2}
-                  placeholder="부모님께 전달할 추가 메모..."
+                  placeholder="예: 학부모 상담 주요 내용, 다음 학기 대비 특이사항 등"
                 />
               </div>
             </div>

@@ -108,12 +108,26 @@ const TEST_ANALYSIS_PROMPT = `${BASE_SYSTEM_PROMPT}
 - 지구력 분석: 문제 순서별 정답률 변화
 - 메타인지 평가: 자기 인식 능력 평가
 
+### 5대 오류 유형 기반 맞춤 액션 플랜 매핑 (매우 중요)
+오답 문항 분석 시 반드시 다음 5가지 오류 유형 중 하나로 자동 분류(errorType)하고, 그에 맞는 기계적 액션 플랜을 도출하세요:
+1. **개념 오류 (Conceptual Error)**: 수학 개념 자체를 잘못 이해함
+   → [액션 플랜]: 관련 기본 개념 인강 시청 배정, 교과서/기본서 해당 단원 정독
+2. **절차 오류 (Procedural Error)**: 풀이 순서나 방법론 적용이 틀림
+   → [액션 플랜]: 대표 예제 단계별 따라 쓰기(Trace), 풀이 노트에 알고리즘 순서대로 적기
+3. **계산 오류 (Computational Error)**: 단순 연산 실수
+   → [액션 플랜]: 해당 연산 파트 드릴(Drill)형 문제 20개 반복 훈련, 풀이 여백 넉넉히 쓰기 연습
+4. **문제 오독 (Misreading Error)**: 문제 조건을 잘못 해석함 (예: "이상" vs "초과", "모두 고르시오")
+   → [액션 플랜]: 문제 읽을 때 핵심 조건에 형광펜/동그라미 치기 훈련, 구하는 것에 밑줄 긋기
+5. **기타/부주의 (Careless/Other)**: 풀이 누락, 답안지 마킹 실수 등
+   → [액션 플랜]: 검산 습관화, 실전 모의고사 시간 배분 연습
+
 ### 개선 전략 5요소 (모든 전략에 필수 포함)
-- 무엇을: 구체적 교재, 자료
+위의 맞춤 액션 플랜을 기반으로 다음 5요소를 구체화하세요:
+- 무엇을: 구체적 교재, 자료, 강의
 - 어디서: 페이지, 챕터
-- 얼마나: 횟수, 시간
-- 어떻게: 구체적 방법
-- 측정 방법: 성과 확인 기준`;
+- 얼마나: 횟수, 시간, 문항 수
+- 어떻게: 구체적 방법 (예: 노트 반 접어서 풀기)
+- 측정 방법: 성과 확인 기준 (예: 다음 주간 테스트 90점)`;
 
 const WEEKLY_REPORT_PROMPT = `${BASE_SYSTEM_PROMPT}
 
@@ -774,6 +788,21 @@ export async function analyzeTestPaperWithContext(
   // 리포트 타입별 시스템 프롬프트 선택
   const systemPrompt = REPORT_TYPE_PROMPTS[reportType] || TEST_ANALYSIS_PROMPT;
 
+  const behavioralDataPrompt = formData.teacherComments || formData.problemBehaviorData?.length ? `
+## [중요] 현장 관찰 및 행동 데이터 (Behavioral Data)
+이미지 분석 시 아래의 교사 관찰 및 학생 입력 데이터를 **우선적으로 반영**하여 분석의 깊이를 더하세요.
+
+${formData.teacherComments ? `### 교사 관찰 코멘트
+- 태도 및 집중도: ${formData.teacherComments.attitudeAndFocus || '기록 없음'}
+- 망설임/체공시간: ${formData.teacherComments.hesitationAndTime || '기록 없음'}
+- 메타인지 상태: ${formData.teacherComments.metacognition || '기록 없음'}
+- 특이사항: ${formData.teacherComments.additionalNote || '기록 없음'}` : ''}
+
+${formData.problemBehaviorData?.length ? `### 문항별 학생 메타인지 및 체공시간
+${formData.problemBehaviorData.map(d => `- ${d.problemNumber}번: 확신도 ${d.selfConfidence ? (d.selfConfidence === 1 ? '1(찍음)' : d.selfConfidence === 2 ? '2(헷갈림)' : '3(확신함)') : '-'}, 체공시간 ${d.timeSpentMins ? d.timeSpentMins + '분' : '-'}`).join('\n')}
+(※ 확신도는 낮으나 정답인 경우 '찍어 맞춤', 확신도는 높으나 오답인 경우 '잘못된 개념 고착화'로 심층 분석할 것)` : ''}
+` : '';
+
   const userPrompt = `
 ${contextPrompt}
 
@@ -791,11 +820,12 @@ ${contextPrompt}
 - 4점 문항: ${formData.points4}개
 - 5점 문항: ${formData.points5}개
 - 6점 문항: ${formData.points6}개
-
+${behavioralDataPrompt}
 ## 분석 요청
 첨부된 시험지 이미지를 분석하여 다음을 수행하세요:
 1. 문항별 채점 및 총점 계산
 2. 5가지 관점 심층 분석
+   - **(주의) 스캔 이미지에서 지우개로 지운 흔적, 덧쓴 자국 등을 적극적으로 탐지하여 '망설임' 및 '개념 혼동' 지표로 활용하세요.**
 3. 거시적 분석 (강점, 약점, 오류 패턴)
 4. 수학 역량 평가 (5축 레이더 차트용)
 5. 약점 흐름도 (3단계)

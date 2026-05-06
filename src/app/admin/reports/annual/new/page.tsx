@@ -15,6 +15,11 @@ interface AnnualFormData {
   teacherAssessment: string;
   proudMoments: string[];
   personalMessage: string;
+  teacherComments?: {
+    attitudeAndFocus?: string;       // 연간 학습 태도 변화 총평
+    annualGoalAchievement?: string;  // 연간 장기 목표 달성 관찰
+    specialNote?: string;            // 기타 특이사항 (학부모 상담 총평 등)
+  };
 }
 
 export default function NewAnnualReportPage() {
@@ -339,23 +344,68 @@ export default function NewAnnualReportPage() {
             </div>
           </div>
 
-          {/* 선생님 연간 평가 */}
+          {/* 선생님 연간 평가 및 관찰 (선택) */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">2. 선생님 연간 평가 (선택)</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">2. 선생님 연간 평가 및 관찰 (선택)</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              AI가 연간 리포트를 분석할 때 참고할 장기적 관찰 항목과 선생님의 평가를 입력합니다. (비워두어도 무방합니다)
+            </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">연간 종합 평가</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">연간 종합 평가 (기존)</label>
                 <textarea
                   value={formData.teacherAssessment}
                   onChange={(e) => setFormData(prev => ({ ...prev, teacherAssessment: e.target.value }))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
-                  rows={4}
+                  rows={2}
                   placeholder="1년간의 학습 여정에 대한 종합 평가..."
                 />
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">연간 학습 태도 변화 총평</label>
+                <textarea
+                  value={formData.teacherComments?.attitudeAndFocus || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), attitudeAndFocus: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                  placeholder="예: 1년 동안 끈기 있게 문제를 해결하는 습관이 어떻게 형성되었는지 등"
+                  rows={2}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">연간 장기 목표 달성 관찰</label>
+                <textarea
+                  value={formData.teacherComments?.annualGoalAchievement || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), annualGoalAchievement: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                  placeholder="예: 올해 초 계획했던 '선행 학습' 또는 '심화 문제 풀이 능력 향상'에 대한 최종 평가 등"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">기타 특이사항 (학부모 상담 총평 등)</label>
+                <textarea
+                  value={formData.teacherComments?.specialNote || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), specialNote: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                  rows={2}
+                  placeholder="예: 학부모 상담 주요 내용 종합 등"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-gray-100">
                 <label className="block text-sm font-medium text-gray-700 mb-2">자랑스러운 순간들</label>
                 {formData.proudMoments.map((moment, index) => (
                   <div key={index} className="flex gap-2 mb-2">

@@ -19,6 +19,11 @@ interface WeeklyFormData {
   endDate: string;
   classDates: string[];
   classNotes: string;
+  teacherComments?: {
+    attitudeAndFocus?: string;     // 한 주간의 학습 태도
+    weeklyGoalAchievement?: string; // 주간 목표 달성 관찰
+    specialNote?: string;          // 기타 특이사항
+  };
 }
 
 // 월-주차 형식 계산 (e.g., "12월 4주차")
@@ -684,10 +689,60 @@ export default function NewWeeklyReportPage() {
             />
           </div>
 
-          {/* 3. AI 분석 (필수) */}
+          {/* 교사 관찰 코멘트 (선택) */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">3. 교사 관찰 코멘트 (선택)</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              AI가 주간 리포트를 분석할 때 참고할 현장 관찰 항목을 입력합니다. (비워두어도 무방합니다)
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">한 주간의 학습 태도 변화</label>
+                <textarea
+                  value={formData.teacherComments?.attitudeAndFocus || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), attitudeAndFocus: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="예: 저번 주보다 집중력이 눈에 띄게 좋아짐, 숙제를 성실히 해옴 등"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">주간 목표 달성 관찰</label>
+                <textarea
+                  value={formData.teacherComments?.weeklyGoalAchievement || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), weeklyGoalAchievement: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="예: 지난주 목표였던 '오답노트 작성'을 잘 실천했는지 등"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">기타 특이사항</label>
+                <textarea
+                  value={formData.teacherComments?.specialNote || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), specialNote: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="예: 학부모 상담 내용, 학생의 건강 상태 등"
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 4. AI 분석 (필수) */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              3. AI 분석 <span className="text-red-500">*</span>
+              4. AI 분석 <span className="text-red-500">*</span>
             </h2>
 
             <p className="text-gray-600 text-sm mb-4">

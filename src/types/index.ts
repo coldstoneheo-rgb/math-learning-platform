@@ -426,6 +426,19 @@ export interface ConsolidatedReportData {
   };
 }
 
+export interface ProblemBehaviorData {
+  problemNumber: string;
+  selfConfidence?: 1 | 2 | 3; // 1: 찍음(낮음), 2: 헷갈림(보통), 3: 확신함(높음)
+  timeSpentMins?: number; // 유독 오래 머무른 문제의 체공 시간 (분)
+}
+
+export interface TeacherComments {
+  attitudeAndFocus?: string; // 문제 풀이 태도 및 집중도
+  hesitationAndTime?: string; // 망설임 및 체공 시간 관찰
+  metacognition?: string; // 메타인지 상태 (정답 확신도, 질문 빈도 등)
+  additionalNote?: string; // 기타 교사 관찰 특이사항
+}
+
 export interface TestAnalysisFormData {
   testName: string;
   testDate: string;
@@ -443,6 +456,9 @@ export interface TestAnalysisFormData {
   totalScore?: number;
   rank?: number;
   totalStudents?: number;
+  // Phase 1: 행동 데이터 트래킹
+  teacherComments?: TeacherComments;
+  problemBehaviorData?: ProblemBehaviorData[];
 }
 
 export interface ApiResponse<T> {

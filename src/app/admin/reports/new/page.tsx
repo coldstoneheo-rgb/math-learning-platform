@@ -433,6 +433,130 @@ export default function NewReportPage() {
               />
             </div>
 
+            {/* 교사 관찰 코멘트 (선택) */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">4. 교사 관찰 코멘트 (선택)</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                이미지 분석만으로는 알기 어려운 학생의 행동 데이터를 입력하면 AI가 더 정밀한 분석을 제공합니다.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">문제 풀이 태도 및 집중도</label>
+                  <textarea
+                    value={formData.teacherComments?.attitudeAndFocus || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      teacherComments: { ...(formData.teacherComments || {}), attitudeAndFocus: e.target.value }
+                    })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    placeholder="예: 산만함, 끈기 등 태도 관련 관찰 사항"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">망설임 및 체공 시간</label>
+                  <textarea
+                    value={formData.teacherComments?.hesitationAndTime || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      teacherComments: { ...(formData.teacherComments || {}), hesitationAndTime: e.target.value }
+                    })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    placeholder="예: 유독 시간을 많이 끈 문제, 지우개 사용이 잦았던 문제 등"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">메타인지 상태 및 기타 특이사항</label>
+                  <textarea
+                    value={formData.teacherComments?.metacognition || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      teacherComments: { ...(formData.teacherComments || {}), metacognition: e.target.value }
+                    })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    placeholder="예: 풀이에 대한 확신 유무, 질문 빈도, 기타 특이사항 등"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 문항별 행동 데이터 (선택) */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">5. 문항별 메타인지 및 체공 시간 (선택)</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                학생 스스로 확신도를 평가하게 하거나 유독 오래 걸린 문제를 기록하세요. AI가 오답 원인을 더 정확히 좁혀줍니다.
+              </p>
+              
+              <div className="space-y-3">
+                {formData.problemBehaviorData?.map((item, index) => (
+                  <div key={index} className="flex gap-3 items-center">
+                    <input
+                      type="text"
+                      placeholder="문항 번호"
+                      value={item.problemNumber}
+                      onChange={(e) => {
+                        const newData = [...(formData.problemBehaviorData || [])];
+                        newData[index].problemNumber = e.target.value;
+                        setFormData({ ...formData, problemBehaviorData: newData });
+                      }}
+                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                    <select
+                      value={item.selfConfidence || ''}
+                      onChange={(e) => {
+                        const newData = [...(formData.problemBehaviorData || [])];
+                        newData[index].selfConfidence = e.target.value ? Number(e.target.value) as 1 | 2 | 3 : undefined;
+                        setFormData({ ...formData, problemBehaviorData: newData });
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                    >
+                      <option value="">확신도 (선택)</option>
+                      <option value="1">1 (찍음)</option>
+                      <option value="2">2 (헷갈림)</option>
+                      <option value="3">3 (확신함)</option>
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="시간(분)"
+                      value={item.timeSpentMins || ''}
+                      onChange={(e) => {
+                        const newData = [...(formData.problemBehaviorData || [])];
+                        newData[index].timeSpentMins = e.target.value ? Number(e.target.value) : undefined;
+                        setFormData({ ...formData, problemBehaviorData: newData });
+                      }}
+                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newData = [...(formData.problemBehaviorData || [])];
+                        newData.splice(index, 1);
+                        setFormData({ ...formData, problemBehaviorData: newData });
+                      }}
+                      className="text-red-500 hover:text-red-700 font-medium px-2 text-sm"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newData = [...(formData.problemBehaviorData || [])];
+                    newData.push({ problemNumber: '' });
+                    setFormData({ ...formData, problemBehaviorData: newData });
+                  }}
+                  className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1 mt-2"
+                >
+                  + 특이 문항 기록 추가
+                </button>
+              </div>
+            </div>
+
             {/* 분석 버튼 */}
             <button
               onClick={handleAnalyze}
