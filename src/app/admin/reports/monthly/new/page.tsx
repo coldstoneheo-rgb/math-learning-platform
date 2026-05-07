@@ -19,6 +19,11 @@ interface MonthlyFormData {
   schedule: { year: number; month: number };
   classNotes: string;
   textbookCompletion: { percentage: number; description: string };
+  teacherComments?: {
+    attitudeAndFocus?: string;         // 한 달간의 학습 태도 변화
+    monthlyGoalAchievement?: string;   // 월간 장기 목표 달성 관찰
+    specialNote?: string;              // 기타 특이사항 (학부모 상담 내용 등)
+  };
 }
 
 interface WeeklyReportSummary {
@@ -611,10 +616,60 @@ export default function NewMonthlyReportPage() {
             />
           </div>
 
-          {/* 4. AI 분석 (필수) */}
+          {/* 교사 관찰 코멘트 (선택) */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">4. 교사 관찰 코멘트 (선택)</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              AI가 월간 리포트를 분석할 때 참고할 장기적 관찰 항목을 입력합니다. (비워두어도 무방합니다)
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">한 달간의 학습 태도 변화</label>
+                <textarea
+                  value={formData.teacherComments?.attitudeAndFocus || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), attitudeAndFocus: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  placeholder="예: 초반에는 산만했으나 점차 학습 리듬을 찾아감 등"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">월간 장기 목표 달성 관찰</label>
+                <textarea
+                  value={formData.teacherComments?.monthlyGoalAchievement || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), monthlyGoalAchievement: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  placeholder="예: 이번 달 목표였던 '함수 그래프 완벽 이해'에 대한 교사의 주관적 평가 등"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">기타 특이사항</label>
+                <textarea
+                  value={formData.teacherComments?.specialNote || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    teacherComments: { ...(prev.teacherComments || {}), specialNote: e.target.value }
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  placeholder="예: 학부모 상담 주요 내용, 방학 기간 특이사항 등"
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 5. AI 분석 (필수) */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              4. AI 분석 <span className="text-red-500">*</span>
+              5. AI 분석 <span className="text-red-500">*</span>
             </h2>
 
             <p className="text-gray-600 text-sm mb-4">

@@ -15,6 +15,8 @@ import type {
   SelfAnalysisProblemType,
 } from '@/types';
 import { routeModel, createRoutingLog, type ModelRoutingContext } from './model-router';
+import { generateKnowledgeTracingContext } from './knowledge-graph';
+import { generatePredictiveAnalysisContext } from './predictive-analysis';
 
 export class GeminiApiError extends Error {
   constructor(message: string, public readonly cause?: unknown) {
@@ -108,12 +110,26 @@ const TEST_ANALYSIS_PROMPT = `${BASE_SYSTEM_PROMPT}
 - 지구력 분석: 문제 순서별 정답률 변화
 - 메타인지 평가: 자기 인식 능력 평가
 
+### 5대 오류 유형 기반 맞춤 액션 플랜 매핑 (매우 중요)
+오답 문항 분석 시 반드시 다음 5가지 오류 유형 중 하나로 자동 분류(errorType)하고, 그에 맞는 기계적 액션 플랜을 도출하세요:
+1. **개념 오류 (Conceptual Error)**: 수학 개념 자체를 잘못 이해함
+   → [액션 플랜]: 관련 기본 개념 인강 시청 배정, 교과서/기본서 해당 단원 정독
+2. **절차 오류 (Procedural Error)**: 풀이 순서나 방법론 적용이 틀림
+   → [액션 플랜]: 대표 예제 단계별 따라 쓰기(Trace), 풀이 노트에 알고리즘 순서대로 적기
+3. **계산 오류 (Computational Error)**: 단순 연산 실수
+   → [액션 플랜]: 해당 연산 파트 드릴(Drill)형 문제 20개 반복 훈련, 풀이 여백 넉넉히 쓰기 연습
+4. **문제 오독 (Misreading Error)**: 문제 조건을 잘못 해석함 (예: "이상" vs "초과", "모두 고르시오")
+   → [액션 플랜]: 문제 읽을 때 핵심 조건에 형광펜/동그라미 치기 훈련, 구하는 것에 밑줄 긋기
+5. **기타/부주의 (Careless/Other)**: 풀이 누락, 답안지 마킹 실수 등
+   → [액션 플랜]: 검산 습관화, 실전 모의고사 시간 배분 연습
+
 ### 개선 전략 5요소 (모든 전략에 필수 포함)
-- 무엇을: 구체적 교재, 자료
+위의 맞춤 액션 플랜을 기반으로 다음 5요소를 구체화하세요:
+- 무엇을: 구체적 교재, 자료, 강의
 - 어디서: 페이지, 챕터
-- 얼마나: 횟수, 시간
-- 어떻게: 구체적 방법
-- 측정 방법: 성과 확인 기준`;
+- 얼마나: 횟수, 시간, 문항 수
+- 어떻게: 구체적 방법 (예: 노트 반 접어서 풀기)
+- 측정 방법: 성과 확인 기준 (예: 다음 주간 테스트 90점)`;
 
 const WEEKLY_REPORT_PROMPT = `${BASE_SYSTEM_PROMPT}
 
@@ -421,6 +437,22 @@ ${sf.conceptImprovements.slice(0, 5).map(c =>
 3. 개념별 개선 현황을 고려하여 아직 개선되지 않은 영역 우선 타겟
 
 ${feedbackParts.join('\n\n')}`);
+    }
+  } // closing brace for if (context.strategyFeedback)
+
+  // 9. 지식 추적 기반 하위 스킬 결손 검증 (Phase 2)
+  if (context.failedMicroSkills && context.failedMicroSkills.length > 0) {
+    const ktContext = generateKnowledgeTracingContext(context.failedMicroSkills);
+    if (ktContext) {
+      sections.push(ktContext);
+    }
+  }
+
+  // 10. 망각 곡선 기반 예방적 분석 (Phase 2)
+  if (context.masteredSkills && context.masteredSkills.length > 0) {
+    const paContext = generatePredictiveAnalysisContext(context.masteredSkills);
+    if (paContext) {
+      sections.push(paContext);
     }
   }
 
@@ -774,6 +806,21 @@ export async function analyzeTestPaperWithContext(
   // 리포트 타입별 시스템 프롬프트 선택
   const systemPrompt = REPORT_TYPE_PROMPTS[reportType] || TEST_ANALYSIS_PROMPT;
 
+  const behavioralDataPrompt = formData.teacherComments || formData.problemBehaviorData?.length ? `
+## [중요] 현장 관찰 및 행동 데이터 (Behavioral Data)
+이미지 분석 시 아래의 교사 관찰 및 학생 입력 데이터를 **우선적으로 반영**하여 분석의 깊이를 더하세요.
+
+${formData.teacherComments ? `### 교사 관찰 코멘트
+- 태도 및 집중도: ${formData.teacherComments.attitudeAndFocus || '기록 없음'}
+- 망설임/체공시간: ${formData.teacherComments.hesitationAndTime || '기록 없음'}
+- 메타인지 상태: ${formData.teacherComments.metacognition || '기록 없음'}
+- 특이사항: ${formData.teacherComments.additionalNote || '기록 없음'}` : ''}
+
+${formData.problemBehaviorData?.length ? `### 문항별 학생 메타인지 및 체공시간
+${formData.problemBehaviorData.map(d => `- ${d.problemNumber}번: 확신도 ${d.selfConfidence ? (d.selfConfidence === 1 ? '1(찍음)' : d.selfConfidence === 2 ? '2(헷갈림)' : '3(확신함)') : '-'}, 체공시간 ${d.timeSpentMins ? d.timeSpentMins + '분' : '-'}`).join('\n')}
+(※ 확신도는 낮으나 정답인 경우 '찍어 맞춤', 확신도는 높으나 오답인 경우 '잘못된 개념 고착화'로 심층 분석할 것)` : ''}
+` : '';
+
   const userPrompt = `
 ${contextPrompt}
 
@@ -791,11 +838,12 @@ ${contextPrompt}
 - 4점 문항: ${formData.points4}개
 - 5점 문항: ${formData.points5}개
 - 6점 문항: ${formData.points6}개
-
+${behavioralDataPrompt}
 ## 분석 요청
 첨부된 시험지 이미지를 분석하여 다음을 수행하세요:
 1. 문항별 채점 및 총점 계산
 2. 5가지 관점 심층 분석
+   - **(주의) 스캔 이미지에서 지우개로 지운 흔적, 덧쓴 자국 등을 적극적으로 탐지하여 '망설임' 및 '개념 혼동' 지표로 활용하세요.**
 3. 거시적 분석 (강점, 약점, 오류 패턴)
 4. 수학 역량 평가 (5축 레이더 차트용)
 5. 약점 흐름도 (3단계)
@@ -2307,3 +2355,136 @@ function cleanAndParseJSON<T>(text: string): T {
     );
   }
 }
+
+// ============================================
+// Phase 3: 레거시 데이터 마이그레이션 (Batch Ingestion)
+// ============================================
+
+export interface LegacyDataIngestionResult {
+  extractedSignals: {
+    id: string;
+    date: string;
+    sourceType: string;
+    affectedPillars: ('ErrorSignature' | 'AbsorptionRate' | 'SolvingStamina' | 'MetaCognition')[];
+    insight: string;
+    relatedConcepts: string[];
+    confidenceScore: number;
+  }[];
+  updatedMetaProfile: Partial<StudentMetaProfile>;
+}
+
+/**
+ * 과거 데이터(Legacy Data)를 분석하여 메타프로필을 업데이트하는 마이그레이션 함수
+ * @param studentName 학생 이름
+ * @param currentProfile 현재 메타프로필 상태
+ * @param images 과거 데이터 스캔본 (시험지, 교사 리포트, 퀴즈, 스프레드시트 캡처 등)
+ * @param documentDate 과거 데이터의 기준 날짜 (예: "2023-03-15")
+ * @param documentType 데이터 유형 태그 (예: "시험지", "월간리포트", "스프레드시트")
+ */
+export async function ingestLegacyData(
+  studentName: string,
+  currentProfile: StudentMetaProfile | null,
+  images: string[],
+  documentDate: string,
+  documentType: string
+): Promise<LegacyDataIngestionResult> {
+  const ai = getGeminiClient();
+
+  // 강제로 가장 강력한 모델(Pro) 라우팅
+  const routingCtx: ModelRoutingContext = {
+    reportType: 'annual', // Pro 모델을 사용하기 위한 우회 (isHighStakes: true)
+    isHighStakes: true,
+  };
+  const selectedModel = routeModel(routingCtx);
+  createRoutingLog(routingCtx);
+
+  const systemPrompt = `당신은 학생의 과거 학습 데이터를 심층 분석하여 성장 궤적(Meta-Profile)을 정밀하게 복원하는 최고 수준의 AI 데이터 엔지니어입니다.
+단순히 "연산 실수가 잦음" 수준의 1차원적인 텍스트 요약이 아니라, **학생 메타프로필의 5대 축(ErrorSignature, AbsorptionRate, SolvingStamina, MetaCognition) 각각에 직접적으로 영향을 줄 수 있는 고밀도(High-fidelity) 인사이트를 구조화**하여 추출해야 합니다.
+
+## 분석 소스 및 심층 파악 포인트
+- 시험지/퀴즈: 
+  - [ErrorSignature] 단순 계산 실수인지, 개념적 오개념인지, 문제 독해(문해력) 부족인지 파악.
+  - [AbsorptionRate] 특정 단원의 성취도를 통해 흡수율(개념 소화 속도) 파악.
+- 교사 리포트/스프레드시트: 
+  - [SolvingStamina] 문제 풀이 시 집중력 저하 시점, 포기 패턴 등의 지구력 지표.
+  - [MetaCognition] 검토(Re-check) 여부, 오답 노트 작성 유무, 자기 확신도 등.
+
+## 핵심 시그널(LegacySignals) 구조화 지침
+과거 자료(${documentDate})에서 식별된 중요한 발견을 다음 JSON 구조의 배열로 도출하세요:
+- insight: "단순 텍스트"가 아닌, 메타프로필을 변화시킬 만한 명확한 근거와 상태 설명. (예: "다항식의 곱셈에서 분배법칙 적용 시 부호 오류가 3회 이상 반복됨. 개념 이해보다는 절차적 숙련도 부족으로 판단됨.")
+- affectedPillars: 이 인사이트가 영향을 미치는 5대 축 배열 (예: ["ErrorSignature", "AbsorptionRate"])
+- relatedConcepts: 관련된 수학 개념/단원 태그 (예: ["다항식의 곱셈", "부호 연산"])
+- confidenceScore: 이 분석에 대한 확신도 (1-100)
+
+## 메타프로필 누적 업데이트(Incremental Update)
+현재 메타프로필(JSON)을 바탕으로, 방금 추출한 시그널들이 현재의 스코어(overallScore)나 패턴(signaturePatterns, conceptGraveyard)을 어떻게 변화시켜야 하는지 판단하고, 변경된 필드만 반환하세요.
+(예: 새로운 오개념이 발견되었다면 errorSignature.signaturePatterns 배열에 추가, 집중력 부족이 뚜렷하다면 solvingStamina.overallScore 삭감 등)`;
+
+  const userPrompt = `
+## 과거 데이터 정보
+- 학생 이름: ${studentName}
+- 데이터 날짜: ${documentDate}
+- 데이터 소스: ${documentType}
+
+## 현재 메타프로필 (이 데이터를 바탕으로 업데이트 진행)
+${currentProfile ? JSON.stringify(currentProfile, null, 2) : '현재 등록된 메타프로필이 없습니다. (초기 구축 단계)'}
+
+첨부된 이미지(과거 데이터)를 분석하여 고품질의 구조화된 시그널 배열을 추출하고, 메타프로필 업데이트 JSON을 반환하세요. ID는 랜덤한 UUID로 생성하세요.
+
+응답 형식 (JSON):
+{
+  "extractedSignals": [
+    {
+      "id": "uuid-v4-string",
+      "date": "${documentDate}",
+      "sourceType": "${documentType}",
+      "affectedPillars": ["ErrorSignature"],
+      "insight": "심층 분석 내용",
+      "relatedConcepts": ["개념1"],
+      "confidenceScore": 90
+    }
+  ],
+  "updatedMetaProfile": {
+    "errorSignature": { ... },
+    "absorptionRate": { ... },
+    "solvingStamina": { ... },
+    "metaCognitionLevel": { ... }
+  }
+}
+`;
+
+  const imageParts = images.map((img) => ({
+    inlineData: {
+      data: img,
+      mimeType: 'image/jpeg' as const, // PDF는 클라이언트에서 이미지로 변환되어 전달됨
+    },
+  }));
+
+  try {
+    const response = await ai.models.generateContent({
+      model: selectedModel,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: systemPrompt + '\n\n' + userPrompt },
+            ...imageParts,
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const text = response.text;
+    if (!text) throw new GeminiApiError('AI 응답이 비어있습니다.');
+
+    const result = cleanAndParseJSON<LegacyDataIngestionResult>(text);
+    return result;
+  } catch (error) {
+    if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
+    throw new GeminiApiError('레거시 데이터 잉제스천 중 오류가 발생했습니다.', error);
+  }
+}
+
