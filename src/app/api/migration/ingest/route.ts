@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Auth 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -53,11 +53,48 @@ export async function POST(req: Request) {
       // 실제 앱 구조에선 baseline 등이 초기화되어 있어야 하므로 단순 할당이 위험할 수 있음
       // 편의상 넘어온 데이터를 기본으로 구성
       updatedProfile = {
-        baseline: { assessmentDate: documentDate, initialLevel: { grade: 0, percentile: 0 }, initialScores: {}, initialLearningStyle: 'mixed' },
-        errorSignature: result.updatedMetaProfile.errorSignature || { signaturePatterns: [], domainVulnerability: [], improvementHistory: [] },
-        absorptionRate: result.updatedMetaProfile.absorptionRate || { overallScore: 50, learningType: 'N/A', recentAbsorbedConcepts: [], conceptGraveyard: [] },
-        solvingStamina: result.updatedMetaProfile.solvingStamina || { overallScore: 50, fatiguePattern: 'N/A', peakPerformanceTime: 'N/A', timeDistributionStrategy: 'N/A' },
-        metaCognitionLevel: result.updatedMetaProfile.metaCognitionLevel || { overallScore: 50, developmentStage: 'N/A', activeMonitoring: false, errorCorrectionRate: 0 },
+        baseline: {
+          assessmentDate: documentDate,
+          initialLevel: { grade: 0, percentile: 0, evaluatedAt: documentDate },
+          domainScores: [],
+          initialStrengths: [],
+          initialWeaknesses: [],
+          initialLearningStyle: 'mixed'
+        },
+        errorSignature: result.updatedMetaProfile?.errorSignature || {
+          primaryErrorTypes: [],
+          signaturePatterns: [],
+          domainVulnerability: [],
+          lastUpdated: documentDate
+        },
+        absorptionRate: result.updatedMetaProfile?.absorptionRate || {
+          overallScore: 50,
+          byDomain: [],
+          learningType: 'steady-grower',
+          optimalConditions: [],
+          recentTrend: [],
+          lastUpdated: documentDate
+        },
+        solvingStamina: result.updatedMetaProfile?.solvingStamina || {
+          overallScore: 50,
+          optimalDuration: 60,
+          accuracyBySequence: [],
+          fatiguePattern: 'consistent',
+          recoveryStrategies: [],
+          lastUpdated: documentDate
+        },
+        metaCognitionLevel: result.updatedMetaProfile?.metaCognitionLevel || {
+          overallScore: 50,
+          subScores: {
+            selfAssessmentAccuracy: 50,
+            errorRecognition: 50,
+            strategySelection: 50,
+            timeManagement: 50
+          },
+          developmentStage: 'developing',
+          improvementAreas: [],
+          lastUpdated: documentDate
+        },
         legacySignals: result.extractedSignals,
         lastUpdated: new Date().toISOString(),
         version: '1.0'

@@ -111,9 +111,9 @@ export function generateKnowledgeTracingContext(failedSkillIds: string[]): strin
     if (skill) {
       const prerequisites = tracePrerequisites(skillId, 1); // 1단계 선수 스킬만
       if (prerequisites.length > 0) {
-        const reqNames = prerequisites.map(p => \`[\${p.name}]\`).join(', ');
-        context += \`- 틀린 스킬: [\${skill.name}]\n\`;
-        context += \`  👉 역추적 의심 하위 스킬: \${reqNames}에 대한 결손이 없는지 점검하세요.\n\`;
+        const reqNames = prerequisites.map(p => `[${p.name}]`).join(', ');
+        context += `- 틀린 스킬: [${skill.name}]\n`;
+        context += `  👉 역추적 의심 하위 스킬: ${reqNames}에 대한 결손이 없는지 점검하세요.\n`;
       }
     }
   }

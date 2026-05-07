@@ -51,7 +51,7 @@ export default function MigrationPage() {
 
     const { data: studentData } = await supabase
       .from('students')
-      .select('id, name, grade, student_id')
+      .select('id, name, grade, student_id, created_at')
       .order('name');
 
     if (studentData) {
@@ -273,7 +273,7 @@ export default function MigrationPage() {
                     <span className="font-bold text-indigo-600">{totalProgress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style={{ width: \`\${totalProgress}%\` }}></div>
+                    <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${totalProgress}%` }}></div>
                   </div>
                   <div className="flex gap-4 mt-2 text-xs text-gray-500">
                     <span>대기: {pendingCount}</span>
@@ -293,12 +293,12 @@ export default function MigrationPage() {
                   tasks.map((task, index) => (
                     <div 
                       key={task.id} 
-                      className={\`border rounded-lg p-3 \${
+                      className={`border rounded-lg p-3 ${
                         task.status === 'success' ? 'bg-green-50 border-green-200' :
                         task.status === 'error' ? 'bg-red-50 border-red-200' :
                         task.status === 'processing' ? 'bg-blue-50 border-blue-200 border-l-4 border-l-blue-500' :
                         'bg-white'
-                      }\`}
+                      }`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1 mr-4">
