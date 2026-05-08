@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfile } from '@/lib/student-profile-extractor';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
 import { generateStudyPlanFromPrescription } from '@/lib/study-plan-generator';
+import { sendReportCreatedNotification } from '@/lib/notification-helper';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -246,6 +247,15 @@ export default function NewReportPage() {
           } catch (planError) {
             console.warn('[Study Plan] 학습 계획 생성 오류:', planError);
           }
+        }
+
+        // [Parent Notification] 학부모 알림 발송
+        const notifResult = await sendReportCreatedNotification({
+          reportId: insertedReport.id,
+          studentId: selectedStudentId,
+        });
+        if (notifResult.success && !notifResult.skipped) {
+          console.log('[Notification] 학부모 알림 발송 완료');
         }
       }
 

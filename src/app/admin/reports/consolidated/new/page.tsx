@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfileFromConsolidated } from '@/lib/student-profile-extractor';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import { sendReportCreatedNotification } from '@/lib/notification-helper';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -256,6 +257,15 @@ export default function NewConsolidatedReportPage() {
           console.log('[Feedback Loop] 등록 결과:', feedbackResult);
         } catch (feedbackError) {
           console.warn('[Feedback Loop] 등록 실패:', feedbackError);
+        }
+
+        // [Parent Notification] 학부모 알림 발송
+        const notifResult = await sendReportCreatedNotification({
+          reportId: insertedReport.id,
+          studentId: selectedStudentId as number,
+        });
+        if (notifResult.success && !notifResult.skipped) {
+          console.log('[Notification] 학부모 알림 발송 완료');
         }
       }
 
