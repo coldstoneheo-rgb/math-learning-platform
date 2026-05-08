@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type {
   AnalysisContextData,
+  RelevantMemory,
   StudentMetaProfile,
   MicroLoopData,
   MacroLoopData,
@@ -27,7 +28,8 @@ import type {
  */
 export async function buildAnalysisContext(
   studentId: number,
-  reportType: ReportType
+  reportType: ReportType,
+  options?: { queryText?: string }
 ): Promise<AnalysisContextData> {
   const supabase = createClient();
 
@@ -55,6 +57,16 @@ export async function buildAnalysisContext(
   // 이전 비전 검증 데이터 가져오기
   const previousVision = await getPreviousVisionData(studentId, recentReports);
 
+  // RAG 기억 서랍: 의미적으로 유사한 과거 메모리 검색
+  let relevantMemories: RelevantMemory[] | undefined;
+  if (options?.queryText) {
+    try {
+      relevantMemories = await retrieveRelevantMemories(studentId, options.queryText);
+    } catch {
+      // RAG 실패해도 분석은 계속 진행
+    }
+  }
+
   return {
     metaProfile,
     recentReports,
@@ -67,6 +79,8 @@ export async function buildAnalysisContext(
     // Phase 2: 지식 추적 및 망각 곡선
     failedMicroSkills,
     masteredSkills,
+    // Phase 3: RAG 기억 서랍
+    relevantMemories,
   };
 }
 
@@ -1178,4 +1192,63 @@ export async function getMasteredSkills(
   }
 
   return masteredSkills;
+}
+
+// ============================================
+// RAG 기억 서랍: 유사도 기반 과거 메모리 검색
+// ============================================
+
+/**
+ * 쿼리 텍스트와 의미적으로 유사한 과거 리포트 메모리 검색
+ *
+ * @param studentId 학생 ID
+ * @param queryText 현재 분석 컨텍스트 (시험명 + 범위 등)
+ * @param options 검색 옵션
+ */
+export async function retrieveRelevantMemories(
+  studentId: number,
+  queryText: string,
+  options?: {
+    limit?: number;
+    threshold?: number;
+    excludeReportId?: number;
+  }
+): Promise<RelevantMemory[]> {
+  const { limit = 5, threshold = 0.65, excludeReportId } = options ?? {};
+
+  // 쿼리 텍스트를 임베딩으로 변환 (서버 사이드 전용)
+  const { generateEmbedding } = await import('./embedding-service');
+  const queryEmbedding = await generateEmbedding(queryText);
+
+  const supabase = createClient();
+
+  // pgvector RPC를 통한 코사인 유사도 검색
+  const { data, error } = await supabase.rpc('match_report_memories', {
+    query_embedding: queryEmbedding,
+    target_student_id: studentId,
+    match_threshold: threshold,
+    match_count: limit,
+    exclude_report_id: excludeReportId ?? null,
+  });
+
+  if (error) {
+    console.warn('[RAG] 기억 검색 실패:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row: {
+    report_id: number;
+    report_type: string;
+    test_date: string | null;
+    source_type: string;
+    source_text: string;
+    similarity: number;
+  }) => ({
+    reportId: row.report_id,
+    reportType: row.report_type,
+    testDate: row.test_date,
+    sourceType: row.source_type,
+    text: row.source_text.slice(0, 200),
+    similarity: Math.round(row.similarity * 100) / 100,
+  }));
 }

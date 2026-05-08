@@ -1728,6 +1728,18 @@ export interface MacroLoopData {
 }
 
 /**
+ * RAG 기억 서랍 - 의미적으로 유사한 과거 리포트 메모리
+ */
+export interface RelevantMemory {
+  reportId: number;
+  reportType: string;
+  testDate: string | null;
+  sourceType: string;
+  text: string;
+  similarity: number;
+}
+
+/**
  * ContextData - AI 프롬프트 컨텍스트 데이터
  * 이전 리포트에서 주입할 데이터
  */
@@ -1778,6 +1790,8 @@ export interface AnalysisContextData {
   };
   // 전략 피드백 데이터 (Phase 2: 피드백 루프)
   strategyFeedback?: StrategyFeedbackContext;
+  // RAG 기억 서랍 (과거 유사 분석 메모리)
+  relevantMemories?: RelevantMemory[];
 }
 
 /**
