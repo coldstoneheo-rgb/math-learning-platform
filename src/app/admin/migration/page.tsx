@@ -10,13 +10,41 @@ import { useToast } from '@/hooks/useToast';
 import { v4 as uuidv4 } from 'uuid';
 import { processMigrationTask, type MigrationTask } from '@/lib/migration-engine';
 
+type ActiveTab = 'ai-ingest' | 'csv-import';
+
+// CSV 업로드 유효성 오류 타입
+interface CsvValidationError {
+  rowIndex: number;
+  field: string;
+  message: string;
+}
+
+// CSV 템플릿 다운로드
+function downloadCsvTemplate() {
+  const headers = 'student_id,test_date,test_name,total_score,max_score,rank,total_students';
+  const example = 'M1250103,2025-03-15,2025년 1학기 중간고사,85,100,5,30';
+  const example2 = 'M1250103,2025-06-20,2025년 1학기 기말고사,92,100,3,30';
+  const csv = [headers, example, example2].join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'migration_template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function MigrationPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string>('');
   const { toasts, addToast, removeToast } = useToast();
-  
+
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState<ActiveTab>('ai-ingest');
+
+  // AI 인제스천 상태
   const [tasks, setTasks] = useState<MigrationTask[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +52,13 @@ export default function MigrationPage() {
   // 일괄 설정용 상태
   const [batchDate, setBatchDate] = useState('');
   const [batchType, setBatchType] = useState('시험지');
+
+  // CSV 업로드 상태
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvResult, setCsvResult] = useState<{ importedCount: number; message: string } | null>(null);
+  const [csvErrors, setCsvErrors] = useState<CsvValidationError[]>([]);
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -51,7 +86,7 @@ export default function MigrationPage() {
 
     const { data: studentData } = await supabase
       .from('students')
-      .select('id, name, grade, student_id')
+      .select('id, name, grade, student_id, created_at')
       .order('name');
 
     if (studentData) {
@@ -143,6 +178,58 @@ export default function MigrationPage() {
     setTasks(prev => prev.filter(t => t.status !== 'success'));
   };
 
+  // CSV 파일 선택
+  const handleCsvSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setCsvFile(file);
+    setCsvResult(null);
+    setCsvErrors([]);
+  };
+
+  // CSV 업로드 실행
+  const startCsvImport = async () => {
+    if (!csvFile) {
+      addToast('CSV 파일을 선택해주세요.', 'error');
+      return;
+    }
+    setCsvImporting(true);
+    setCsvResult(null);
+    setCsvErrors([]);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', csvFile);
+
+      const res = await fetch('/api/migration/csv-import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.validationErrors) {
+          setCsvErrors(data.validationErrors);
+          addToast(`유효성 오류: ${data.validationErrors.length}건을 확인해주세요.`, 'error');
+        } else if (data.unmappedStudentIds) {
+          addToast(`등록되지 않은 학번: ${data.unmappedStudentIds.join(', ')}`, 'error');
+        } else {
+          addToast(data.error || '업로드 실패', 'error');
+        }
+        return;
+      }
+
+      setCsvResult(data);
+      setCsvFile(null);
+      if (csvInputRef.current) csvInputRef.current.value = '';
+      addToast(data.message, 'success');
+    } catch {
+      addToast('네트워크 오류가 발생했습니다.', 'error');
+    } finally {
+      setCsvImporting(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner />;
 
   const pendingCount = tasks.filter(t => t.status === 'pending').length;
@@ -164,14 +251,188 @@ export default function MigrationPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8 rounded-r-lg">
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
           <h3 className="font-bold text-blue-800">타임머신 학습 엔진 안내</h3>
           <p className="text-blue-700 text-sm mt-1">
-            과거의 시험지, PDF 리포트, 일일 문제풀이 이미지 등을 업로드하면 AI가 순차적으로 과거의 성장 궤적을 학습하여 
+            과거의 시험지, PDF 리포트, 일일 문제풀이 이미지 등을 업로드하면 AI가 순차적으로 과거의 성장 궤적을 학습하여
             현재 학생의 메타프로필(Meta-Profile)을 업데이트합니다. 이 과정은 리포트를 렌더링하지 않고 핵심 시그널만 DB에 누적 압축 보관합니다.
           </p>
         </div>
 
+        {/* 탭 전환 */}
+        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setActiveTab('ai-ingest')}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'ai-ingest'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🤖 AI 인제스천 (이미지/PDF)
+          </button>
+          <button
+            onClick={() => setActiveTab('csv-import')}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'csv-import'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            📊 CSV 일괄 업로드 (점수 데이터)
+          </button>
+        </div>
+
+        {/* ───────────── CSV 업로드 탭 ───────────── */}
+        {activeTab === 'csv-import' && (
+          <div className="space-y-6">
+            {/* 안내 */}
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+              <h3 className="font-bold text-amber-800">CSV 일괄 업로드 안내</h3>
+              <p className="text-amber-700 text-sm mt-1">
+                과거 시험 점수, 석차 등 정량 데이터를 CSV로 일괄 등록합니다.
+                등록된 데이터는 <strong>연간 성장 그래프</strong>에 즉시 반영됩니다. AI 분석 없이 빠르게 과거 성적 궤적을 복원할 수 있습니다.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 좌측: 템플릿 & 업로드 */}
+              <div className="space-y-4">
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h2 className="text-lg font-bold mb-3">① 템플릿 다운로드</h2>
+                  <p className="text-sm text-gray-600 mb-4">
+                    아래 버튼으로 표준 CSV 템플릿을 다운로드한 뒤 Excel 또는 Numbers에서 작성하세요.
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-600 mb-4 overflow-x-auto">
+                    <div className="font-bold text-gray-700 mb-1">필수 열</div>
+                    <div>student_id · test_date · test_name · total_score · max_score</div>
+                    <div className="mt-1 text-gray-400">선택 열: rank · total_students</div>
+                  </div>
+                  <button
+                    onClick={downloadCsvTemplate}
+                    className="w-full py-2 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors text-sm font-medium"
+                  >
+                    📥 migration_template.csv 다운로드
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h2 className="text-lg font-bold mb-3">② CSV 파일 업로드</h2>
+                  <input
+                    ref={csvInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCsvSelect}
+                    className="hidden"
+                    disabled={csvImporting}
+                  />
+                  <button
+                    onClick={() => csvInputRef.current?.click()}
+                    disabled={csvImporting}
+                    className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-indigo-500 hover:text-indigo-600 transition-colors disabled:opacity-50 flex flex-col items-center gap-2"
+                  >
+                    <span className="text-2xl">📄</span>
+                    <span className="text-sm">
+                      {csvFile ? csvFile.name : '클릭하여 CSV 파일 선택'}
+                    </span>
+                    {csvFile && (
+                      <span className="text-xs text-gray-400">
+                        {(csvFile.size / 1024).toFixed(1)} KB
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={startCsvImport}
+                    disabled={!csvFile || csvImporting}
+                    className="mt-4 w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {csvImporting ? '⏳ 업로드 중...' : '🚀 CSV 데이터 가져오기'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 우측: 결과 / 오류 / 예시 */}
+              <div className="space-y-4">
+                {/* 성공 결과 */}
+                {csvResult && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">✅</span>
+                      <h3 className="font-bold text-green-800">업로드 완료</h3>
+                    </div>
+                    <p className="text-green-700 text-sm">{csvResult.message}</p>
+                    <p className="text-green-600 text-xs mt-2">
+                      연간 성장 그래프에서 추가된 데이터를 확인할 수 있습니다.
+                    </p>
+                  </div>
+                )}
+
+                {/* 유효성 오류 */}
+                {csvErrors.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+                    <h3 className="font-bold text-red-800 mb-3">
+                      ⚠️ 유효성 오류 ({csvErrors.length}건)
+                    </h3>
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                      {csvErrors.map((err, i) => (
+                        <div key={i} className="text-xs bg-white rounded p-2 border border-red-100">
+                          <span className="font-semibold text-red-700">{err.rowIndex}행 [{err.field}]</span>
+                          <span className="text-red-600 ml-1">{err.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* CSV 형식 예시 */}
+                {!csvResult && csvErrors.length === 0 && (
+                  <div className="bg-white rounded-xl shadow-sm p-6">
+                    <h3 className="font-bold text-gray-800 mb-3">📋 CSV 형식 예시</h3>
+                    <div className="overflow-x-auto">
+                      <table className="text-xs w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            {['student_id', 'test_date', 'test_name', 'total_score', 'max_score', 'rank', 'total_students'].map(h => (
+                              <th key={h} className="border border-gray-200 px-2 py-1 text-left font-semibold text-gray-600">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="border border-gray-200 px-2 py-1 text-indigo-600">M1250103</td>
+                            <td className="border border-gray-200 px-2 py-1">2025-03-15</td>
+                            <td className="border border-gray-200 px-2 py-1">중간고사</td>
+                            <td className="border border-gray-200 px-2 py-1 text-center">85</td>
+                            <td className="border border-gray-200 px-2 py-1 text-center">100</td>
+                            <td className="border border-gray-200 px-2 py-1 text-center text-gray-400">5</td>
+                            <td className="border border-gray-200 px-2 py-1 text-center text-gray-400">30</td>
+                          </tr>
+                          <tr className="bg-gray-50/50">
+                            <td className="border border-gray-200 px-2 py-1 text-indigo-600">M1250104</td>
+                            <td className="border border-gray-200 px-2 py-1">2025-03-15</td>
+                            <td className="border border-gray-200 px-2 py-1">중간고사</td>
+                            <td className="border border-gray-200 px-2 py-1 text-center">72</td>
+                            <td className="border border-gray-200 px-2 py-1 text-center">100</td>
+                            <td className="border border-gray-200 px-2 py-1 text-center text-gray-400">12</td>
+                            <td className="border border-gray-200 px-2 py-1 text-center text-gray-400">30</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3">
+                      * student_id는 학생 관리 페이지의 학번과 일치해야 합니다.<br />
+                      * rank, total_students는 생략 가능합니다.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ───────────── AI 인제스천 탭 ───────────── */}
+        {activeTab === 'ai-ingest' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* 좌측 패널: 설정 및 업로드 */}
           <div className="md:col-span-1 space-y-6">
@@ -273,7 +534,7 @@ export default function MigrationPage() {
                     <span className="font-bold text-indigo-600">{totalProgress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style={{ width: \`\${totalProgress}%\` }}></div>
+                    <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${totalProgress}%` }}></div>
                   </div>
                   <div className="flex gap-4 mt-2 text-xs text-gray-500">
                     <span>대기: {pendingCount}</span>
@@ -293,12 +554,12 @@ export default function MigrationPage() {
                   tasks.map((task, index) => (
                     <div 
                       key={task.id} 
-                      className={\`border rounded-lg p-3 \${
+                      className={`border rounded-lg p-3 ${
                         task.status === 'success' ? 'bg-green-50 border-green-200' :
                         task.status === 'error' ? 'bg-red-50 border-red-200' :
                         task.status === 'processing' ? 'bg-blue-50 border-blue-200 border-l-4 border-l-blue-500' :
                         'bg-white'
-                      }\`}
+                      }`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1 mr-4">
@@ -379,6 +640,8 @@ export default function MigrationPage() {
             </div>
           </div>
         </div>
+        )}
+
       </main>
     </div>
   );

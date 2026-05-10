@@ -74,9 +74,9 @@ export function generatePredictiveAnalysisContext(masteredSkills: MasteredSkillR
 
   skillsAtRisk.slice(0, 3).forEach(skill => {
     const p = Math.round(skill.forgettingProbability);
-    context += \`- 경고 개념: [\${skill.skillName}]\n\`;
-    context += \`  👉 마지막 학습일: \${new Date(skill.lastMasteredDate).toLocaleDateString()}, 현재 망각 확률: \${p}%\n\`;
-    context += \`  👉 AI 가이드: "과거 극복했던 [\${skill.skillName}] 개념, 지금 복습하지 않으면 잊어버릴 확률이 \${p}%입니다"와 같은 선제적 컨설팅 문구를 포함하세요.\n\`;
+    context += `- 경고 개념: [${skill.skillName}]\n`;
+    context += `  👉 마지막 학습일: ${new Date(skill.lastMasteredDate).toLocaleDateString()}, 현재 망각 확률: ${p}%\n`;
+    context += `  👉 AI 가이드: "과거 극복했던 [${skill.skillName}] 개념, 지금 복습하지 않으면 잊어버릴 확률이 ${p}%입니다"와 같은 선제적 컨설팅 문구를 포함하세요.\n`;
   });
 
   return context;

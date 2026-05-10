@@ -456,6 +456,27 @@ ${feedbackParts.join('\n\n')}`);
     }
   }
 
+  // 11. RAG 기억 서랍: 의미적으로 유사한 과거 분석 메모리 (Phase 3)
+  if (context.relevantMemories && context.relevantMemories.length > 0) {
+    const memLines = context.relevantMemories
+      .slice(0, 5)
+      .map((m) => {
+        const date = m.testDate ?? '날짜 미상';
+        const sim = Math.round(m.similarity * 100);
+        return `  - [${date} | ${m.reportType} | 유사도 ${sim}%] ${m.text.slice(0, 150)}`;
+      })
+      .join('\n');
+
+    sections.push(`
+## 💭 과거 기억 서랍 (RAG Memory Drawer)
+다음은 이 학생의 과거 리포트에서 현재 분석과 의미적으로 유사한 기억입니다.
+장기적 패턴, 반복 오류, 성장 서사의 일관성을 위해 참고하세요:
+
+${memLines}
+
+※ 위 기억을 현재 분석에 그대로 인용하지 말고, 패턴과 맥락을 파악하는 데 활용하세요.`);
+  }
+
   return sections.length > 0 ? `
 # ===== 학생 컨텍스트 데이터 (AI 분석 참조용) =====
 ${sections.join('\n')}

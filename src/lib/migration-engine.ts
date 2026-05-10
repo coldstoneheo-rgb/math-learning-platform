@@ -3,12 +3,6 @@
  * 클라이언트 단에서 파일(이미지/PDF)을 처리하고 API로 순차 전송하기 위한 유틸리티 모듈입니다.
  */
 
-import * as pdfjsLib from 'pdfjs-dist';
-
-// pdf.js 워커 설정 (Next.js public 폴더 혹은 CDN 활용)
-// Vercel 배포 환경을 고려해 안정적인 CDN 워커를 사용합니다.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
 /**
  * File 객체를 Base64 Data URL로 변환합니다.
  */
@@ -26,8 +20,14 @@ export function fileToBase64(file: File): Promise<string> {
  * 한글 깨짐 방지를 위해 cMapUrl 및 cMapPacked 옵션을 활성화합니다.
  */
 export async function convertPdfToImages(file: File): Promise<string[]> {
+  // 동적 import로 브라우저에서만 로드되도록 함
+  const pdfjsLib = await import('pdfjs-dist');
+
+  // pdf.js 워커 설정 (CDN 활용)
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
   const arrayBuffer = await file.arrayBuffer();
-  
+
   // cMap 설정을 통해 한글 폰트 지원
   const CMAP_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/cmaps/`;
   const CMAP_PACKED = true;
@@ -49,7 +49,7 @@ export async function convertPdfToImages(file: File): Promise<string[]> {
 
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    
+
     if (!context) {
       throw new Error('Canvas 2d context 생성을 실패했습니다.');
     }
@@ -60,13 +60,13 @@ export async function convertPdfToImages(file: File): Promise<string[]> {
     const renderContext = {
       canvasContext: context,
       viewport: viewport,
+      canvas: canvas,
     };
 
     await page.render(renderContext).promise;
-    
+
     // JPEG 포맷, 품질 0.8로 압축하여 Base64 생성
     const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-    // 'data:image/jpeg;base64,' 접두사 유지 여부는 API 쪽 처리에 맞춤 (보통 유지하거나 분리)
     images.push(base64Image);
   }
 
@@ -116,7 +116,7 @@ export async function processMigrationTask(
     }
 
     // 서버로 전송할 때는 접두사(data:image/jpeg;base64,)를 제거하고 순수 base64 데이터만 전송
-    const cleanBase64Images = base64Images.map(img => 
+    const cleanBase64Images = base64Images.map(img =>
       img.replace(/^data:image\/(jpeg|png|jpg);base64,/, '')
     );
 
@@ -133,7 +133,6 @@ export async function processMigrationTask(
       headers: {
         'Content-Type': 'application/json',
       },
-      // 대용량 페이로드가 될 수 있으므로 서버의 limit 제한 확인 필요
       body: JSON.stringify(payload),
     });
 
@@ -143,7 +142,7 @@ export async function processMigrationTask(
     }
 
     const data = await response.json();
-    
+
     return {
       ...task,
       status: 'success',

@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type {
   AnalysisContextData,
+  RelevantMemory,
   StudentMetaProfile,
   MicroLoopData,
   MacroLoopData,
@@ -27,7 +28,8 @@ import type {
  */
 export async function buildAnalysisContext(
   studentId: number,
-  reportType: ReportType
+  reportType: ReportType,
+  options?: { queryText?: string }
 ): Promise<AnalysisContextData> {
   const supabase = createClient();
 
@@ -39,6 +41,8 @@ export async function buildAnalysisContext(
     activeStrengths,
     growthLoopStatus,
     strategyFeedback,
+    failedMicroSkills,
+    masteredSkills,
   ] = await Promise.all([
     getStudentMetaProfile(studentId),
     getRecentReports(studentId, reportType),
@@ -46,10 +50,22 @@ export async function buildAnalysisContext(
     getActiveStrengths(studentId),
     getCurrentGrowthLoop(studentId, reportType),
     getStrategyFeedback(studentId),
+    getFailedMicroSkills(studentId),
+    getMasteredSkills(studentId),
   ]);
 
   // 이전 비전 검증 데이터 가져오기
   const previousVision = await getPreviousVisionData(studentId, recentReports);
+
+  // RAG 기억 서랍: 의미적으로 유사한 과거 메모리 검색
+  let relevantMemories: RelevantMemory[] | undefined;
+  if (options?.queryText) {
+    try {
+      relevantMemories = await retrieveRelevantMemories(studentId, options.queryText);
+    } catch {
+      // RAG 실패해도 분석은 계속 진행
+    }
+  }
 
   return {
     metaProfile,
@@ -60,6 +76,11 @@ export async function buildAnalysisContext(
     currentMacroLoop: growthLoopStatus?.macroLoop,
     previousVision,
     strategyFeedback,
+    // Phase 2: 지식 추적 및 망각 곡선
+    failedMicroSkills,
+    masteredSkills,
+    // Phase 3: RAG 기억 서랍
+    relevantMemories,
   };
 }
 
@@ -1035,4 +1056,199 @@ async function getStrategyFeedback(
     typeStats,
     overallStats,
   };
+}
+
+// ============================================
+// Phase 2: 지식 추적 및 망각 곡선 관련 함수
+// ============================================
+
+import { KNOWLEDGE_GRAPH } from './knowledge-graph';
+import type { MasteredSkillRecord } from './predictive-analysis';
+
+/**
+ * 개념명을 미세 스킬 ID로 매핑
+ * 취약점 개념명에서 관련 미세 스킬 ID를 찾습니다.
+ */
+function mapConceptToSkillIds(concept: string): string[] {
+  const matchedIds: string[] = [];
+  const conceptLower = concept.toLowerCase();
+
+  for (const [skillId, skill] of Object.entries(KNOWLEDGE_GRAPH)) {
+    const skillNameLower = skill.name.toLowerCase();
+    const skillDescLower = skill.description.toLowerCase();
+
+    // 부분 매칭: 개념이 스킬명이나 설명에 포함되어 있는지 확인
+    if (
+      skillNameLower.includes(conceptLower) ||
+      conceptLower.includes(skillNameLower) ||
+      skillDescLower.includes(conceptLower)
+    ) {
+      matchedIds.push(skillId);
+    }
+  }
+
+  return matchedIds;
+}
+
+/**
+ * 학생의 실패한 미세 스킬 목록 조회
+ * 활성 취약점과 최근 오답 패턴에서 관련 미세 스킬 ID를 추출합니다.
+ */
+export async function getFailedMicroSkills(
+  studentId: number
+): Promise<string[]> {
+  const supabase = createClient();
+
+  // 1. 활성 취약점에서 개념 가져오기
+  const { data: weaknesses } = await supabase
+    .from('student_weaknesses')
+    .select('concept')
+    .eq('student_id', studentId)
+    .in('status', ['active', 'recurring'])
+    .order('severity', { ascending: false })
+    .limit(5);
+
+  const failedSkillIds: string[] = [];
+
+  // 2. 각 취약 개념을 미세 스킬 ID로 매핑
+  if (weaknesses) {
+    for (const w of weaknesses) {
+      const skillIds = mapConceptToSkillIds(w.concept);
+      failedSkillIds.push(...skillIds);
+    }
+  }
+
+  // 3. 중복 제거 후 반환
+  return [...new Set(failedSkillIds)];
+}
+
+/**
+ * 학생의 마스터한 스킬 목록 조회 (망각 곡선 분석용)
+ * 해결된 취약점과 확인된 강점에서 마스터된 스킬 정보를 추출합니다.
+ */
+export async function getMasteredSkills(
+  studentId: number
+): Promise<MasteredSkillRecord[]> {
+  const supabase = createClient();
+
+  // 1. 해결된 취약점 조회 (resolved 상태)
+  const { data: resolvedWeaknesses } = await supabase
+    .from('student_weaknesses')
+    .select('concept, resolved_at')
+    .eq('student_id', studentId)
+    .eq('status', 'resolved')
+    .not('resolved_at', 'is', null)
+    .order('resolved_at', { ascending: false })
+    .limit(10);
+
+  // 2. 확인된 강점 조회
+  const { data: confirmedStrengths } = await supabase
+    .from('student_strengths')
+    .select('concept, last_confirmed_at, confirmation_count')
+    .eq('student_id', studentId)
+    .eq('status', 'active')
+    .order('last_confirmed_at', { ascending: false })
+    .limit(10);
+
+  const masteredSkills: MasteredSkillRecord[] = [];
+
+  // 3. 해결된 취약점을 마스터 스킬로 변환
+  if (resolvedWeaknesses) {
+    for (const w of resolvedWeaknesses) {
+      const skillIds = mapConceptToSkillIds(w.concept);
+      for (const skillId of skillIds) {
+        const skill = KNOWLEDGE_GRAPH[skillId];
+        if (skill) {
+          masteredSkills.push({
+            skillId,
+            skillName: skill.name,
+            lastMasteredDate: w.resolved_at || new Date().toISOString(),
+            memoryStrength: 3, // 해결된 취약점은 기본 강도 3
+          });
+        }
+      }
+    }
+  }
+
+  // 4. 확인된 강점을 마스터 스킬로 변환
+  if (confirmedStrengths) {
+    for (const s of confirmedStrengths) {
+      const skillIds = mapConceptToSkillIds(s.concept);
+      for (const skillId of skillIds) {
+        const skill = KNOWLEDGE_GRAPH[skillId];
+        if (skill) {
+          // 이미 추가된 스킬은 중복 방지
+          if (!masteredSkills.find(ms => ms.skillId === skillId)) {
+            masteredSkills.push({
+              skillId,
+              skillName: skill.name,
+              lastMasteredDate: s.last_confirmed_at || new Date().toISOString(),
+              memoryStrength: Math.min(s.confirmation_count + 2, 10), // 확인 횟수에 따라 강도 증가
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return masteredSkills;
+}
+
+// ============================================
+// RAG 기억 서랍: 유사도 기반 과거 메모리 검색
+// ============================================
+
+/**
+ * 쿼리 텍스트와 의미적으로 유사한 과거 리포트 메모리 검색
+ *
+ * @param studentId 학생 ID
+ * @param queryText 현재 분석 컨텍스트 (시험명 + 범위 등)
+ * @param options 검색 옵션
+ */
+export async function retrieveRelevantMemories(
+  studentId: number,
+  queryText: string,
+  options?: {
+    limit?: number;
+    threshold?: number;
+    excludeReportId?: number;
+  }
+): Promise<RelevantMemory[]> {
+  const { limit = 5, threshold = 0.65, excludeReportId } = options ?? {};
+
+  // 쿼리 텍스트를 임베딩으로 변환 (서버 사이드 전용)
+  const { generateEmbedding } = await import('./embedding-service');
+  const queryEmbedding = await generateEmbedding(queryText);
+
+  const supabase = createClient();
+
+  // pgvector RPC를 통한 코사인 유사도 검색
+  const { data, error } = await supabase.rpc('match_report_memories', {
+    query_embedding: queryEmbedding,
+    target_student_id: studentId,
+    match_threshold: threshold,
+    match_count: limit,
+    exclude_report_id: excludeReportId ?? null,
+  });
+
+  if (error) {
+    console.warn('[RAG] 기억 검색 실패:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row: {
+    report_id: number;
+    report_type: string;
+    test_date: string | null;
+    source_type: string;
+    source_text: string;
+    similarity: number;
+  }) => ({
+    reportId: row.report_id,
+    reportType: row.report_type,
+    testDate: row.test_date,
+    sourceType: row.source_type,
+    text: row.source_text.slice(0, 200),
+    similarity: Math.round(row.similarity * 100) / 100,
+  }));
 }

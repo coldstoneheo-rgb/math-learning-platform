@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { updateStudentProfileFromConsolidated } from '@/lib/student-profile-extractor';
 import { registerReportFeedbackData } from '@/lib/feedback-loop';
+import { sendReportCreatedNotification } from '@/lib/notification-helper';
+import { indexReportEmbeddings } from '@/lib/embedding-helper';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -257,6 +259,18 @@ export default function NewConsolidatedReportPage() {
         } catch (feedbackError) {
           console.warn('[Feedback Loop] 등록 실패:', feedbackError);
         }
+
+        // [Parent Notification] 학부모 알림 발송
+        const notifResult = await sendReportCreatedNotification({
+          reportId: insertedReport.id,
+          studentId: selectedStudentId as number,
+        });
+        if (notifResult.success && !notifResult.skipped) {
+          console.log('[Notification] 학부모 알림 발송 완료');
+        }
+
+        // [Embedding] RAG 기억 서랍 인덱싱 (fire-and-forget)
+        indexReportEmbeddings(insertedReport.id, selectedStudentId as number);
       }
 
       addToast('통합 리포트가 저장되었습니다.', 'success');

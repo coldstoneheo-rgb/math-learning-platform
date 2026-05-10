@@ -9,6 +9,11 @@ import WeaknessResolutionMap, { buildWeaknessItems } from '@/components/report/W
 import TrajectoryAreaChart from '@/components/report/TrajectoryAreaChart';
 import MetaProfileComparison, { buildMetaProfileMetrics } from '@/components/report/MetaProfileComparison';
 import AnnualGrowthStory from '@/components/report/AnnualGrowthStory';
+import {
+  ReportGrowthHero,
+  HomeActionCard,
+  GrowthProjectionChart,
+} from '@/components/report/premium';
 import { exportReportToPdf } from '@/lib/pdf-export';
 import {
   calculateHabitScore,
@@ -203,6 +208,41 @@ export default function ParentReportDetailPage() {
           />
         )}
 
+        {/* 🌟 프리미엄: 성장 한 줄 요약 Hero */}
+        <div className="mb-6">
+          <ReportGrowthHero
+            reportType={report.report_type as 'level_test' | 'test' | 'weekly' | 'monthly' | 'semi_annual' | 'annual' | 'consolidated'}
+            studentName={report.students?.name || '학생'}
+            reportDate={report.test_date || report.created_at}
+            headline={
+              testAnalysis?.macroAnalysis?.oneLineSummary ||
+              levelTestAnalysis?.initialBaseline?.overallLevel ||
+              monthlyAnalysis?.monthlyGrowthSummary?.headline ||
+              semiAnnualAnalysis?.growthSummaryBanner?.headline ||
+              annualAnalysis?.growthNarrativeFinal?.headline ||
+              '이번 리포트의 핵심 분석 결과입니다.'
+            }
+            subheadline={
+              testAnalysis?.macroAnalysis?.analysisMessage ||
+              levelTestAnalysis?.parentBriefing ||
+              monthlyAnalysis?.monthlyGrowthSummary?.keyAchievement ||
+              undefined
+            }
+            currentScore={report.total_score ?? undefined}
+            targetScore={report.max_score ?? undefined}
+            percentile={
+              report.rank && report.total_students
+                ? Math.round((1 - report.rank / report.total_students) * 100)
+                : undefined
+            }
+            emotionType={
+              (report.total_score ?? 0) >= (report.max_score ?? 100) * 0.9 ? 'celebrate' :
+              (report.total_score ?? 0) >= (report.max_score ?? 100) * 0.7 ? 'encourage' :
+              (report.total_score ?? 0) >= (report.max_score ?? 100) * 0.5 ? 'neutral' : 'alert'
+            }
+          />
+        </div>
+
         {/* 공통 헤더 배너 */}
         <div className={`bg-gradient-to-r ${gradientColor} rounded-xl shadow-lg p-6 mb-6 text-white`}>
           <div className="flex justify-between items-start">
@@ -386,6 +426,45 @@ export default function ParentReportDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* 🌟 프리미엄: 학부모 행동 가이드 */}
+            {report.students && (
+              <HomeActionCard
+                studentName={report.students.name}
+                praisePoint={
+                  testAnalysis.macroAnalysis?.strengths?.split('.')[0] ||
+                  '꾸준히 노력하고 있는 점'
+                }
+                praiseExample={`"${report.students.name}아, 이번 시험에서 ${testAnalysis.macroAnalysis?.strengths?.split('.')[0] || '열심히 푼 점'}이 정말 대단해!"`}
+                observePoint={
+                  testAnalysis.riskFactors?.[0]?.factor ||
+                  testAnalysis.macroAnalysis?.weaknesses?.split('.')[0] ||
+                  '집중력 유지'
+                }
+                questionToAsk={`"오늘 수학 공부하면서 가장 어려웠던 건 뭐야?"`}
+                weekendActivity={
+                  testAnalysis.actionablePrescription?.[0]?.howTo ||
+                  '틀린 문제 함께 다시 풀어보기'
+                }
+              />
+            )}
+
+            {/* 🌟 프리미엄: 성장 예측 차트 */}
+            {testAnalysis.growthPredictions && testAnalysis.growthPredictions.length > 0 && (
+              <GrowthProjectionChart
+                historicalData={[
+                  { date: report.test_date || '현재', score: report.total_score ?? 0 },
+                ]}
+                projectedData={testAnalysis.growthPredictions.map(p => ({
+                  date: p.timeframe,
+                  score: p.predictedScore,
+                  label: `${p.timeframe} 예상`,
+                  isProjection: true,
+                }))}
+                targetScore={testAnalysis.growthPredictions[testAnalysis.growthPredictions.length - 1]?.predictedScore || 90}
+                studentName={report.students?.name}
+              />
+            )}
 
             {/* 미래 비전 */}
             {report.students && (testAnalysis.macroAnalysis?.futureVision || testAnalysis.growthPredictions) && (
