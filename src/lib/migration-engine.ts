@@ -3,6 +3,8 @@
  * 클라이언트 단에서 파일(이미지/PDF)을 처리하고 API로 순차 전송하기 위한 유틸리티 모듈입니다.
  */
 
+import imageCompression from 'browser-image-compression';
+
 /**
  * File 객체를 Base64 Data URL로 변환합니다.
  */
@@ -10,6 +12,28 @@ export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+}
+
+/**
+ * Base64 이미지를 browser-image-compression으로 압축하여 Vercel Payload 크기를 줄입니다.
+ */
+async function compressBase64Image(base64: string): Promise<string> {
+  const res = await fetch(base64);
+  const blob = await res.blob();
+  
+  const options = {
+    maxSizeMB: 0.4, // 최대 400KB
+    maxWidthOrHeight: 1920,
+    useWebWorker: true,
+  };
+  
+  const compressedBlob = await imageCompression(blob as File, options);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(compressedBlob);
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
@@ -107,9 +131,14 @@ export async function processMigrationTask(
     let base64Images: string[] = [];
 
     if (task.file.type === 'application/pdf') {
-      base64Images = await convertPdfToImages(task.file);
+      const rawImages = await convertPdfToImages(task.file);
+      // PDF에서 추출된 고화질 이미지를 하나씩 압축
+      base64Images = await Promise.all(rawImages.map(img => compressBase64Image(img)));
     } else if (task.file.type.startsWith('image/')) {
-      const base64 = await fileToBase64(task.file);
+      // 일반 이미지 파일 자체를 먼저 압축
+      const options = { maxSizeMB: 0.4, maxWidthOrHeight: 1920, useWebWorker: true };
+      const compressedFile = await imageCompression(task.file, options);
+      const base64 = await fileToBase64(compressedFile);
       base64Images.push(base64);
     } else {
       throw new Error('지원하지 않는 파일 형식입니다. (이미지 또는 PDF만 가능)');
@@ -120,34 +149,45 @@ export async function processMigrationTask(
       img.replace(/^data:image\/(jpeg|png|jpg);base64,/, '')
     );
 
-    const payload = {
-      studentId,
-      studentName,
-      images: cleanBase64Images,
-      documentDate: task.documentDate,
-      documentType: task.documentType,
-    };
+    // Vercel Serverless Payload 제한(4.5MB) 회피를 위해 청크 분할 전송 (한 번에 최대 3장)
+    const CHUNK_SIZE = 3;
+    let allExtractedSignals: any[] = [];
 
-    const response = await fetch('/api/migration/ingest', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    for (let i = 0; i < cleanBase64Images.length; i += CHUNK_SIZE) {
+      const chunkedImages = cleanBase64Images.slice(i, i + CHUNK_SIZE);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'API 요청 실패');
+      const payload = {
+        studentId,
+        studentName,
+        images: chunkedImages,
+        documentDate: task.documentDate,
+        documentType: task.documentType,
+      };
+
+      const response = await fetch('/api/migration/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API 요청 실패 (청크 ${i / CHUNK_SIZE + 1})`);
+      }
+
+      const data = await response.json();
+      if (data.extractedSignals) {
+        allExtractedSignals = [...allExtractedSignals, ...data.extractedSignals];
+      }
     }
-
-    const data = await response.json();
 
     return {
       ...task,
       status: 'success',
       progress: 100,
-      extractedSignals: data.extractedSignals,
+      extractedSignals: allExtractedSignals,
     };
   } catch (error) {
     console.error('Task 처리 중 오류:', error);

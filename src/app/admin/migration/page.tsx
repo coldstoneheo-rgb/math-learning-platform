@@ -48,6 +48,7 @@ export default function MigrationPage() {
   const [tasks, setTasks] = useState<MigrationTask[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // 일괄 설정용 상태
   const [batchDate, setBatchDate] = useState('');
@@ -114,6 +115,39 @@ export default function MigrationPage() {
     // reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!isProcessing) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isProcessing) return;
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files).filter(file => 
+        file.type.startsWith('image/') || file.type === 'application/pdf'
+      );
+      
+      const newTasks: MigrationTask[] = newFiles.map(file => ({
+        id: uuidv4(),
+        file,
+        documentDate: batchDate || new Date().toISOString().split('T')[0],
+        documentType: batchType,
+        status: 'pending',
+        progress: 0
+      }));
+
+      setTasks(prev => [...prev, ...newTasks]);
     }
   };
 
@@ -492,14 +526,20 @@ export default function MigrationPage() {
                 className="hidden"
                 disabled={isProcessing}
               />
-              <button
+              <div
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isProcessing}
-                className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-indigo-500 hover:text-indigo-600 transition-colors disabled:opacity-50 flex flex-col items-center justify-center gap-2"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`w-full py-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
+                  isDragging 
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                    : 'border-gray-300 text-gray-500 hover:border-indigo-500 hover:text-indigo-600'
+                } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
               >
                 <span className="text-2xl">📁</span>
-                <span>클릭하여 이미지/PDF 추가</span>
-              </button>
+                <span>클릭하거나 파일을 이곳에 드래그하여 추가하세요</span>
+              </div>
             </div>
           </div>
 
