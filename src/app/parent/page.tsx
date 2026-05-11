@@ -45,6 +45,12 @@ export default function ParentDashboard() {
     checkAuthAndLoad();
   }, []);
 
+  useEffect(() => {
+    if (user && selectedChild) {
+      loadChecklistSummary(user.id, selectedChild.id);
+    }
+  }, [user, selectedChild]);
+
   const checkAuthAndLoad = async () => {
     const supabase = createClient();
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -518,6 +524,27 @@ export default function ParentDashboard() {
                 </div>
 
                 {/* Phase 5: 체크리스트 요약 위젯 */}
+                {checklistSummary && (
+                  <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border border-indigo-50 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-xl">
+                        📋
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">이번 주 학습 가이드 체크리스트</h3>
+                        <p className="text-sm text-gray-500">
+                          {checklistSummary.total}개의 항목 중 <span className="font-medium text-indigo-600">{checklistSummary.completed}개</span> 완료
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => router.push('/parent/checklist')}
+                      className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      체크리스트 보기
+                    </button>
+                  </div>
+                )}
                 {user && (() => {
                   const pct = checklistSummary ? Math.round((checklistSummary.completed / checklistSummary.total) * 100) : 0;
                   const hasPending = checklistSummary && checklistSummary.completed < checklistSummary.total;
