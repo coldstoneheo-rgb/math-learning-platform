@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis, Notification, ParentChecklist } from '@/types';
 import { HabitTrendChart } from '@/components/report';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
 import {
   LineChart,
   Line,
@@ -413,6 +414,8 @@ export default function ParentDashboard() {
                 </div>
               )}
             </div>
+
+            <ThemeToggle />
 
             <button
               onClick={handleLogout}

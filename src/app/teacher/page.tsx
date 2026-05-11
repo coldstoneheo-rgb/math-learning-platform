@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Report, Student, Schedule, ClassSession, Assignment, StudentWeakness } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
 
 interface ReportWithStudent extends Report {
   students: Pick<Student, 'name' | 'grade'>;
@@ -206,8 +207,9 @@ export default function AdminDashboard() {
           <Link href="/" className="text-xl font-bold text-indigo-600 hover:text-indigo-700">
             수학 학습 분석
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <span className="text-gray-600">{user?.name} 선생님</span>
+            <ThemeToggle />
             <button
               onClick={handleLogout}
               className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"

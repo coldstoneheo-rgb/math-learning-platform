@@ -71,6 +71,9 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
+
+  /* 기본 color-scheme: 시스템 다크모드 자동 적용 방지 (라이트 기본) */
+  color-scheme: light;
 }
 
 @theme inline {
@@ -81,14 +84,15 @@
     'Noto Sans KR', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f172a;
-    --foreground: #f1f5f9;
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(71, 85, 105, 0.3);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  }
+/* Dark mode: .dark 클래스 기반 (ThemeProvider에서 html.dark로 관리)
+   시스템 미디어 쿼리 대신 명시적 클래스로 제어하여 사용자 선택 우선 */
+html.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(71, 85, 105, 0.3);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
 }
 
 body {
@@ -352,4 +356,101 @@ th,
 .focus-ring:focus-visible {
   outline: 2px solid var(--primary-500);
   outline-offset: 2px;
+}
+
+/* ================================================
+   Dark Mode 글로벌 오버라이드 (html.dark 기반)
+   개별 페이지 Tailwind 클래스의 dark: 변형 없이도
+   가장 공통적인 배경/텍스트 색상을 반전시킵니다.
+   ================================================ */
+
+/* 기본 배경/텍스트 */
+html.dark body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* 흰 배경 카드/패널 → 다크 배경으로 */
+html.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #0f172a !important;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #1e293b !important;
+}
+
+html.dark .bg-gray-200 {
+  background-color: #334155 !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+/* 텍스트 색상 */
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-gray-400 {
+  color: #64748b !important;
+}
+
+/* 테두리 */
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: #334155 !important;
+}
+
+/* 입력 필드 */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b;
+}
+
+/* 스크롤바 */
+html.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* 모달/드롭다운 오버레이 */
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg {
+  --tw-shadow-color: rgba(0, 0, 0, 0.4);
 }
