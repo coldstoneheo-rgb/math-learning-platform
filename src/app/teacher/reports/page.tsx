@@ -152,7 +152,7 @@ export default function ReportsPage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
+            <a href="/teacher" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
             <h1 className="text-xl font-bold text-gray-900">리포트 관리</h1>
           </div>
           <span className="text-gray-600">{user?.name} 선생님</span>
@@ -187,7 +187,7 @@ export default function ReportsPage() {
         {filteredReports.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center">
             <p className="text-gray-500 mb-4">생성된 리포트가 없습니다.</p>
-            <Link href="/admin/reports/create" className="text-indigo-600 hover:text-indigo-700 font-medium">
+            <Link href="/teacher/reports/create" className="text-indigo-600 hover:text-indigo-700 font-medium">
               첫 리포트 생성하기
             </Link>
           </div>
@@ -232,7 +232,7 @@ export default function ReportsPage() {
                     </td>
                     <td className="px-4 md:px-6 py-3 md:py-4 text-right whitespace-nowrap">
                       <a
-                        href={`/admin/reports/${report.id}`}
+                        href={`/teacher/reports/${report.id}`}
                         className="text-indigo-600 hover:text-indigo-800 text-sm mr-2 md:mr-3"
                       >
                         보기

@@ -274,7 +274,7 @@ export default function NewConsolidatedReportPage() {
       }
 
       addToast('통합 리포트가 저장되었습니다.', 'success');
-      router.push('/admin/reports');
+      router.push('/teacher/reports');
     } catch (err) {
       console.error('저장 오류:', err);
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
@@ -299,7 +299,7 @@ export default function NewConsolidatedReportPage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/teacher/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
             </Link>
             <h1 className="text-xl font-bold text-gray-900">통합 리포트 작성</h1>

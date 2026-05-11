@@ -218,7 +218,7 @@ export default function StudentsPage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin" className="text-gray-500 hover:text-gray-700">
+            <a href="/teacher" className="text-gray-500 hover:text-gray-700">
               ← 대시보드
             </a>
             <h1 className="text-xl font-bold text-gray-900">학생 관리</h1>

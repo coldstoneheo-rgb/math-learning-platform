@@ -264,7 +264,7 @@ export default function NewReportPage() {
       }
 
       addToast('리포트가 저장되었습니다.', 'success');
-      router.push('/admin');
+      router.push('/teacher');
     } catch (err) {
       console.error('저장 오류:', err);
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
@@ -290,7 +290,7 @@ export default function NewReportPage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/teacher/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
             </Link>
             <h1 className="text-xl font-bold text-gray-900">시험지 분석</h1>
@@ -316,7 +316,7 @@ export default function NewReportPage() {
               {students.length === 0 ? (
                 <div className="text-center py-4">
                   <p className="text-gray-500 mb-2">등록된 학생이 없습니다.</p>
-                  <a href="/admin/students" className="text-indigo-600 hover:text-indigo-700">
+                  <a href="/teacher/students" className="text-indigo-600 hover:text-indigo-700">
                     학생 등록하러 가기
                   </a>
                 </div>

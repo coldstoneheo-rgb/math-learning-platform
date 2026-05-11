@@ -52,7 +52,7 @@ export default function StudentDashboard() {
     const { data: userData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
     if (!userData) { router.push('/login'); return; }
 
-    if (userData.role === 'teacher') { router.push('/admin'); return; }
+    if (userData.role === 'teacher') { router.push('/teacher'); return; }
     if (userData.role === 'parent') { router.push('/parent'); return; }
     if (userData.role !== 'student') { router.push('/'); return; }
 

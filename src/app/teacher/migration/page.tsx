@@ -278,7 +278,7 @@ export default function MigrationPage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <a href="/admin" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
+            <a href="/teacher" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
             <h1 className="text-xl font-bold text-gray-900">레거시 데이터 마이그레이션 (Batch Ingestion)</h1>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge } from '@/components/report';
+import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge, ReportComments } from '@/components/report';
 import GrowthRadarChart, { buildRadarData } from '@/components/report/GrowthRadarChart';
 import WeaknessResolutionMap, { buildWeaknessItems } from '@/components/report/WeaknessResolutionMap';
 import TrajectoryAreaChart from '@/components/report/TrajectoryAreaChart';
@@ -1385,6 +1385,14 @@ export default function ParentReportDetailPage() {
               <p className="text-yellow-800 font-medium">{selfAnalysis.encouragement}</p>
             </div>
           </>
+        )}
+
+        {/* Phase 5: 교사-학부모 코멘트 스레드 */}
+        {user && (
+          <ReportComments
+            reportId={parseInt(reportId, 10)}
+            currentUser={user}
+          />
         )}
 
         {/* 하단 네비게이션 */}

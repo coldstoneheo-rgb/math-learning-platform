@@ -14,6 +14,7 @@ import {
   VisionDistanceFooter,
   MomentumGauge,
   HabitTrendChart,
+  ReportComments,
 } from '@/components/report';
 import {
   ReportGrowthHero,
@@ -85,7 +86,7 @@ export default function ReportDetailPage() {
 
     if (error || !reportData) {
       addToast('리포트를 찾을 수 없습니다.', 'error');
-      router.push('/admin/reports');
+      router.push('/teacher/reports');
       return;
     }
 
@@ -166,9 +167,9 @@ export default function ReportDetailPage() {
     <header className="bg-white shadow-sm print:hidden">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Link href="/admin" className="text-indigo-600 hover:text-indigo-700 font-medium">🏠 대시보드</Link>
+          <Link href="/teacher" className="text-indigo-600 hover:text-indigo-700 font-medium">🏠 대시보드</Link>
           <span className="text-gray-300">|</span>
-          <Link href="/admin/reports" className="text-gray-500 hover:text-gray-700">← 목록</Link>
+          <Link href="/teacher/reports" className="text-gray-500 hover:text-gray-700">← 목록</Link>
           <h1 className="text-xl font-bold text-gray-900">리포트 상세</h1>
         </div>
         <div className="flex items-center gap-2">
@@ -2100,6 +2101,13 @@ export default function ReportDetailPage() {
               </div>
             )}
           </>
+        )}
+        {/* Phase 5: 교사-학부모 코멘트 스레드 */}
+        {user && (
+          <ReportComments
+            reportId={parseInt(reportId, 10)}
+            currentUser={user}
+          />
         )}
       </main>
     </div>

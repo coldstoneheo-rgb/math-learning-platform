@@ -240,7 +240,7 @@ export default function AdminDashboard() {
                 {todayStudents.length}명
               </span>
             </div>
-            <Link href="/admin/schedules" className="text-sm text-indigo-600 hover:text-indigo-700">
+            <Link href="/teacher/schedules" className="text-sm text-indigo-600 hover:text-indigo-700">
               일정 관리 →
             </Link>
           </div>
@@ -252,7 +252,7 @@ export default function AdminDashboard() {
                 오늘은 예정된 수업이 없습니다.
               </p>
               <a
-                href="/admin/schedules"
+                href="/teacher/schedules"
                 className="inline-block mt-4 text-sm text-indigo-600 hover:text-indigo-700"
               >
                 수업 일정 등록하기 →
@@ -273,25 +273,25 @@ export default function AdminDashboard() {
             title="학생 관리"
             description="추가, 수정, 삭제"
             icon="👨‍🎓"
-            href="/admin/students"
+            href="/teacher/students"
           />
           <DashboardCard
             title="수업 일정"
             description="요일별 수업 시간"
             icon="📅"
-            href="/admin/schedules"
+            href="/teacher/schedules"
           />
           <DashboardCard
             title="수업 기록"
             description="수업 내용 기록"
             icon="✏️"
-            href="/admin/class-record"
+            href="/teacher/class-record"
           />
           <DashboardCard
             title="학부모 관리"
             description="계정 및 자녀 연결"
             icon="👨‍👩‍👧"
-            href="/admin/parents"
+            href="/teacher/parents"
           />
         </div>
         <div className="grid md:grid-cols-4 gap-4 mb-8">
@@ -299,25 +299,25 @@ export default function AdminDashboard() {
             title="리포트 생성"
             description="주간/월간/시험"
             icon="📊"
-            href="/admin/reports/create"
+            href="/teacher/reports/create"
           />
           <DashboardCard
             title="리포트 관리"
             description="조회 및 관리"
             icon="📋"
-            href="/admin/reports"
+            href="/teacher/reports"
           />
           <DashboardCard
             title="전략 관리"
             description="효과 추적"
             icon="🎯"
-            href="/admin/strategies"
+            href="/teacher/strategies"
           />
           <DashboardCard
             title="분석 대시보드"
             description="성과 및 예측"
             icon="📈"
-            href="/admin/analytics"
+            href="/teacher/analytics"
           />
         </div>
 
@@ -325,7 +325,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900">최근 이벤트</h3>
-            <Link href="/admin/reports" className="text-sm text-indigo-600 hover:text-indigo-700">
+            <Link href="/teacher/reports" className="text-sm text-indigo-600 hover:text-indigo-700">
               전체 보기 →
             </Link>
           </div>
@@ -340,7 +340,7 @@ export default function AdminDashboard() {
               {recentReports.map((report) => (
                 <a
                   key={report.id}
-                  href={`/admin/reports/${report.id}`}
+                  href={`/teacher/reports/${report.id}`}
                   className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-2 px-2 rounded transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -438,7 +438,7 @@ function TodayStudentCard({
           </div>
         </div>
         <a
-          href={`/admin/class-record?student=${student.id}`}
+          href={`/teacher/class-record?student=${student.id}`}
           className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
         >
           기록

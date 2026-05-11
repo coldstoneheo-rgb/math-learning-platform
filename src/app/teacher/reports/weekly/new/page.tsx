@@ -474,7 +474,7 @@ export default function NewWeeklyReportPage() {
       }
 
       addToast('주간 리포트가 저장되었습니다.', 'success');
-      router.push('/admin/reports');
+      router.push('/teacher/reports');
     } catch (err: unknown) {
       console.error('저장 오류:', err);
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
@@ -504,7 +504,7 @@ export default function NewWeeklyReportPage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link href="/admin/reports/create" className="text-gray-500 hover:text-gray-700">
+            <Link href="/teacher/reports/create" className="text-gray-500 hover:text-gray-700">
               ← 리포트 선택
             </Link>
             <h1 className="text-xl font-bold text-gray-900">주간 리포트 작성</h1>
@@ -665,7 +665,7 @@ export default function NewWeeklyReportPage() {
                 {formData.classDates.length === 0 && (
                   <p className="text-sm text-amber-600 mt-2">
                     ⚠️ 수업일이 없습니다. 수업일을 추가하거나{' '}
-                    <a href="/admin/schedules" className="text-green-600 hover:underline">
+                    <a href="/teacher/schedules" className="text-green-600 hover:underline">
                       정기 일정을 등록
                     </a>
                     해주세요.

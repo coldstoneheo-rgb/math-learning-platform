@@ -12,7 +12,7 @@ const REPORT_TYPES = [
     title: '레벨 테스트',
     description: '신규 학생 진단 테스트 - Baseline(기준점) 설정',
     icon: '🎯',
-    href: '/admin/reports/level-test/new',
+    href: '/teacher/reports/level-test/new',
     color: 'red',
     badge: '신규 학생',
   },
@@ -21,7 +21,7 @@ const REPORT_TYPES = [
     title: '시험 분석',
     description: '시험지 이미지를 분석하여 상세한 학습 진단 리포트 생성',
     icon: '📝',
-    href: '/admin/reports/new',
+    href: '/teacher/reports/new',
     color: 'blue',
   },
   {
@@ -29,7 +29,7 @@ const REPORT_TYPES = [
     title: '주간 리포트',
     description: '한 주간의 학습 내용과 진도를 정리한 리포트 생성 (AI 분석 지원)',
     icon: '📅',
-    href: '/admin/reports/weekly/new',
+    href: '/teacher/reports/weekly/new',
     color: 'green',
   },
   {
@@ -37,7 +37,7 @@ const REPORT_TYPES = [
     title: '월간 리포트',
     description: '한 달간의 학습 성과와 성장을 분석한 리포트 생성 (AI 분석 지원)',
     icon: '📆',
-    href: '/admin/reports/monthly/new',
+    href: '/teacher/reports/monthly/new',
     color: 'purple',
   },
   {
@@ -45,7 +45,7 @@ const REPORT_TYPES = [
     title: '통합 분석',
     description: '여러 시험 결과를 종합하여 심층 분석 리포트 생성',
     icon: '📊',
-    href: '/admin/reports/consolidated/new',
+    href: '/teacher/reports/consolidated/new',
     color: 'orange',
   },
   {
@@ -53,7 +53,7 @@ const REPORT_TYPES = [
     title: '반기 종합 리포트',
     description: '6개월간의 학습을 종합 분석 - Macro Loop 점검 (AI 분석 필수)',
     icon: '📈',
-    href: '/admin/reports/semi-annual/new',
+    href: '/teacher/reports/semi-annual/new',
     color: 'indigo',
     badge: 'Macro Loop',
   },
@@ -62,7 +62,7 @@ const REPORT_TYPES = [
     title: '연간 종합 리포트',
     description: '1년간의 성장 스토리 - Baseline 대비 성장, 다음 학년 준비 (AI 분석 필수)',
     icon: '📚',
-    href: '/admin/reports/annual/new',
+    href: '/teacher/reports/annual/new',
     color: 'amber',
     badge: 'Growth Story',
   },
@@ -115,7 +115,7 @@ export default function ReportCreatePage() {
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/admin" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
+            <a href="/teacher" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
             <h1 className="text-xl font-bold text-gray-900">리포트 생성</h1>
           </div>
           <span className="text-gray-600">{user?.name} 선생님</span>

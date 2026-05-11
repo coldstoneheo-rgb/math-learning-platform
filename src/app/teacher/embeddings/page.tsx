@@ -147,7 +147,7 @@ export default function EmbeddingsAdminPage() {
 
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <a href="/admin" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
+          <a href="/teacher" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
           <h1 className="text-xl font-bold text-gray-900">🧠 RAG 기억 서랍 관리</h1>
         </div>
       </header>
