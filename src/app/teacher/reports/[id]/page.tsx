@@ -49,6 +49,7 @@ export default function ReportDetailPage() {
   const [report, setReport] = useState<ReportWithStudent | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
@@ -125,6 +126,76 @@ export default function ReportDetailPage() {
     }
   };
 
+  // Phase 5: 학부모 알림 발송
+  const handleSendNotification = async () => {
+    if (!report || !report.students || sendingNotification) return;
+
+    const supabase = createClient();
+    const parentId = report.students.parent_id;
+    if (!parentId) {
+      addToast('이 학생에 연결된 학부모 정보가 없습니다.', 'error');
+      return;
+    }
+
+    const { data: parentData } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('id', parentId)
+      .single();
+
+    if (!parentData?.email) {
+      addToast('학부모 이메일 정보를 찾을 수 없습니다.', 'error');
+      return;
+    }
+
+    setSendingNotification(true);
+    try {
+      const studentName = report.students.name;
+      const title = `📊 ${studentName} 학생의 새 리포트가 도착했습니다`;
+      const message = `${studentName} 학생의 "${report.test_name || '리포트'}" 분석이 완료되었습니다. 리포트를 확인하세요.`;
+
+      await Promise.all([
+        fetch('/api/notifications/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientUserId: parentId,
+            title,
+            message,
+            channel: 'in_app',
+            relatedResourceType: 'report',
+            relatedResourceId: reportId,
+          }),
+        }),
+        fetch('/api/notifications/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientUserId: parentId,
+            title,
+            message,
+            channel: 'email',
+            relatedResourceType: 'report',
+            relatedResourceId: reportId,
+            emailData: {
+              recipientEmail: parentData.email,
+              recipientName: parentData.name || '학부모',
+              studentName,
+              reportId: parseInt(reportId, 10),
+            },
+          }),
+        }),
+      ]);
+
+      addToast(`${parentData.name || '학부모'}님께 알림을 발송했습니다. 이메일도 전송되었습니다.`, 'success');
+    } catch (error) {
+      console.error('알림 발송 오류:', error);
+      addToast('알림 발송 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
   // report.analysis_data는 다양한 리포트 타입을 지원
   const analysis = (report?.analysis_data as AnalysisData) || null;
   const levelTestAnalysis = report?.report_type === 'level_test'
@@ -173,6 +244,25 @@ export default function ReportDetailPage() {
           <h1 className="text-xl font-bold text-gray-900">리포트 상세</h1>
         </div>
         <div className="flex items-center gap-2">
+          {/* Phase 5: 학부모 알림 발송 버튼 */}
+          {report?.students?.parent_id && (
+            <button
+              onClick={handleSendNotification}
+              disabled={sendingNotification}
+              className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {sendingNotification ? (
+                <><span className="animate-spin text-sm">⏳</span> 전송 중...</>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  학부모 알림 발송
+                </>
+              )}
+            </button>
+          )}
           <button
             onClick={handleExportPdf}
             disabled={exporting}
