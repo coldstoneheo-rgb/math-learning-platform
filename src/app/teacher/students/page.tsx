@@ -355,7 +355,7 @@ export default function StudentsPage() {
                           연결됨
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
                           미연결
                         </span>
                       )}
@@ -363,7 +363,7 @@ export default function StudentsPage() {
                     <td className="px-4 md:px-6 py-3 md:py-4 text-right">
                       <button
                         onClick={() => openAccountLinkModal(student)}
-                        className="text-emerald-600 hover:text-emerald-800 text-sm mr-3"
+                        className="text-emerald-700 hover:text-emerald-900 text-sm mr-3"
                       >
                         계정 연결
                       </button>
