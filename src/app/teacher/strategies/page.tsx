@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -68,6 +68,7 @@ export default function StrategiesPage() {
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [editingStrategy, setEditingStrategy] = useState<StrategyTracking | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -125,7 +126,9 @@ export default function StrategiesPage() {
       const data = await response.json();
 
       if (data.success) {
-        setStrategies(data.strategies || []);
+        startTransition(() => {
+          setStrategies(data.strategies || []);
+        });
       }
     } catch (error) {
       console.error('Failed to load strategies:', error);
@@ -224,6 +227,7 @@ export default function StrategiesPage() {
           <div className="p-4 border-b">
             <h2 className="text-lg font-semibold text-gray-800">
               전략 목록 ({strategies.length}개)
+              {isPending && <span className="ml-2 text-sm font-normal text-gray-400">갱신 중...</span>}
             </h2>
           </div>
 

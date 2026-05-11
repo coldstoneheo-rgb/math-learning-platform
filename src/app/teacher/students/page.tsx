@@ -8,6 +8,14 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 
+// 학생 가입 계정 (auth users 중 role='student')
+interface StudentUser {
+  id: string;
+  email: string;
+  name: string;
+  created_at: string;
+}
+
 export default function StudentsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -25,6 +33,13 @@ export default function StudentsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // 계정 연결 모달 상태
+  const [showAccountLinkModal, setShowAccountLinkModal] = useState(false);
+  const [linkingStudent, setLinkingStudent] = useState<Student | null>(null);
+  const [studentUsers, setStudentUsers] = useState<StudentUser[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [linkSaving, setLinkSaving] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoadStudents();
@@ -201,6 +216,68 @@ export default function StudentsPage() {
     setError('');
   };
 
+  // 계정 연결 모달 열기: role='student'인 미연결 계정 목록 조회
+  const openAccountLinkModal = async (student: Student) => {
+    setLinkingStudent(student);
+    setSelectedUserId(student.user_id || '');
+    setShowAccountLinkModal(true);
+
+    const supabase = createClient();
+    // role='student'인 전체 사용자 조회
+    const { data: allStudentUsers } = await supabase
+      .from('users')
+      .select('id, email, name, created_at')
+      .eq('role', 'student')
+      .order('created_at', { ascending: false });
+
+    if (!allStudentUsers) { setStudentUsers([]); return; }
+
+    // 이미 다른 학생 프로필에 연결된 user_id 목록 조회 (현재 편집 중인 학생 제외)
+    const { data: linkedStudents } = await supabase
+      .from('students')
+      .select('user_id')
+      .not('user_id', 'is', null)
+      .neq('id', student.id);
+
+    const linkedUserIds = new Set((linkedStudents || []).map(s => s.user_id));
+    // 미연결 계정 + 현재 이미 연결된 계정 포함 (선택 해제 옵션 위해)
+    setStudentUsers(allStudentUsers.filter(u => !linkedUserIds.has(u.id)) as StudentUser[]);
+  };
+
+  const closeAccountLinkModal = () => {
+    setShowAccountLinkModal(false);
+    setLinkingStudent(null);
+    setStudentUsers([]);
+    setSelectedUserId('');
+  };
+
+  const handleAccountLink = async () => {
+    if (!linkingStudent) return;
+    setLinkSaving(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('students')
+        .update({ user_id: selectedUserId || null })
+        .eq('id', linkingStudent.id);
+
+      if (error) throw error;
+
+      addToast(
+        selectedUserId ? '학생 계정이 연결되었습니다.' : '계정 연결이 해제되었습니다.',
+        'success'
+      );
+      await loadStudents();
+      closeAccountLinkModal();
+    } catch (err) {
+      console.error('계정 연결 오류:', err);
+      addToast(err instanceof Error ? err.message : '계정 연결 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setLinkSaving(false);
+    }
+  };
+
   const getGradeLabel = (grade: number): string => {
     if (grade <= 6) return `초${grade}`;
     if (grade <= 9) return `중${grade - 6}`;
@@ -253,14 +330,14 @@ export default function StudentsPage() {
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden overflow-x-auto">
-            <table className="w-full min-w-[600px]">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학생 ID</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">이름</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학년</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">학교</th>
-                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">시작일</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">계정 연결</th>
                   <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">관리</th>
                 </tr>
               </thead>
@@ -271,8 +348,25 @@ export default function StudentsPage() {
                     <td className="px-4 md:px-6 py-3 md:py-4 text-sm font-medium text-gray-900">{student.name}</td>
                     <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600">{getGradeLabel(student.grade)}</td>
                     <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden sm:table-cell">{student.school || '-'}</td>
-                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden md:table-cell">{student.start_date || '-'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      {student.user_id ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><polyline points="20 6 9 17 4 12"/></svg>
+                          연결됨
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                          미연결
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 md:px-6 py-3 md:py-4 text-right">
+                      <button
+                        onClick={() => openAccountLinkModal(student)}
+                        className="text-emerald-600 hover:text-emerald-800 text-sm mr-3"
+                      >
+                        계정 연결
+                      </button>
                       <button
                         onClick={() => handleEdit(student)}
                         className="text-indigo-600 hover:text-indigo-800 text-sm mr-3"
@@ -406,6 +500,70 @@ export default function StudentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* 계정 연결 모달 */}
+      {showAccountLinkModal && linkingStudent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">학생 계정 연결</h2>
+              <p className="text-sm text-gray-500 mt-1">{linkingStudent.name} 학생의 로그인 계정을 연결합니다.</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="account-link-select" className="block text-sm font-medium text-gray-700 mb-1">
+                  학생 계정 선택
+                </label>
+                {studentUsers.length === 0 ? (
+                  <div className="text-center py-4 bg-gray-50 rounded-lg">
+                    <p className="text-gray-500 text-sm">연결 가능한 학생 계정이 없습니다.</p>
+                    <p className="text-gray-400 text-xs mt-1">'학생'으로 가입한 사용자가 없거나 모두 다른 학생과 연결되어 있습니다.</p>
+                  </div>
+                ) : (
+                  <select
+                    id="account-link-select"
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                  >
+                    <option value="">연결 해제 (미연결 상태로 변경)</option>
+                    {studentUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {linkingStudent.user_id && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  현재 연결됨: {studentUsers.find(u => u.id === linkingStudent.user_id)?.email || '(ID: ' + linkingStudent.user_id?.slice(0, 8) + '...)'}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeAccountLinkModal}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAccountLink}
+                  disabled={linkSaving || studentUsers.length === 0}
+                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                >
+                  {linkSaving ? '저장 중...' : selectedUserId ? '연결' : '연결 해제'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

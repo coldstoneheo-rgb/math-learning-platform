@@ -364,7 +364,7 @@ export default function AdminDashboard() {
                         {report.total_score}점
                       </span>
                     )}
-                    <span className="text-sm text-gray-400">
+                    <span className="text-sm text-gray-500">
                       {new Date(report.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
@@ -386,7 +386,7 @@ function StatCard({ label, value, unit, description }: { label: string; value: n
         {value}<span className="text-sm font-normal text-gray-500 ml-1">{unit}</span>
       </div>
       {description && (
-        <div className="text-xs text-gray-400 mt-1">{description}</div>
+        <div className="text-xs text-gray-500 mt-1">{description}</div>
       )}
     </div>
   );

@@ -33,11 +33,11 @@ export function ThemeToggle() {
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setOpen(prev => !prev)}
-        aria-label="테마 변경"
+        aria-label={`테마 변경: 현재 ${current.label} 모드`}
         title="테마 변경"
         className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
       >
-        <span>{current.icon}</span>
+        <span aria-hidden="true">{current.icon}</span>
         <span className="hidden sm:inline">{current.label}</span>
         <svg
           className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
