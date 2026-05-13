@@ -157,31 +157,35 @@ function getRelevantPreviousReportTypes(currentType: ReportType): ReportType[] {
       return [];
 
     case 'test':
-      // 시험 분석: 이전 시험과 주간/월간 리포트 참조
-      return ['test', 'weekly', 'monthly'];
+      // 시험 분석: 이전 시험과 주간/월간 리포트, 자기 분석 참조
+      return ['test', 'weekly', 'monthly', 'self_analysis'];
 
     case 'weekly':
-      // 주간: 이전 주간과 최근 시험 참조
-      return ['weekly', 'test'];
+      // 주간: 이전 주간과 최근 시험, 자기 분석 참조
+      return ['weekly', 'test', 'self_analysis'];
 
     case 'monthly':
-      // 월간: 주간들과 시험들 참조
-      return ['weekly', 'test', 'monthly'];
+      // 월간: 주간들과 시험들, 자기 분석 참조
+      return ['weekly', 'test', 'monthly', 'self_analysis'];
 
     case 'semi_annual':
-      // 반기: 월간들과 시험들 참조
-      return ['monthly', 'test', 'semi_annual'];
+      // 반기: 월간들과 시험들, 자기 분석 참조
+      return ['monthly', 'test', 'semi_annual', 'self_analysis'];
 
     case 'annual':
-      // 연간: 반기들과 월간들 참조
-      return ['semi_annual', 'monthly', 'test'];
+      // 연간: 반기들과 월간들, 시험, 자기 분석 참조
+      return ['semi_annual', 'monthly', 'test', 'self_analysis'];
 
     case 'consolidated':
       // 레거시 통합: 시험들 참조
       return ['test', 'consolidated'];
 
+    case 'self_analysis':
+      // 자기 분석: 이전 시험과 주간, 자기 분석 참조
+      return ['test', 'weekly', 'self_analysis'];
+
     default:
-      return ['test', 'weekly', 'monthly'];
+      return ['test', 'weekly', 'monthly', 'self_analysis'];
   }
 }
 

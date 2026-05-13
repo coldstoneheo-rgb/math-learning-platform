@@ -599,6 +599,45 @@ export default function ParentDashboard() {
                   );
                 })()}
 
+                {/* ===== 자녀 풀이 분석 하이라이트 (Phase 5.3) ===== */}
+                {(() => {
+                  const latestSelfAnalysis = selectedChild.reports.find(r => r.report_type === 'self_analysis');
+                  if (!latestSelfAnalysis) return null;
+                  const analysisData = latestSelfAnalysis.analysis_data as any;
+                  return (
+                    <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl shadow-sm border border-emerald-100 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm shrink-0">
+                          ✨
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h2 className="text-lg font-bold text-emerald-900">최근 자녀 풀이 분석 결과</h2>
+                            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                              {latestSelfAnalysis.test_date}
+                            </span>
+                          </div>
+                          <p className="text-sm text-emerald-700 mb-2">
+                            {analysisData.oneLineSummary || '자녀가 스스로 학습을 점검하고 성장하는 중입니다!'}
+                          </p>
+                          {analysisData.strengthsObserved && analysisData.strengthsObserved.length > 0 && (
+                            <div className="flex items-center gap-2 text-xs text-emerald-600 bg-white/60 px-3 py-1.5 rounded-lg inline-flex">
+                              <span className="font-bold">💪 칭찬 포인트:</span>
+                              <span>{analysisData.strengthsObserved[0]}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => router.push(`/parent/reports/${latestSelfAnalysis.id}`)}
+                        className="shrink-0 w-full md:w-auto text-center px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                      >
+                        리포트 보기
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 {/* Growth Loop 진행 상황 */}
                 <GrowthLoopStatus reports={selectedChild.reports} />
 
