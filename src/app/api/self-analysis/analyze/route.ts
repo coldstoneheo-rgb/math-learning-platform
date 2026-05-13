@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { analyzeSelfStudy, GeminiApiError, GeminiParseError } from '@/lib/gemini';
-import { buildAnalysisContext } from '@/lib/context-builder';
+import { buildAnalysisContext, updateStudentMetaProfile } from '@/lib/context-builder';
 import { applyRateLimitAsync } from '@/lib/rate-limiter';
 import { z } from 'zod';
 import type { SelfAnalysisProblemType, SelfAnalysisReport } from '@/types';
@@ -154,6 +154,25 @@ export async function POST(request: NextRequest): Promise<NextResponse<SelfAnaly
       console.error('[Self-Analysis] 저장 오류:', saveError);
       // 저장 실패해도 분석 결과는 반환
       return NextResponse.json({ success: true, analysisData });
+    }
+
+    // Phase 5.3: 메타프로필(Meta-Profile) 실시간 반영
+    try {
+      await updateStudentMetaProfile(
+        studentId,
+        {
+          errorSignature: {
+            // Self-Analysis에서 발견된 새로운 관찰 내용만 서명 패턴에 추가 (타입 오류 방지)
+            signaturePatterns: analysisData.comparisonWithHistory.newObservations.slice(0, 3),
+            lastUpdated: new Date().toISOString(),
+            primaryErrorTypes: [],
+            domainVulnerability: [],
+          },
+        },
+        savedReport.id
+      );
+    } catch (metaError) {
+      console.error('[Self-Analysis] 메타프로필 업데이트 오류:', metaError);
     }
 
     return NextResponse.json({

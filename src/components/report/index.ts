@@ -29,3 +29,7 @@ export { default as MetaProfileComparison, buildMetaProfileMetrics } from './Met
 export type { MetricChange } from './MetaProfileComparison';
 export { default as AnnualGrowthStory } from './AnnualGrowthStory';
 export type { GrowthStoryData } from './AnnualGrowthStory';
+
+// Phase 5: CRM 컴포넌트
+export { default as ReportComments } from './ReportComments';
+

@@ -114,10 +114,14 @@ export async function middleware(request: NextRequest) {
     }
 
     const url = request.nextUrl.clone();
-    if (userData.role === 'teacher') {
-      url.pathname = '/admin';
+    if (userData.role === 'super_admin') {
+      url.pathname = '/super-admin';
+    } else if (userData.role === 'teacher') {
+      url.pathname = '/teacher';
     } else if (userData.role === 'parent') {
       url.pathname = '/parent';
+    } else if (userData.role === 'student') {
+      url.pathname = '/student';
     } else {
       url.pathname = '/';
     }
