@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -21,11 +21,13 @@ import {
   FivePerspectiveAnalysis,
   HomeActionCard,
   WeaknessJourneyMap,
-  toJourneyStatus,
   GrowthProjectionChart,
   ConfidenceBadge,
+  getConfidenceLevel,
+  EvidenceBadge,
+  ErrorSignatureTracker,
+  ReportPDFExporter,
 } from '@/components/report/premium';
-import { exportReportToPdf } from '@/lib/pdf-export';
 import {
   calculateHabitScore,
   convertMomentumStatus,
@@ -34,6 +36,7 @@ import {
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
+import { FEATURE_FLAGS, isFeatureEnabledForUser } from '@/lib/feature-flags';
 import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport } from '@/types';
 
 interface ReportWithStudent extends Report {
@@ -48,8 +51,8 @@ export default function ReportDetailPage() {
   const [user, setUser] = useState<User | null>(null);
   const [report, setReport] = useState<ReportWithStudent | null>(null);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
   const [sendingNotification, setSendingNotification] = useState(false);
+  const reportContentRef = useRef<HTMLDivElement>(null);
   const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
@@ -101,31 +104,6 @@ export default function ReportDetailPage() {
     return `고${grade - 9}`;
   };
 
-  const handleExportPdf = async () => {
-    if (!report) return;
-
-    setExporting(true);
-    try {
-      const success = await exportReportToPdf(
-        'report-content',
-        report.students?.name || '학생',
-        report.test_name || '리포트',
-        report.test_date || new Date().toISOString().split('T')[0]
-      );
-
-      if (!success) {
-        addToast('PDF 내보내기에 실패했습니다.', 'error');
-      } else {
-        addToast('PDF가 저장되었습니다.', 'success');
-      }
-    } catch (error) {
-      console.error('PDF 내보내기 오류:', error);
-      addToast('PDF 내보내기 중 오류가 발생했습니다.', 'error');
-    } finally {
-      setExporting(false);
-    }
-  };
-
   // Phase 5: 학부모 알림 발송
   const handleSendNotification = async () => {
     if (!report || !report.students || sendingNotification) return;
@@ -154,7 +132,7 @@ export default function ReportDetailPage() {
       const title = `📊 ${studentName} 학생의 새 리포트가 도착했습니다`;
       const message = `${studentName} 학생의 "${report.test_name || '리포트'}" 분석이 완료되었습니다. 리포트를 확인하세요.`;
 
-      await Promise.all([
+      const responses = await Promise.all([
         fetch('/api/notifications/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -187,7 +165,20 @@ export default function ReportDetailPage() {
         }),
       ]);
 
-      addToast(`${parentData.name || '학부모'}님께 알림을 발송했습니다. 이메일도 전송되었습니다.`, 'success');
+      const results = await Promise.all(
+        responses.map(async (response) => ({
+          ok: response.ok,
+          body: await response.json().catch(() => ({} as { error?: string })),
+        }))
+      );
+      const failed = results.filter(result => !result.ok || result.body?.error);
+
+      if (failed.length > 0) {
+        addToast(`알림 ${results.length - failed.length}건 성공, ${failed.length}건 실패했습니다.`, 'error');
+        return;
+      }
+
+      addToast(`${parentData.name || '학부모'}님께 인앱/이메일 알림을 발송했습니다.`, 'success');
     } catch (error) {
       console.error('알림 발송 오류:', error);
       addToast('알림 발송 중 오류가 발생했습니다.', 'error');
@@ -215,9 +206,60 @@ export default function ReportDetailPage() {
   const annualAnalysis = report?.report_type === 'annual'
     ? (report?.analysis_data as AnnualReportAnalysis)
     : null;
+  const notificationsEnabled = user
+    ? isFeatureEnabledForUser(FEATURE_FLAGS.PARENT_NOTIFICATIONS, user.id, 'teacher')
+    : false;
+
   const selfAnalysis = report?.report_type === 'self_analysis'
     ? (report?.analysis_data as SelfAnalysisReport)
     : null;
+
+  const confidenceDataCount = [
+    report?.students?.meta_profile?.baseline?.assessmentDate,
+    ...(report?.students?.meta_profile?.errorSignature?.signaturePatterns || []),
+    ...(report?.students?.meta_profile?.legacySignals || []),
+    ...(analysis?.detailedAnalysis || []),
+    ...(analysis?.growthPredictions || []),
+  ].filter(Boolean).length;
+
+  const evidenceSources = [
+    {
+      type: 'ai_analysis' as const,
+      label: 'AI 분석 결과',
+      date: report?.test_date || report?.created_at,
+      description: report?.test_name || '리포트 분석 데이터',
+    },
+    ...(analysis?.detailedAnalysis?.length
+      ? [{
+          type: 'test_paper' as const,
+          label: '문항별 분석',
+          date: report?.test_date || undefined,
+          description: `${analysis.detailedAnalysis.length}개 문항 근거`,
+        }]
+      : []),
+    ...(report?.students?.meta_profile?.legacySignals?.length
+      ? [{
+          type: 'teacher_observation' as const,
+          label: '레거시 시그널',
+          date: report.students.meta_profile.legacySignals.at(-1)?.date,
+          description: `${report.students.meta_profile.legacySignals.length}건 누적`,
+        }]
+      : []),
+  ];
+
+  const errorSignatures = (report?.students?.meta_profile?.errorSignature?.signaturePatterns || []).map((signature, index) => ({
+    id: `meta-signature-${index}`,
+    signature,
+    category: 'concept' as const,
+    status: index === 0 ? 'recurring' as const : 'active' as const,
+    occurrenceCount: Math.max(1, report?.students?.meta_profile?.legacySignals?.filter(signal => signal.insight.includes(signature)).length || 1),
+    lastOccurrence: report?.students?.meta_profile?.lastUpdated,
+    firstDetected: report?.students?.meta_profile?.baseline?.assessmentDate,
+    frequency: Math.max(20, Math.min(90, 70 - index * 10)),
+    trend: 'stable' as const,
+    details: '학생 메타프로필에 누적된 오류 서명입니다.',
+    resolution: analysis?.actionablePrescription?.[index]?.howTo,
+  }));
 
   if (loading) {
     return <LoadingSpinner />;
@@ -245,7 +287,7 @@ export default function ReportDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {/* Phase 5: 학부모 알림 발송 버튼 */}
-          {report?.students?.parent_id && (
+          {notificationsEnabled && report?.students?.parent_id && (
             <button
               onClick={handleSendNotification}
               disabled={sendingNotification}
@@ -263,20 +305,14 @@ export default function ReportDetailPage() {
               )}
             </button>
           )}
-          <button
-            onClick={handleExportPdf}
-            disabled={exporting}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-          >
-            {exporting ? (
-              <>
-                <span className="animate-spin">⏳</span>
-                PDF 생성 중...
-              </>
-            ) : (
-              <>📄 PDF 저장</>
-            )}
-          </button>
+          <ReportPDFExporter
+            targetRef={reportContentRef}
+            studentName={report.students?.name || '학생'}
+            reportType={report.test_name || '리포트'}
+            reportDate={report.test_date || report.created_at}
+            compact
+            onExportComplete={(success) => addToast(success ? 'PDF가 저장되었습니다.' : 'PDF 내보내기에 실패했습니다.', success ? 'success' : 'error')}
+          />
           <button
             onClick={() => window.print()}
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -288,7 +324,7 @@ export default function ReportDetailPage() {
     </header>
 
 
-      <main id="report-content" className="container mx-auto px-4 py-8 max-w-4xl">
+      <main id="report-content" ref={reportContentRef} data-pdf-target className="container mx-auto px-4 py-8 max-w-4xl">
         {/* 학생 메타프로필 헤더 */}
         {report.students && (
           <MetaHeader
@@ -394,6 +430,26 @@ export default function ReportDetailPage() {
             </div>
           </div>
         </div>
+
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <ConfidenceBadge
+            level={getConfidenceLevel(confidenceDataCount)}
+            dataCount={confidenceDataCount}
+            dataPeriod={report.test_date || report.created_at?.slice(0, 10)}
+            description="리포트, 메타프로필, 누적 시그널을 함께 반영한 분석 신뢰도입니다."
+          />
+          <EvidenceBadge sources={evidenceSources} />
+        </div>
+
+        {errorSignatures.length > 0 && (
+          <div className="mb-6">
+            <ErrorSignatureTracker
+              signatures={errorSignatures}
+              studentName={report.students?.name}
+              testName={report.test_name || undefined}
+            />
+          </div>
+        )}
 
         {/* ===== 레벨 테스트 전용 뷰 ===== */}
         {report.report_type === 'level_test' && levelTestAnalysis && (

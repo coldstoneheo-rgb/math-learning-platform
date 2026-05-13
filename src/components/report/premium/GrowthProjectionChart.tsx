@@ -13,7 +13,6 @@
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -25,7 +24,7 @@ import {
   ComposedChart,
   Legend,
 } from 'recharts';
-import { TrendingUp, Target, Sparkles, Calendar, Info, Rocket } from 'lucide-react';
+import { TrendingUp, Target, Calendar, Info, Rocket } from 'lucide-react';
 
 interface DataPoint {
   date: string;
@@ -40,7 +39,41 @@ interface GrowthProjectionChartProps {
   targetScore?: number;
   studentName?: string;
   showProjection?: boolean;
-  currentMonth?: string;
+}
+
+function formatChartMonth(dateStr: string) {
+  const date = new Date(dateStr);
+  return `${date.getMonth() + 1}월`;
+}
+
+function GrowthProjectionTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ dataKey: string; value: number; color: string }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+
+  const isProjection = payload.some(p => p.dataKey === 'projected' && p.value !== undefined);
+
+  return (
+    <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-slate-200 p-3">
+      <p className="text-xs font-medium text-slate-600 mb-1">
+        {label ? formatChartMonth(label) : ''}
+        {isProjection && <span className="text-violet-500 ml-1">(예상)</span>}
+      </p>
+      {payload.map((entry, index) => (
+        entry.value !== undefined && (
+          <p key={index} className="text-sm font-semibold" style={{ color: entry.color }}>
+            {entry.dataKey === 'actual' ? '실제' : '예상'}: {entry.value}점
+          </p>
+        )
+      ))}
+    </div>
+  );
 }
 
 function GrowthProjectionChart({
@@ -49,7 +82,6 @@ function GrowthProjectionChart({
   targetScore = 90,
   studentName,
   showProjection = true,
-  currentMonth,
 }: GrowthProjectionChartProps) {
   const currentScore = historicalData[historicalData.length - 1]?.score || 0;
 
@@ -107,33 +139,6 @@ function GrowthProjectionChart({
   const projection3Month = autoProjectedData[2]?.score;
   const projection6Month = autoProjectedData[5]?.score;
   const reachTargetMonth = autoProjectedData.findIndex(d => d.score >= targetScore) + 1;
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}월`;
-  };
-
-  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number; color: string }>; label?: string }) => {
-    if (active && payload && payload.length) {
-      const isProjection = payload.some(p => p.dataKey === 'projected' && p.value !== undefined);
-      return (
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-slate-200 p-3">
-          <p className="text-xs font-medium text-slate-600 mb-1">
-            {label ? formatDate(label) : ''}
-            {isProjection && <span className="text-violet-500 ml-1">(예상)</span>}
-          </p>
-          {payload.map((entry, index) => (
-            entry.value !== undefined && (
-              <p key={index} className="text-sm font-semibold" style={{ color: entry.color }}>
-                {entry.dataKey === 'actual' ? '실제' : '예상'}: {entry.value}점
-              </p>
-            )
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <motion.div
@@ -248,7 +253,7 @@ function GrowthProjectionChart({
 
             <XAxis
               dataKey="date"
-              tickFormatter={formatDate}
+              tickFormatter={formatChartMonth}
               tick={{ fontSize: 11, fill: '#64748b' }}
               axisLine={{ stroke: '#cbd5e1' }}
               tickLine={{ stroke: '#cbd5e1' }}
@@ -261,7 +266,7 @@ function GrowthProjectionChart({
               tickLine={{ stroke: '#cbd5e1' }}
             />
 
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<GrowthProjectionTooltip />} />
 
             {targetScore && (
               <ReferenceLine

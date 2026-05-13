@@ -16,11 +16,9 @@ import {
   Shield,
   ShieldCheck,
   ShieldAlert,
-  TrendingUp,
   Database,
   Clock,
   AlertTriangle,
-  Info,
   BarChart3,
 } from 'lucide-react';
 

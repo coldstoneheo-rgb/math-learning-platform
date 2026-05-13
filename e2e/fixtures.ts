@@ -30,7 +30,7 @@ export const test = base.extend<{
       await page.fill('input[type="email"]', TEST_ACCOUNTS.teacher.email);
       await page.fill('input[type="password"]', TEST_ACCOUNTS.teacher.password);
       await page.click('button[type="submit"]');
-      await page.waitForURL('/admin');
+      await page.waitForURL('/teacher');
     };
     await use(login);
   },

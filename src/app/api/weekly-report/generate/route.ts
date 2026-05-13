@@ -181,7 +181,17 @@ export async function POST(
     // 11. 컨텍스트 데이터 구성
     let context;
     try {
-      context = await buildAnalysisContext(studentId, 'weekly');
+      const queryText = [
+        student.name,
+        `${year}년 ${weekNumber}주차`,
+        startDate,
+        endDate,
+        teacherNotes,
+        ...classSessionsData.flatMap(session => session.keywords),
+      ].filter(Boolean).join(' ');
+      context = await buildAnalysisContext(studentId, 'weekly', {
+        queryText: queryText || undefined,
+      });
 
       // 지난주 목표 추가
       if (lastWeekReport?.analysis_data) {

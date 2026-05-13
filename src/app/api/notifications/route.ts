@@ -25,14 +25,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // 이메일 설정 확인
-  if (!isEmailConfigured()) {
-    return NextResponse.json(
-      { error: '이메일 서비스가 설정되지 않았습니다.' },
-      { status: 503 }
-    );
-  }
-
   const body = await request.json();
   const { type, data } = body;
 
@@ -138,6 +130,30 @@ async function handleReportNotification(
     summary = analysisData.macroAnalysis.summary.slice(0, 100) + '...';
   }
 
+  // 인앱 알림 생성: 이메일 설정/발송 상태와 별개로 학부모 대시보드에서 확인 가능하게 저장
+  try {
+    await supabase.from('notifications').insert({
+      user_id: parent.id,
+      title: `${student.name} 학생의 새 리포트가 도착했습니다`,
+      message: `${student.name} 학생의 "${report.test_name || '리포트'}" 분석이 완료되었습니다.`,
+      channel: 'in_app',
+      status: 'sent',
+      related_resource_type: 'report',
+      related_resource_id: String(reportId),
+      sent_at: new Date().toISOString(),
+    });
+  } catch (notificationError) {
+    console.warn('[Notification API] In-app notification insert failed:', notificationError);
+  }
+
+  if (!isEmailConfigured()) {
+    return NextResponse.json({
+      success: true,
+      skipped: true,
+      message: '인앱 알림은 생성되었고, 이메일 서비스는 설정되지 않아 건너뛰었습니다.',
+    });
+  }
+
   // 이메일 발송
   const result = await sendReportNotification({
     parentEmail: parent.email,
@@ -236,6 +252,14 @@ async function handleStudyPlanNotification(
       { error: '학부모 정보를 찾을 수 없습니다.' },
       { status: 404 }
     );
+  }
+
+  if (!isEmailConfigured()) {
+    return NextResponse.json({
+      success: true,
+      skipped: true,
+      message: '이메일 서비스가 설정되지 않아 학습 계획 알림을 건너뛰었습니다.',
+    });
   }
 
   // 이메일 발송
@@ -344,6 +368,14 @@ async function handleWeeklyReminder(
   const totalTasks = (activePlans || []).reduce((sum, p) => sum + (p.total_tasks || 0), 0);
   const completedTasks = (activePlans || []).reduce((sum, p) => sum + (p.completed_tasks || 0), 0);
   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  if (!isEmailConfigured()) {
+    return NextResponse.json({
+      success: true,
+      skipped: true,
+      message: '이메일 서비스가 설정되지 않아 주간 리마인더를 건너뛰었습니다.',
+    });
+  }
 
   // 이메일 발송
   const result = await sendWeeklyReminder({

@@ -47,8 +47,8 @@ export async function convertPdfToImages(file: File): Promise<string[]> {
   // 동적 import로 브라우저에서만 로드되도록 함
   const pdfjsLib = await import('pdfjs-dist');
 
-  // pdf.js 워커 설정 (CDN 활용)
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  // pdf.js 워커 설정 (CDN 활용). 명시적 HTTPS로 혼합 콘텐츠/로컬 scheme 문제를 피합니다.
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
   const arrayBuffer = await file.arrayBuffer();
 
@@ -62,7 +62,11 @@ export async function convertPdfToImages(file: File): Promise<string[]> {
     cMapPacked: CMAP_PACKED,
   });
 
-  const pdf = await loadingTask.promise;
+  const pdf = await loadingTask.promise.catch((error: unknown) => {
+    throw new Error(
+      `PDF 변환에 실패했습니다. 네트워크에서 pdf.js worker/cMap 리소스를 불러올 수 있는지 확인해주세요. ${error instanceof Error ? error.message : ''}`.trim()
+    );
+  });
   const numPages = pdf.numPages;
   const images: string[] = [];
 
@@ -151,7 +155,7 @@ export async function processMigrationTask(
 
     // Vercel Serverless Payload 제한(4.5MB) 회피를 위해 청크 분할 전송 (한 번에 최대 3장)
     const CHUNK_SIZE = 3;
-    let allExtractedSignals: any[] = [];
+    let allExtractedSignals: NonNullable<MigrationTask['extractedSignals']> = [];
 
     for (let i = 0; i < cleanBase64Images.length; i += CHUNK_SIZE) {
       const chunkedImages = cleanBase64Images.slice(i, i + CHUNK_SIZE);

@@ -5,7 +5,7 @@
  * AI 분석에 주입하는 서비스
  */
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import type {
   AnalysisContextData,
   RelevantMemory,
@@ -31,8 +31,6 @@ export async function buildAnalysisContext(
   reportType: ReportType,
   options?: { queryText?: string }
 ): Promise<AnalysisContextData> {
-  const supabase = createClient();
-
   // 병렬로 데이터 수집
   const [
     metaProfile,
@@ -94,7 +92,7 @@ export async function buildAnalysisContext(
 async function getStudentMetaProfile(
   studentId: number
 ): Promise<StudentMetaProfile | undefined> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: student, error } = await supabase
     .from('students')
@@ -116,7 +114,7 @@ async function getRecentReports(
   studentId: number,
   currentReportType: ReportType
 ): Promise<AnalysisContextData['recentReports']> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 리포트 타입에 따라 참조할 이전 리포트 유형 결정
   const relevantTypes = getRelevantPreviousReportTypes(currentReportType);
@@ -293,7 +291,7 @@ function extractUnresolvedIssues(analysisData: Record<string, unknown>): string[
 async function getActiveWeaknesses(
   studentId: number
 ): Promise<AnalysisContextData['activeWeaknesses']> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: weaknesses, error } = await supabase
     .from('student_weaknesses')
@@ -321,7 +319,7 @@ async function getActiveWeaknesses(
 async function getActiveStrengths(
   studentId: number
 ): Promise<AnalysisContextData['activeStrengths']> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: strengths, error } = await supabase
     .from('student_strengths')
@@ -375,7 +373,7 @@ async function getCurrentGrowthLoop(
   studentId: number,
   reportType: ReportType
 ): Promise<{ microLoop?: MicroLoopData; macroLoop?: MacroLoopData } | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 리포트 타입에 따라 조회할 루프 유형 결정
   const loopTypes = getLoopTypesForReport(reportType);
@@ -499,7 +497,7 @@ async function getPreviousVisionData(
     return undefined;
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 가장 최근 리포트에서 예측 데이터 추출
   const { data: lastReport, error } = await supabase
@@ -564,7 +562,7 @@ export async function updateStudentMetaProfile(
   updates: Partial<StudentMetaProfile>,
   reportId?: number
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 현재 프로필 조회
   const { data: student, error: fetchError } = await supabase
@@ -833,7 +831,7 @@ export async function startNewGrowthLoopCycle(
   loopType: 'micro_weekly' | 'micro_monthly' | 'macro_semi_annual' | 'macro_annual',
   goals: Array<{ goal: string; metric?: string; target?: number; deadline?: string }>
 ): Promise<{ success: boolean; cycleId?: number; error?: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 기존 활성 사이클 완료 처리
   await supabase
@@ -886,7 +884,7 @@ export async function updateGrowthLoopPerformance(
   loopType: string,
   performanceData: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase
     .from('growth_loop_status')
@@ -916,7 +914,7 @@ export async function updateGrowthLoopPerformance(
 async function getStrategyFeedback(
   studentId: number
 ): Promise<StrategyFeedbackContext | undefined> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 완료된 전략 데이터 조회
   const { data: strategies, error } = await supabase
@@ -1091,6 +1089,10 @@ function mapConceptToSkillIds(concept: string): string[] {
     }
   }
 
+  if (matchedIds.length === 0) {
+    console.warn(`[KnowledgeGraph] No micro-skill match for concept: ${concept}`);
+  }
+
   return matchedIds;
 }
 
@@ -1101,7 +1103,7 @@ function mapConceptToSkillIds(concept: string): string[] {
 export async function getFailedMicroSkills(
   studentId: number
 ): Promise<string[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 1. 활성 취약점에서 개념 가져오기
   const { data: weaknesses } = await supabase
@@ -1133,7 +1135,7 @@ export async function getFailedMicroSkills(
 export async function getMasteredSkills(
   studentId: number
 ): Promise<MasteredSkillRecord[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 1. 해결된 취약점 조회 (resolved 상태)
   const { data: resolvedWeaknesses } = await supabase
@@ -1224,7 +1226,7 @@ export async function retrieveRelevantMemories(
   const { generateEmbedding } = await import('./embedding-service');
   const queryEmbedding = await generateEmbedding(queryText);
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // pgvector RPC를 통한 코사인 유사도 검색
   const { data, error } = await supabase.rpc('match_report_memories', {

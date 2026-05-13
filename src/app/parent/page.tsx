@@ -603,7 +603,11 @@ export default function ParentDashboard() {
                 {(() => {
                   const latestSelfAnalysis = selectedChild.reports.find(r => r.report_type === 'self_analysis');
                   if (!latestSelfAnalysis) return null;
-                  const analysisData = latestSelfAnalysis.analysis_data as any;
+                  const analysisData = latestSelfAnalysis.analysis_data as {
+                    oneLineSummary?: string;
+                    strengthsObserved?: string[];
+                    comparisonWithHistory?: { overallTrend?: string };
+                  };
                   return (
                     <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl shadow-sm border border-emerald-100 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                       <div className="flex items-start gap-4">

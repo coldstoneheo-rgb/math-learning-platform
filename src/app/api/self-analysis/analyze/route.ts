@@ -119,7 +119,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<SelfAnaly
     // 누적 학습 컨텍스트 조회
     let context = undefined;
     try {
-      context = await buildAnalysisContext(studentId, 'self_analysis');
+      const queryText = [
+        studentName,
+        body.problemType,
+        ...body.topicTags,
+        body.studentNote,
+      ].filter(Boolean).join(' ');
+      context = await buildAnalysisContext(studentId, 'self_analysis', {
+        queryText: queryText || undefined,
+      });
     } catch {
       // 컨텍스트 조회 실패 시 컨텍스트 없이 진행
       console.warn('[Self-Analysis] 컨텍스트 조회 실패, 컨텍스트 없이 진행');

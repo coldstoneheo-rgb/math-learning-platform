@@ -310,7 +310,12 @@ ${mp.errorSignature.signaturePatterns.length > 0
 ### 영역별 취약도
 ${mp.errorSignature.domainVulnerability.length > 0
       ? mp.errorSignature.domainVulnerability.map(d => `- ${d.domain}: ${d.vulnerabilityScore}/100`).join('\n')
-      : '- 데이터 부족'}`);
+      : '- 데이터 부족'}
+
+### 레거시 마이그레이션 핵심 시그널
+${mp.legacySignals && mp.legacySignals.length > 0
+      ? mp.legacySignals.slice(-8).map((s, i) => `${i + 1}. [${s.date} | ${s.sourceType} | 확신도 ${s.confidenceScore}%] ${s.insight} (관련: ${s.relatedConcepts.join(', ') || '미분류'})`).join('\n')
+      : '- 누적된 레거시 시그널 없음'}`);
   }
 
   // 2. 최근 리포트 요약

@@ -520,7 +520,7 @@ export default function StudentsPage() {
                 {studentUsers.length === 0 ? (
                   <div className="text-center py-4 bg-gray-50 rounded-lg">
                     <p className="text-gray-500 text-sm">연결 가능한 학생 계정이 없습니다.</p>
-                    <p className="text-gray-400 text-xs mt-1">'학생'으로 가입한 사용자가 없거나 모두 다른 학생과 연결되어 있습니다.</p>
+                    <p className="text-gray-400 text-xs mt-1">&apos;학생&apos;으로 가입한 사용자가 없거나 모두 다른 학생과 연결되어 있습니다.</p>
                   </div>
                 ) : (
                   <select

@@ -153,7 +153,7 @@ function ActionCard({ action, index }: { action: ActionItem; index: number }) {
                       <Lightbulb className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
                       <span>
                         <strong className="text-slate-700">예시: </strong>
-                        "{action.example}"
+                        &ldquo;{action.example}&rdquo;
                       </span>
                     </p>
                   </div>
@@ -300,7 +300,7 @@ function HomeActionCard({
           <ThumbsUp className="w-4 h-4 flex-shrink-0 text-slate-400 mt-0.5" />
           <p>
             <strong className="text-slate-600">Tip:</strong> 구체적인 행동을 칭찬하면 아이의 자존감과 학습 동기가 높아집니다.
-            "잘했어"보다 "어려운 문제를 끝까지 풀어본 게 대단해"가 더 효과적입니다.
+            &ldquo;잘했어&rdquo;보다 &ldquo;어려운 문제를 끝까지 풀어본 게 대단해&rdquo;가 더 효과적입니다.
           </p>
         </div>
       </div>

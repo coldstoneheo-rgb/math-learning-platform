@@ -22,7 +22,6 @@ import {
   Hash,
   ChevronDown,
   ChevronUp,
-  BarChart3,
   Target,
   Zap,
   Info,

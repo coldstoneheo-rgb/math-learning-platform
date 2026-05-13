@@ -200,7 +200,16 @@ export async function POST(
     // 14. 컨텍스트 데이터 구성 (메타프로필 기반)
     let context;
     try {
-      context = await buildAnalysisContext(studentId, 'monthly');
+      const queryText = [
+        student.name,
+        `${year}년 ${month}월`,
+        teacherNotes,
+        ...(testReports || []).map(report => report.test_name),
+        ...(classSessions || []).flatMap(session => session.learning_keywords || []),
+      ].filter(Boolean).join(' ');
+      context = await buildAnalysisContext(studentId, 'monthly', {
+        queryText: queryText || undefined,
+      });
     } catch (contextError) {
       console.warn('[Monthly Report] Context building failed:', contextError);
       // 컨텍스트 실패해도 진행
