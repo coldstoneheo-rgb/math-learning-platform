@@ -67,7 +67,7 @@ test.describe('인증 플로우', () => {
 
 test.describe('인증되지 않은 접근', () => {
   test('관리자 페이지는 로그인 필요', async ({ page }) => {
-    await page.goto('/admin');
+    await page.goto('/teacher');
     // 로그인 페이지로 리다이렉트되거나 에러 표시
     await expect(page).toHaveURL(/\/login/);
   });

@@ -33,8 +33,10 @@ function LoginForm() {
         // 세션 쿠키가 설정되도록 잠시 대기 후 리다이렉트
         router.refresh();
 
-        if (userData?.role === 'teacher') router.push('/teacher');
+        if (userData?.role === 'super_admin') router.push('/super-admin');
+        else if (userData?.role === 'teacher') router.push('/teacher');
         else if (userData?.role === 'parent') router.push('/parent');
+        else if (userData?.role === 'student') router.push('/student');
         else router.push('/');
       }
     } catch (err) {

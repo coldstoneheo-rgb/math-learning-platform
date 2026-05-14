@@ -7,35 +7,35 @@ import { useEffect, useState } from 'react';
 export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
-
 
   useEffect(() => {
     async function checkSuperAdmin() {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/login');
         return;
       }
-      
-      const { data: profile } = await supabase
-        .from('profiles')
+
+      const { data: userData } = await supabase
+        .from('users')
         .select('role')
         .eq('id', user.id)
         .single();
-        
-      if (profile?.role !== 'super_admin') {
+
+      if (userData?.role !== 'super_admin') {
         router.push('/');
         return;
       }
-      
+
       setLoading(false);
     }
-    
+
     checkSuperAdmin();
-  }, [supabase, router]);
+  }, [router]);
 
   const handleLogout = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/login');
   };

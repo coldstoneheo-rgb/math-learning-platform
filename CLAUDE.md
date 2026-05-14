@@ -859,13 +859,13 @@ npm run lint
 ### Using Claude Code Slash Commands
 ```bash
 # Generate a new report page
-/report-page weekly /admin/reports/weekly/new
+/report-page weekly /teacher/reports/weekly/new
 
 # Generate CRUD pages for a Supabase table
-/supabase-crud assignments /admin/assignments
+/supabase-crud assignments /teacher/assignments
 
 # Generate an authenticated admin page
-/admin-page 설정 /admin/settings
+/admin-page 설정 /teacher/settings
 ```
 
 ---
