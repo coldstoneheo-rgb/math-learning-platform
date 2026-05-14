@@ -92,6 +92,19 @@ export default function MigrationPage() {
 
     if (studentData) {
       setStudents(studentData);
+
+      const params = new URLSearchParams(window.location.search);
+      const requestedStudent = params.get('studentId') ?? params.get('student');
+      if (requestedStudent) {
+        const matchedStudent = studentData.find(
+          (student) =>
+            student.id.toString() === requestedStudent ||
+            student.student_id === requestedStudent
+        );
+        if (matchedStudent) {
+          setSelectedStudent(matchedStudent.id.toString());
+        }
+      }
     }
     setLoading(false);
   };

@@ -323,6 +323,27 @@ export default function AdminDashboard() {
           />
         </div>
 
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-gray-900">데이터 고도화</h3>
+            <p className="text-sm text-gray-500">과거 데이터와 AI 기억을 성장 분석에 연결합니다.</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <DashboardCard
+              title="과거 데이터 가져오기"
+              description="이미지/PDF/CSV 복원"
+              icon="🗂️"
+              href="/teacher/migration"
+            />
+            <DashboardCard
+              title="AI 기억 서랍 관리"
+              description="RAG 인덱싱/검색"
+              icon="🧠"
+              href="/teacher/embeddings"
+            />
+          </div>
+        </div>
+
         {/* 최근 이벤트 */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-4">

@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "dist/**",
     "node_modules/**",
+    ".npm-cache/**",
     "next-env.d.ts",
     "*.generated.*",
     // Test and script files

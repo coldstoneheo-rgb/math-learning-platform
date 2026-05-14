@@ -21,6 +21,27 @@ test.describe('Migration 페이지', () => {
   });
 
   // ────────────────────────────────────────────────────────────────
+  // TC-M00: 교사 대시보드 진입점
+  // ────────────────────────────────────────────────────────────────
+  test.describe('TC-M00: 교사 대시보드 진입점', () => {
+    test('TC-M00-1: 과거 데이터 입력 메뉴가 대시보드에 표시됨', async ({ page }) => {
+      await page.goto('/teacher');
+
+      const migrationLink = page.getByRole('link', { name: /과거 데이터 가져오기/ });
+      await expect(migrationLink).toBeVisible();
+      await expect(migrationLink).toHaveAttribute('href', '/teacher/migration');
+    });
+
+    test('TC-M00-2: RAG 기억 서랍 관리 메뉴가 대시보드에 표시됨', async ({ page }) => {
+      await page.goto('/teacher');
+
+      const embeddingsLink = page.getByRole('link', { name: /AI 기억 서랍 관리/ });
+      await expect(embeddingsLink).toBeVisible();
+      await expect(embeddingsLink).toHaveAttribute('href', '/teacher/embeddings');
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────
   // TC-M01: 페이지 기본 렌더링
   // ────────────────────────────────────────────────────────────────
   test.describe('TC-M01~03: 페이지 기본 렌더링', () => {
@@ -69,6 +90,26 @@ test.describe('Migration 페이지', () => {
 
       await expect(page.locator('text=대상 학생 선택')).toBeVisible();
     });
+
+    test('TC-M06-1: studentId 쿼리로 진입하면 해당 학생이 자동 선택됨', async ({ page }) => {
+      await page.goto('/teacher/migration');
+
+      const studentSelect = page.locator('select').first();
+      await page.waitForFunction(() => {
+        const select = document.querySelector('select');
+        return Boolean(select && select.options.length > 1);
+      }, { timeout: 5000 }).catch(() => null);
+
+      const options = studentSelect.locator('option');
+      const optionCount = await options.count();
+      test.skip(optionCount < 2, '자동 선택 검증에는 등록된 학생이 필요합니다.');
+
+      const firstStudentValue = await options.nth(1).getAttribute('value');
+      expect(firstStudentValue).toBeTruthy();
+
+      await page.goto(`/teacher/migration?studentId=${firstStudentValue}`);
+      await expect(page.locator('select').first()).toHaveValue(firstStudentValue!);
+    });
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -94,9 +135,10 @@ test.describe('Migration 페이지', () => {
       await page.goto('/teacher/migration');
 
       const sourceTypeOptions = ['시험지/평가문제', '월간/반기 리포트', '일일학습/문제풀이노트'];
-      for (const opt of sourceTypeOptions) {
-        await expect(page.locator(`option:has-text("${opt}")`)).toBeAttached();
-      }
+      const sourceTypeSelect = page.locator('select').nth(1);
+      await expect(sourceTypeSelect).toBeVisible();
+      const optionTexts = await sourceTypeSelect.locator('option').allTextContents();
+      expect(optionTexts).toEqual(expect.arrayContaining(sourceTypeOptions));
     });
   });
 
