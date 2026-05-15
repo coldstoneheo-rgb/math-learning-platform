@@ -251,6 +251,21 @@ export interface TestAnalysisData {
   metaCognitionAnalysis?: MetaCognitionAnalysis;
   // 지구력 분석 (시험 풀이 집중력 및 시간 배분)
   staminaAnalysis?: StaminaAnalysis;
+  // AI 초안과 교사 확정값을 구분하기 위한 검증 메타데이터
+  verificationStatus?: 'ai_draft' | 'teacher_verified';
+  aiInferred?: {
+    capturedAt: string;
+    testResults?: Partial<TestResults>;
+    detailedAnalysis?: DetailedProblemAnalysis[];
+    note: string;
+  };
+  teacherVerified?: {
+    verifiedAt: string;
+    testResults: TestResults;
+    detailedAnalysis: DetailedProblemAnalysis[];
+    verificationNote?: string;
+    adjustedFields: string[];
+  };
 }
 
 /**
