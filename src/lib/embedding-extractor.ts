@@ -135,20 +135,58 @@ export function extractEmbeddableTextsFromAny(
   // 주간 리포트: 실제 데이터는 aiAnalysis 아래에 중첩되어 저장됩니다.
   const aiAnalysis = data.aiAnalysis as Record<string, unknown> | undefined;
   if (aiAnalysis) {
-    const weeklyAchievements = extractTextFragments(aiAnalysis.weeklyAchievements);
-    const areasForImprovement = extractTextFragments(aiAnalysis.areasForImprovement);
-    const nextWeekPlan = extractTextFragments(aiAnalysis.nextWeekPlan);
-    const microLoopFeedback = extractTextFragments(aiAnalysis.microLoopFeedback);
+    const hasWeeklyShape = Boolean(
+      aiAnalysis.weeklyAchievements ||
+      aiAnalysis.areasForImprovement ||
+      aiAnalysis.nextWeekPlan ||
+      aiAnalysis.microLoopFeedback
+    );
+    const hasMonthlyShape = Boolean(
+      aiAnalysis.monthlyAchievements ||
+      aiAnalysis.newChallenges ||
+      aiAnalysis.nextMonthPlan ||
+      aiAnalysis.parentReport ||
+      aiAnalysis.microLoopMonthlyReview
+    );
 
-    pushChunk('summary', [
-      weekly.period as string | undefined,
-      aiAnalysis.encouragement as string | undefined,
-      aiAnalysis.teacherComment as string | undefined,
-      microLoopFeedback,
-    ].filter(Boolean).join(' | '));
-    pushChunk('strength', weeklyAchievements, 500);
-    pushChunk('weakness', areasForImprovement, 500);
-    pushChunk('prescription', nextWeekPlan, 500);
+    if (hasWeeklyShape) {
+      const weeklyAchievements = extractTextFragments(aiAnalysis.weeklyAchievements);
+      const areasForImprovement = extractTextFragments(aiAnalysis.areasForImprovement);
+      const nextWeekPlan = extractTextFragments(aiAnalysis.nextWeekPlan);
+      const microLoopFeedback = extractTextFragments(aiAnalysis.microLoopFeedback);
+
+      pushChunk('summary', [
+        weekly.period as string | undefined,
+        aiAnalysis.encouragement as string | undefined,
+        aiAnalysis.teacherComment as string | undefined,
+        microLoopFeedback,
+      ].filter(Boolean).join(' | '));
+      pushChunk('strength', weeklyAchievements, 500);
+      pushChunk('weakness', areasForImprovement, 500);
+      pushChunk('prescription', nextWeekPlan, 500);
+    }
+
+    if (hasMonthlyShape) {
+      pushChunk('summary', [
+        data.period as string | undefined,
+        aiAnalysis.teacherMessage as string | undefined,
+        extractTextFragments(aiAnalysis.microLoopMonthlyReview),
+        extractTextFragments(aiAnalysis.shortTermVision),
+      ].filter(Boolean).join(' | '), 500);
+      pushChunk('strength', [
+        extractTextFragments(aiAnalysis.monthlyAchievements),
+        extractTextFragments(aiAnalysis.resolvedWeaknesses),
+        extractTextFragments((aiAnalysis.parentReport as Record<string, unknown> | undefined)?.highlights),
+      ].filter(Boolean).join(' | '), 500);
+      pushChunk('weakness', [
+        extractTextFragments(aiAnalysis.newChallenges),
+        extractTextFragments((aiAnalysis.parentReport as Record<string, unknown> | undefined)?.concerns),
+      ].filter(Boolean).join(' | '), 500);
+      pushChunk('prescription', [
+        extractTextFragments(aiAnalysis.nextMonthPlan),
+        extractTextFragments((aiAnalysis.parentReport as Record<string, unknown> | undefined)?.recommendations),
+      ].filter(Boolean).join(' | '), 500);
+    }
   }
 
   return chunks.slice(0, 8);
