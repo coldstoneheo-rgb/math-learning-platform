@@ -86,6 +86,11 @@ export function extractEmbeddableTextsFromAny(
 ): EmbeddableChunk[] {
   const chunks: EmbeddableChunk[] = [];
 
+  const pushChunk = (sourceType: EmbeddableChunk['sourceType'], text: string, maxLen = 400) => {
+    const normalized = text.replace(/\s+/g, ' ').trim().slice(0, maxLen);
+    if (normalized) chunks.push({ sourceType, text: normalized });
+  };
+
   // macroAnalysis 계층
   const macro = data.macroAnalysis as Record<string, string> | undefined;
   if (macro?.summary) {
@@ -111,5 +116,62 @@ export function extractEmbeddableTextsFromAny(
   if (whatWentWell) chunks.push({ sourceType: 'strength', text: whatWentWell.slice(0, 300) });
   if (improvements) chunks.push({ sourceType: 'weakness', text: improvements.slice(0, 300) });
 
+  // 레벨 테스트: 초기 기준점 자체가 이후 성장 비교의 핵심 기억입니다.
+  const testInfo = data.testInfo as Record<string, unknown> | undefined;
+  const testResults = data.testResults as Record<string, unknown> | undefined;
+  if (testInfo || testResults) {
+    pushChunk(
+      'summary',
+      [
+        testInfo?.testName && `테스트: ${testInfo.testName}`,
+        testInfo?.testRange && `범위: ${testInfo.testRange}`,
+        testResults?.totalScore !== undefined && `점수: ${testResults.totalScore}/${testResults.maxScore ?? '미상'}`,
+        testResults?.correctCount !== undefined && `정답 ${testResults.correctCount}개`,
+        testResults?.incorrectCount !== undefined && `오답 ${testResults.incorrectCount}개`,
+      ].filter(Boolean).join(' | ')
+    );
+  }
+
+  // 주간 리포트: 실제 데이터는 aiAnalysis 아래에 중첩되어 저장됩니다.
+  const aiAnalysis = data.aiAnalysis as Record<string, unknown> | undefined;
+  if (aiAnalysis) {
+    const weeklyAchievements = extractTextFragments(aiAnalysis.weeklyAchievements);
+    const areasForImprovement = extractTextFragments(aiAnalysis.areasForImprovement);
+    const nextWeekPlan = extractTextFragments(aiAnalysis.nextWeekPlan);
+    const microLoopFeedback = extractTextFragments(aiAnalysis.microLoopFeedback);
+
+    pushChunk('summary', [
+      weekly.period as string | undefined,
+      aiAnalysis.encouragement as string | undefined,
+      aiAnalysis.teacherComment as string | undefined,
+      microLoopFeedback,
+    ].filter(Boolean).join(' | '));
+    pushChunk('strength', weeklyAchievements, 500);
+    pushChunk('weakness', areasForImprovement, 500);
+    pushChunk('prescription', nextWeekPlan, 500);
+  }
+
   return chunks.slice(0, 8);
+}
+
+function extractTextFragments(value: unknown): string {
+  const fragments: string[] = [];
+
+  const visit = (item: unknown) => {
+    if (!item) return;
+    if (typeof item === 'string') {
+      if (item.trim()) fragments.push(item.trim());
+      return;
+    }
+    if (Array.isArray(item)) {
+      item.forEach(visit);
+      return;
+    }
+    if (typeof item === 'object') {
+      Object.values(item as Record<string, unknown>).forEach(visit);
+    }
+  };
+
+  visit(value);
+  return fragments.join(' | ');
 }

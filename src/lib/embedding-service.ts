@@ -1,13 +1,14 @@
 /**
  * Gemini 임베딩 서비스
  *
- * text-embedding-004 모델을 사용해 텍스트를 768차원 벡터로 변환합니다.
+ * Gemini Embedding 모델을 사용해 텍스트를 768차원 벡터로 변환합니다.
  * 이미 설치된 @google/genai SDK를 재사용합니다.
  */
 
 import { GoogleGenAI } from '@google/genai';
 
-const EMBEDDING_MODEL = 'text-embedding-004';
+const EMBEDDING_MODEL = 'gemini-embedding-2';
+const EMBEDDING_DIMENSIONS = 768;
 
 let _client: GoogleGenAI | null = null;
 
@@ -30,11 +31,15 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   const response = await client.models.embedContent({
     model: EMBEDDING_MODEL,
     contents: normalizedText,
+    config: { outputDimensionality: EMBEDDING_DIMENSIONS },
   });
 
   const values = response.embeddings?.[0]?.values;
   if (!values || values.length === 0) {
     throw new Error('임베딩 생성 실패: 빈 응답');
+  }
+  if (values.length !== EMBEDDING_DIMENSIONS) {
+    throw new Error(`임베딩 차원 불일치: expected ${EMBEDDING_DIMENSIONS}, got ${values.length}`);
   }
   return values;
 }
