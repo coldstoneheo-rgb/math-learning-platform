@@ -13,7 +13,170 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
-import type { Student, User, TestAnalysisFormData, AnalysisData } from '@/types';
+import type { Student, User, TestAnalysisFormData, AnalysisData, DetailedProblemAnalysis, TestResults } from '@/types';
+
+type VerificationDraft = {
+  totalScore: number;
+  maxScore: number;
+  rank: number | '';
+  totalStudents: number | '';
+  correctRateByPoint: { name: string; value: number; total: number }[];
+  detailedAnalysis: DetailedProblemAnalysis[];
+  verificationNote: string;
+};
+
+const CORRECTNESS_OPTIONS: DetailedProblemAnalysis['isCorrect'][] = ['O', 'X', '△', '-'];
+const ERROR_TYPE_OPTIONS: DetailedProblemAnalysis['errorType'][] = [
+  '개념 오류',
+  '절차 오류',
+  '계산 오류',
+  '문제 오독',
+  '기타/부주의',
+  'N/A',
+];
+
+const toNumberOrZero = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const cloneDetailedAnalysis = (items?: DetailedProblemAnalysis[]): DetailedProblemAnalysis[] =>
+  (items || []).map((item) => ({ ...item }));
+
+const buildVerificationDraft = (
+  analysisData: AnalysisData,
+  fallbackMaxScore: number
+): VerificationDraft => ({
+  totalScore: toNumberOrZero(analysisData.testResults?.totalScore),
+  maxScore: toNumberOrZero(analysisData.testResults?.maxScore || fallbackMaxScore),
+  rank: analysisData.testResults?.rank || '',
+  totalStudents: analysisData.testResults?.totalStudents || '',
+  correctRateByPoint: (analysisData.testResults?.correctRateByPoint || []).map((item) => ({ ...item })),
+  detailedAnalysis: cloneDetailedAnalysis(analysisData.detailedAnalysis),
+  verificationNote: '',
+});
+
+const detectAdjustedFields = (analysisData: AnalysisData, draft: VerificationDraft): string[] => {
+  const adjusted = new Set<string>();
+  const originalResults = analysisData.testResults;
+
+  if (originalResults?.totalScore !== draft.totalScore) adjusted.add('totalScore');
+  if (originalResults?.maxScore !== draft.maxScore) adjusted.add('maxScore');
+  if ((originalResults?.rank || '') !== draft.rank) adjusted.add('rank');
+  if ((originalResults?.totalStudents || '') !== draft.totalStudents) adjusted.add('totalStudents');
+
+  draft.correctRateByPoint.forEach((row, index) => {
+    const original = originalResults?.correctRateByPoint?.[index];
+    if (!original || original.name !== row.name || original.value !== row.value || original.total !== row.total) {
+      adjusted.add('correctRateByPoint');
+    }
+  });
+
+  draft.detailedAnalysis.forEach((item, index) => {
+    const original = analysisData.detailedAnalysis?.[index];
+    if (!original || original.isCorrect !== item.isCorrect || original.errorType !== item.errorType) {
+      adjusted.add('detailedAnalysis');
+    }
+  });
+
+  if (draft.verificationNote.trim()) adjusted.add('verificationNote');
+  return Array.from(adjusted);
+};
+
+const GROWTH_CRITICAL_ADJUSTMENT_FIELDS = new Set([
+  'totalScore',
+  'maxScore',
+  'rank',
+  'totalStudents',
+  'correctRateByPoint',
+  'detailedAnalysis',
+]);
+
+const DERIVED_GUIDANCE_EXCLUDED_NOTE =
+  '교사가 AI 초안의 채점/문항 판정을 보정했으므로, AI 초안에서 파생된 약점·처방·성장 예측은 최종 성장 데이터에서 제외했습니다. 확정값 기준의 새 처방은 후속 리포트 또는 교사 코멘트로 보완하세요.';
+
+const hasGrowthCriticalAdjustments = (adjustedFields: string[]): boolean =>
+  adjustedFields.some((field) => GROWTH_CRITICAL_ADJUSTMENT_FIELDS.has(field));
+
+const excludeDraftDerivedGuidance = (analysisData: AnalysisData): AnalysisData => ({
+  ...analysisData,
+  macroAnalysis: {
+    ...analysisData.macroAnalysis,
+    summary: `${analysisData.macroAnalysis?.summary || '분석 결과'}\n\n[교사 보정] ${DERIVED_GUIDANCE_EXCLUDED_NOTE}`,
+    oneLineSummary: analysisData.macroAnalysis?.oneLineSummary,
+    strengths: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+    weaknesses: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+    errorPattern: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+    futureVision: undefined,
+    weaknessFlow: undefined,
+  },
+  actionablePrescription: [],
+  growthPredictions: [],
+  riskFactors: [],
+  swotAnalysis: undefined,
+  trendComment: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+});
+
+const getVerificationError = (draft: VerificationDraft): string | null => {
+  if (draft.maxScore <= 0) return '만점은 1점 이상이어야 합니다.';
+  if (draft.totalScore < 0) return '최종 점수는 0점 이상이어야 합니다.';
+  if (draft.totalScore > draft.maxScore) return '최종 점수는 만점을 초과할 수 없습니다.';
+  if (draft.rank !== '' && draft.rank < 1) return '석차는 1 이상이어야 합니다.';
+  if (draft.totalStudents !== '' && draft.totalStudents < 1) return '전체 인원은 1 이상이어야 합니다.';
+  if (draft.rank !== '' && draft.totalStudents !== '' && draft.rank > draft.totalStudents) {
+    return '석차는 전체 인원보다 클 수 없습니다.';
+  }
+
+  for (const row of draft.correctRateByPoint) {
+    if (row.value < 0 || row.total < 0) return '배점별 정답 수와 전체 수는 0 이상이어야 합니다.';
+    if (row.value > row.total) return `${row.name} 정답 수는 전체 수를 초과할 수 없습니다.`;
+  }
+
+  return null;
+};
+
+const buildTeacherVerifiedAnalysis = (
+  analysisData: AnalysisData,
+  draft: VerificationDraft
+): AnalysisData => {
+  const adjustedFields = detectAdjustedFields(analysisData, draft);
+  const shouldExcludeDraftGuidance = hasGrowthCriticalAdjustments(adjustedFields);
+  const sourceAnalysis = shouldExcludeDraftGuidance
+    ? excludeDraftDerivedGuidance(analysisData)
+    : analysisData;
+  const verifiedResults: TestResults = {
+    ...(analysisData.testResults || {}),
+    totalScore: draft.totalScore,
+    maxScore: draft.maxScore,
+    rank: draft.rank === '' ? 0 : draft.rank,
+    totalStudents: draft.totalStudents === '' ? 0 : draft.totalStudents,
+    correctRateByPoint: draft.correctRateByPoint.map((item) => ({ ...item })),
+  };
+  const verifiedDetailed = cloneDetailedAnalysis(draft.detailedAnalysis);
+
+  return {
+    ...sourceAnalysis,
+    testResults: verifiedResults,
+    detailedAnalysis: verifiedDetailed,
+    verificationStatus: 'teacher_verified',
+    aiInferred: {
+      capturedAt: new Date().toISOString(),
+      testResults: analysisData.testResults ? { ...analysisData.testResults } : undefined,
+      detailedAnalysis: cloneDetailedAnalysis(analysisData.detailedAnalysis),
+      note: 'Original AI-inferred values before teacher correction. Do not use as final grading truth.',
+    },
+    teacherVerified: {
+      verifiedAt: new Date().toISOString(),
+      testResults: verifiedResults,
+      detailedAnalysis: verifiedDetailed,
+      verificationNote: draft.verificationNote.trim() || undefined,
+      adjustedFields,
+      derivedGuidanceStatus: shouldExcludeDraftGuidance
+        ? 'excluded_after_teacher_adjustment'
+        : 'ai_draft_retained',
+    },
+  };
+};
 
 export default function NewReportPage() {
   const router = useRouter();
@@ -47,6 +210,8 @@ export default function NewReportPage() {
 
   // 분석 결과
   const [analysisResult, setAnalysisResult] = useState<AnalysisData | null>(null);
+  const [verificationDraft, setVerificationDraft] = useState<VerificationDraft | null>(null);
+  const [isTeacherVerified, setIsTeacherVerified] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -149,6 +314,8 @@ export default function NewReportPage() {
       }
 
       setAnalysisResult(result.analysisData);
+      setVerificationDraft(buildVerificationDraft(result.analysisData, formData.maxScore));
+      setIsTeacherVerified(false);
     } catch (err: unknown) {
       console.error('분석 오류:', err);
       const errorMessage = err instanceof Error ? err.message : '분석 중 오류가 발생했습니다.';
@@ -160,12 +327,23 @@ export default function NewReportPage() {
 
   const handleSaveReport = async () => {
     if (!analysisResult || !selectedStudentId) return;
+    if (!verificationDraft || !isTeacherVerified) {
+      setError('저장 전에 교사가 점수와 문항별 정오를 확인하고 확정해야 합니다.');
+      return;
+    }
+    const verificationError = getVerificationError(verificationDraft);
+    if (verificationError) {
+      setError(verificationError);
+      setIsTeacherVerified(false);
+      return;
+    }
 
     setSaving(true);
     setError('');
 
     try {
       const supabase = createClient();
+      const verifiedAnalysis = buildTeacherVerifiedAnalysis(analysisResult, verificationDraft);
 
       const { data: insertedReport, error: insertError } = await supabase
         .from('reports')
@@ -174,11 +352,11 @@ export default function NewReportPage() {
           report_type: 'test',
           test_name: formData.testName,
           test_date: formData.testDate,
-          total_score: analysisResult.testResults?.totalScore || 0,
-          max_score: formData.maxScore,
-          rank: analysisResult.testResults?.rank || null,
-          total_students: analysisResult.testResults?.totalStudents || null,
-          analysis_data: analysisResult,
+          total_score: verifiedAnalysis.testResults.totalScore,
+          max_score: verifiedAnalysis.testResults.maxScore,
+          rank: verifiedAnalysis.testResults.rank || null,
+          total_students: verifiedAnalysis.testResults.totalStudents || null,
+          analysis_data: verifiedAnalysis,
         })
         .select('id')
         .single();
@@ -190,7 +368,7 @@ export default function NewReportPage() {
         const profileResult = await updateStudentProfile(
           selectedStudentId,
           insertedReport.id,
-          analysisResult
+          verifiedAnalysis
         );
         if (!profileResult.success) {
           console.warn('학생 프로필 업데이트 실패:', profileResult.error);
@@ -204,7 +382,7 @@ export default function NewReportPage() {
             body: JSON.stringify({
               studentId: selectedStudentId,
               reportId: insertedReport.id,
-              analysisData: analysisResult,
+              analysisData: verifiedAnalysis,
               reportType: 'test',
             }),
           });
@@ -224,7 +402,7 @@ export default function NewReportPage() {
           const feedbackResult = await registerReportFeedbackData(
             insertedReport.id,
             selectedStudentId,
-            analysisResult
+            verifiedAnalysis
           );
           console.log('[Feedback Loop] 등록 결과:', feedbackResult);
         } catch (feedbackError) {
@@ -232,12 +410,12 @@ export default function NewReportPage() {
         }
 
         // [Study Plan] AI 처방 → 학습 계획 자동 생성
-        if (analysisResult.actionablePrescription?.length > 0) {
+        if (verifiedAnalysis.actionablePrescription?.length > 0) {
           try {
             const planResult = await generateStudyPlanFromPrescription(
               selectedStudentId,
               insertedReport.id,
-              analysisResult.actionablePrescription,
+              verifiedAnalysis.actionablePrescription,
               formData.testName
             );
             if (planResult.success) {
@@ -600,12 +778,165 @@ export default function NewReportPage() {
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold text-indigo-600">
-                    {analysisResult.testResults?.totalScore || 0}점
+                    {verificationDraft?.totalScore ?? analysisResult.testResults?.totalScore ?? 0}점
                   </div>
-                  <div className="text-gray-500">/ {formData.maxScore}점</div>
+                  <div className="text-gray-500">/ {verificationDraft?.maxScore ?? formData.maxScore}점</div>
                 </div>
               </div>
             </div>
+
+            {/* 교사 확정 */}
+            {verificationDraft && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl shadow-sm p-6">
+                <div className="flex items-start justify-between gap-4 mb-5">
+                  <div>
+                    <h3 className="text-lg font-semibold text-amber-950">교사 확인 및 최종값 확정</h3>
+                    <p className="text-sm text-amber-800 mt-1">
+                      AI 분석은 초안입니다. 점수, 석차, 배점별 정답 수, 문항별 정오는 교사가 확인한 값만 최종 리포트와 성장 데이터에 저장됩니다.
+                    </p>
+                  </div>
+                  <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${
+                    isTeacherVerified ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {isTeacherVerified ? '확정 완료' : '확정 필요'}
+                  </span>
+                </div>
+
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">최종 점수</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={verificationDraft.totalScore}
+                      onChange={(e) => {
+                        setVerificationDraft({ ...verificationDraft, totalScore: toNumberOrZero(e.target.value) });
+                        setIsTeacherVerified(false);
+                      }}
+                      className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                    />
+                    <p className="text-xs text-amber-700 mt-1">AI 추정: {analysisResult.testResults?.totalScore ?? '-'}점</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">만점</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={verificationDraft.maxScore}
+                      onChange={(e) => {
+                        setVerificationDraft({ ...verificationDraft, maxScore: toNumberOrZero(e.target.value) });
+                        setIsTeacherVerified(false);
+                      }}
+                      className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">석차</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={verificationDraft.rank}
+                      onChange={(e) => {
+                        setVerificationDraft({ ...verificationDraft, rank: e.target.value ? Number(e.target.value) : '' });
+                        setIsTeacherVerified(false);
+                      }}
+                      className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                      placeholder="선택"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">전체 인원</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={verificationDraft.totalStudents}
+                      onChange={(e) => {
+                        setVerificationDraft({ ...verificationDraft, totalStudents: e.target.value ? Number(e.target.value) : '' });
+                        setIsTeacherVerified(false);
+                      }}
+                      className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                      placeholder="선택"
+                    />
+                  </div>
+                </div>
+
+                {verificationDraft.correctRateByPoint.length > 0 && (
+                  <div className="mt-5">
+                    <h4 className="font-medium text-gray-900 mb-2">배점별 정답 수 확인</h4>
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {verificationDraft.correctRateByPoint.map((row, index) => (
+                        <div key={`${row.name}-${index}`} className="bg-white border border-amber-200 rounded-lg p-3">
+                          <div className="text-sm font-medium text-gray-800 mb-2">{row.name}</div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="text-xs text-gray-500">
+                              정답 수
+                              <input
+                                type="number"
+                                min={0}
+                                value={row.value}
+                                onChange={(e) => {
+                                  const next = [...verificationDraft.correctRateByPoint];
+                                  next[index] = { ...row, value: toNumberOrZero(e.target.value) };
+                                  setVerificationDraft({ ...verificationDraft, correctRateByPoint: next });
+                                  setIsTeacherVerified(false);
+                                }}
+                                className="mt-1 w-full px-2 py-1 border border-gray-300 rounded"
+                              />
+                            </label>
+                            <label className="text-xs text-gray-500">
+                              전체 수
+                              <input
+                                type="number"
+                                min={0}
+                                value={row.total}
+                                onChange={(e) => {
+                                  const next = [...verificationDraft.correctRateByPoint];
+                                  next[index] = { ...row, total: toNumberOrZero(e.target.value) };
+                                  setVerificationDraft({ ...verificationDraft, correctRateByPoint: next });
+                                  setIsTeacherVerified(false);
+                                }}
+                                className="mt-1 w-full px-2 py-1 border border-gray-300 rounded"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-5">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">확정 메모</label>
+                  <textarea
+                    value={verificationDraft.verificationNote}
+                    onChange={(e) => {
+                      setVerificationDraft({ ...verificationDraft, verificationNote: e.target.value });
+                      setIsTeacherVerified(false);
+                    }}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                    placeholder="예: 실제 채점표 기준으로 총점과 서술형 정오를 보정함"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const verificationError = getVerificationError(verificationDraft);
+                    if (verificationError) {
+                      setError(verificationError);
+                      setIsTeacherVerified(false);
+                      return;
+                    }
+                    setIsTeacherVerified(true);
+                    setError('');
+                  }}
+                  className="mt-5 w-full py-3 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-700 transition-colors"
+                >
+                  최종값 확인 완료
+                </button>
+              </div>
+            )}
 
             {/* 거시 분석 */}
             <div className="bg-white rounded-xl shadow-sm p-6">
@@ -658,9 +989,12 @@ export default function NewReportPage() {
             )}
 
             {/* 문항별 분석 */}
-            {analysisResult.detailedAnalysis && analysisResult.detailedAnalysis.length > 0 && (
+            {verificationDraft?.detailedAnalysis && verificationDraft.detailedAnalysis.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 문항별 분석</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">문항별 분석 및 정오 확인</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  AI가 추정한 문항별 정오와 오류 유형을 실제 채점 기준에 맞게 보정하세요.
+                </p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -672,16 +1006,50 @@ export default function NewReportPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {analysisResult.detailedAnalysis.map((item, index) => (
+                      {verificationDraft.detailedAnalysis.map((item, index) => (
                         <tr key={index} className={item.isCorrect === 'X' ? 'bg-red-50' : ''}>
                           <td className="px-3 py-2">{item.problemNumber}</td>
                           <td className="px-3 py-2">
-                            <span className={`font-bold ${item.isCorrect === 'O' ? 'text-green-600' : item.isCorrect === 'X' ? 'text-red-600' : 'text-yellow-600'}`}>
-                              {item.isCorrect}
-                            </span>
+                            <select
+                              value={item.isCorrect}
+                              onChange={(e) => {
+                                const next = [...verificationDraft.detailedAnalysis];
+                                next[index] = {
+                                  ...item,
+                                  isCorrect: e.target.value as DetailedProblemAnalysis['isCorrect'],
+                                };
+                                setVerificationDraft({ ...verificationDraft, detailedAnalysis: next });
+                                setIsTeacherVerified(false);
+                              }}
+                              className={`px-2 py-1 border rounded font-bold bg-white ${
+                                item.isCorrect === 'O' ? 'text-green-600' : item.isCorrect === 'X' ? 'text-red-600' : 'text-yellow-600'
+                              }`}
+                            >
+                              {CORRECTNESS_OPTIONS.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
                           </td>
                           <td className="px-3 py-2">{item.keyConcept}</td>
-                          <td className="px-3 py-2 text-gray-600">{item.errorType || '-'}</td>
+                          <td className="px-3 py-2 text-gray-600">
+                            <select
+                              value={item.errorType || 'N/A'}
+                              onChange={(e) => {
+                                const next = [...verificationDraft.detailedAnalysis];
+                                next[index] = {
+                                  ...item,
+                                  errorType: e.target.value as DetailedProblemAnalysis['errorType'],
+                                };
+                                setVerificationDraft({ ...verificationDraft, detailedAnalysis: next });
+                                setIsTeacherVerified(false);
+                              }}
+                              className="px-2 py-1 border border-gray-300 rounded bg-white"
+                            >
+                              {ERROR_TYPE_OPTIONS.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -693,17 +1061,21 @@ export default function NewReportPage() {
             {/* 저장 버튼 */}
             <div className="flex gap-4">
               <button
-                onClick={() => setAnalysisResult(null)}
+                onClick={() => {
+                  setAnalysisResult(null);
+                  setVerificationDraft(null);
+                  setIsTeacherVerified(false);
+                }}
                 className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 다시 분석하기
               </button>
               <button
                 onClick={handleSaveReport}
-                disabled={saving}
+                disabled={saving || !isTeacherVerified}
                 className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
-                {saving ? '저장 중...' : '💾 리포트 저장'}
+                {saving ? '저장 중...' : isTeacherVerified ? '💾 확정 리포트 저장' : '교사 확인 후 저장 가능'}
               </button>
             </div>
           </div>
