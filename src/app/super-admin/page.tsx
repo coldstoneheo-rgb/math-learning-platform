@@ -18,13 +18,13 @@ export default function SuperAdminDashboard() {
         return;
       }
       
-      const { data: profile } = await supabase
-        .from('profiles')
+      const { data: userData } = await supabase
+        .from('users')
         .select('role')
         .eq('id', user.id)
         .single();
         
-      if (profile?.role !== 'super_admin') {
+      if (userData?.role !== 'super_admin') {
         router.push('/');
         return;
       }

@@ -13,6 +13,23 @@ import { NextResponse } from 'next/server';
  */
 export async function POST(request: Request) {
   try {
+    const supabase = await createClient();
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!userData || userData.role !== 'teacher') {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+
     const body: SendNotificationRequest = await request.json();
     const {
       recipientUserId,
@@ -32,8 +49,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
-
     const { data: notificationRecord, error: insertError } = await supabase
       .from('notifications')
       .insert({
@@ -52,6 +67,10 @@ export async function POST(request: Request) {
 
     if (insertError || !notificationRecord) {
       console.error('[notifications/send] DB insert error:', insertError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create notification record' },
+        { status: 500 }
+      );
     }
 
     const notificationId = notificationRecord?.id ?? null;
