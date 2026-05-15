@@ -29,7 +29,7 @@ import type {
 export async function buildAnalysisContext(
   studentId: number,
   reportType: ReportType,
-  options?: { queryText?: string }
+  options?: { queryText?: string; relevantMemories?: RelevantMemory[] }
 ): Promise<AnalysisContextData> {
   // 병렬로 데이터 수집
   const [
@@ -57,7 +57,9 @@ export async function buildAnalysisContext(
 
   // RAG 기억 서랍: 의미적으로 유사한 과거 메모리 검색
   let relevantMemories: RelevantMemory[] | undefined;
-  if (options?.queryText) {
+  if (options?.relevantMemories) {
+    relevantMemories = options.relevantMemories;
+  } else if (options?.queryText) {
     try {
       relevantMemories = await retrieveRelevantMemories(studentId, options.queryText);
     } catch (error) {
@@ -1254,7 +1256,7 @@ export async function retrieveRelevantMemories(
 
   if (error) {
     console.warn('[RAG] 기억 검색 실패:', error.message);
-    return [];
+    throw new Error(`RAG 기억 검색 실패: ${error.message}`);
   }
 
   return (data ?? []).map((row: {

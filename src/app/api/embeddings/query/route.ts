@@ -61,9 +61,9 @@ export async function POST(req: Request) {
     : 'test';
 
   try {
-    let memories = includeContextPreview
-      ? []
-      : await retrieveRelevantMemories(Number(studentId), safeQueryText, { limit: safeLimit });
+    const memories = await retrieveRelevantMemories(Number(studentId), safeQueryText, {
+      limit: safeLimit,
+    });
     const response: {
       memories: typeof memories;
       diagnostics: {
@@ -83,10 +83,8 @@ export async function POST(req: Request) {
     if (includeContextPreview) {
       const context = await buildAnalysisContext(Number(studentId), safeReportType, {
         queryText: safeQueryText,
+        relevantMemories: memories,
       });
-      memories = context.relevantMemories ?? memories;
-      response.memories = memories;
-      response.diagnostics.memoryCount = memories.length;
       const prompt = buildContextPrompt(context);
       response.diagnostics.ragPromptInjected = prompt.includes('과거 기억 서랍');
       response.diagnostics.contextPromptExcerpt = prompt.slice(0, 1200);
