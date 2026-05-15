@@ -286,7 +286,7 @@ const REPORT_TYPE_PROMPTS: Record<ReportType, string> = {
 /**
  * 컨텍스트 데이터를 프롬프트 텍스트로 변환
  */
-function buildContextPrompt(context?: AnalysisContextData): string {
+export function buildContextPrompt(context?: AnalysisContextData): string {
   if (!context) return '';
 
   const sections: string[] = [];
