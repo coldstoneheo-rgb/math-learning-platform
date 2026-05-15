@@ -31,6 +31,13 @@ export default function EmbeddingsAdminPage() {
     text: string; sourceType: string; reportType: string;
     testDate: string | null; similarity: number;
   }[]>([]);
+  const [queryDiagnostics, setQueryDiagnostics] = useState<{
+    memoryCount: number;
+    contextPreviewRequested: boolean;
+    ragPromptInjected?: boolean;
+    contextPromptExcerpt?: string;
+  } | null>(null);
+  const [hasQueried, setHasQueried] = useState(false);
   const [queryLoading, setQueryLoading] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
@@ -145,16 +152,24 @@ export default function EmbeddingsAdminPage() {
       return;
     }
     setQueryLoading(true);
+    setHasQueried(false);
     setQueryResults([]);
+    setQueryDiagnostics(null);
     try {
       const res = await fetch('/api/embeddings/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queryText: queryTest, studentId: Number(queryStudentId) }),
+        body: JSON.stringify({
+          queryText: queryTest,
+          studentId: Number(queryStudentId),
+          includeContextPreview: true,
+        }),
       });
       const data = await res.json();
       if (data.memories) {
         setQueryResults(data.memories);
+        setQueryDiagnostics(data.diagnostics ?? null);
+        setHasQueried(true);
       } else {
         addToast(data.error ?? '검색 실패', 'error');
       }
@@ -206,6 +221,16 @@ export default function EmbeddingsAdminPage() {
             <div className="text-sm text-gray-500 mt-1">최근 실패</div>
           </div>
         </div>
+
+        {totalReports > 0 && totalIndexed === 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="font-semibold">RAG 기억 서랍이 아직 실제 분석에 활용되지 않습니다.</div>
+            <p className="mt-1">
+              저장된 리포트는 있지만 인덱싱된 기억이 없어 검색과 AI 프롬프트 주입 결과가 비어 있습니다.
+              전체 Backfill 또는 학생별 Backfill을 먼저 실행한 뒤 검색 테스트로 프롬프트 주입 여부를 확인하세요.
+            </p>
+          </div>
+        )}
 
         {/* 전체 Backfill */}
         <div className="bg-white rounded-xl shadow-sm p-5">
@@ -351,7 +376,22 @@ export default function EmbeddingsAdminPage() {
             </div>
           )}
 
-          {queryResults.length === 0 && !queryLoading && queryTest && (
+          {queryDiagnostics && (
+            <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-900">
+              <div className="font-semibold">분석 프롬프트 주입 검증</div>
+              <div className="mt-1">
+                RAG 기억 {queryDiagnostics.memoryCount}건,
+                프롬프트 주입 {queryDiagnostics.ragPromptInjected ? '확인됨' : '미확인'}
+              </div>
+              {queryDiagnostics.contextPromptExcerpt && (
+                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-white p-2 text-[11px] text-gray-700">
+                  {queryDiagnostics.contextPromptExcerpt}
+                </pre>
+              )}
+            </div>
+          )}
+
+          {queryResults.length === 0 && !queryLoading && hasQueried && (
             <p className="mt-3 text-sm text-gray-400 text-center">
               검색 결과가 없습니다. 임베딩 인덱싱 여부를 확인해주세요.
             </p>
