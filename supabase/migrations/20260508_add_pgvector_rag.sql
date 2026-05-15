@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS report_embeddings (
   source_text TEXT NOT NULL,
   -- 텍스트 출처 유형
   source_type TEXT NOT NULL CHECK (source_type IN ('summary', 'weakness', 'strength', 'errorPattern', 'prescription', 'combined')),
-  -- Gemini text-embedding-004 차원 = 768
+  -- Gemini Embedding outputDimensionality = 768
   embedding vector(768) NOT NULL,
   -- 메타데이터 (필터링/정렬용)
   report_type TEXT,
