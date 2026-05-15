@@ -265,6 +265,7 @@ export interface TestAnalysisData {
     detailedAnalysis: DetailedProblemAnalysis[];
     verificationNote?: string;
     adjustedFields: string[];
+    derivedGuidanceStatus?: 'ai_draft_retained' | 'excluded_after_teacher_adjustment';
   };
 }
 

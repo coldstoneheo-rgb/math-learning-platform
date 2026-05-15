@@ -83,6 +83,40 @@ const detectAdjustedFields = (analysisData: AnalysisData, draft: VerificationDra
   return Array.from(adjusted);
 };
 
+const GROWTH_CRITICAL_ADJUSTMENT_FIELDS = new Set([
+  'totalScore',
+  'maxScore',
+  'rank',
+  'totalStudents',
+  'correctRateByPoint',
+  'detailedAnalysis',
+]);
+
+const DERIVED_GUIDANCE_EXCLUDED_NOTE =
+  '교사가 AI 초안의 채점/문항 판정을 보정했으므로, AI 초안에서 파생된 약점·처방·성장 예측은 최종 성장 데이터에서 제외했습니다. 확정값 기준의 새 처방은 후속 리포트 또는 교사 코멘트로 보완하세요.';
+
+const hasGrowthCriticalAdjustments = (adjustedFields: string[]): boolean =>
+  adjustedFields.some((field) => GROWTH_CRITICAL_ADJUSTMENT_FIELDS.has(field));
+
+const excludeDraftDerivedGuidance = (analysisData: AnalysisData): AnalysisData => ({
+  ...analysisData,
+  macroAnalysis: {
+    ...analysisData.macroAnalysis,
+    summary: `${analysisData.macroAnalysis?.summary || '분석 결과'}\n\n[교사 보정] ${DERIVED_GUIDANCE_EXCLUDED_NOTE}`,
+    oneLineSummary: analysisData.macroAnalysis?.oneLineSummary,
+    strengths: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+    weaknesses: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+    errorPattern: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+    futureVision: undefined,
+    weaknessFlow: undefined,
+  },
+  actionablePrescription: [],
+  growthPredictions: [],
+  riskFactors: [],
+  swotAnalysis: undefined,
+  trendComment: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+});
+
 const getVerificationError = (draft: VerificationDraft): string | null => {
   if (draft.maxScore <= 0) return '만점은 1점 이상이어야 합니다.';
   if (draft.totalScore < 0) return '최종 점수는 0점 이상이어야 합니다.';
@@ -105,6 +139,11 @@ const buildTeacherVerifiedAnalysis = (
   analysisData: AnalysisData,
   draft: VerificationDraft
 ): AnalysisData => {
+  const adjustedFields = detectAdjustedFields(analysisData, draft);
+  const shouldExcludeDraftGuidance = hasGrowthCriticalAdjustments(adjustedFields);
+  const sourceAnalysis = shouldExcludeDraftGuidance
+    ? excludeDraftDerivedGuidance(analysisData)
+    : analysisData;
   const verifiedResults: TestResults = {
     ...(analysisData.testResults || {}),
     totalScore: draft.totalScore,
@@ -116,7 +155,7 @@ const buildTeacherVerifiedAnalysis = (
   const verifiedDetailed = cloneDetailedAnalysis(draft.detailedAnalysis);
 
   return {
-    ...analysisData,
+    ...sourceAnalysis,
     testResults: verifiedResults,
     detailedAnalysis: verifiedDetailed,
     verificationStatus: 'teacher_verified',
@@ -131,7 +170,10 @@ const buildTeacherVerifiedAnalysis = (
       testResults: verifiedResults,
       detailedAnalysis: verifiedDetailed,
       verificationNote: draft.verificationNote.trim() || undefined,
-      adjustedFields: detectAdjustedFields(analysisData, draft),
+      adjustedFields,
+      derivedGuidanceStatus: shouldExcludeDraftGuidance
+        ? 'excluded_after_teacher_adjustment'
+        : 'ai_draft_retained',
     },
   };
 };
