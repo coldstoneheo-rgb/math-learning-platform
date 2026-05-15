@@ -5,7 +5,7 @@
  * AI 분석에 주입하는 서비스
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import type {
   AnalysisContextData,
   RelevantMemory,
@@ -60,10 +60,25 @@ export async function buildAnalysisContext(
   if (options?.queryText) {
     try {
       relevantMemories = await retrieveRelevantMemories(studentId, options.queryText);
-    } catch {
+    } catch (error) {
       // RAG 실패해도 분석은 계속 진행
+      console.warn('[AnalysisContext] RAG memory retrieval failed:', {
+        studentId,
+        reportType,
+        error: error instanceof Error ? error.message : 'unknown error',
+      });
     }
   }
+
+  console.info('[AnalysisContext] built', {
+    studentId,
+    reportType,
+    hasQueryText: Boolean(options?.queryText),
+    memoryCount: relevantMemories?.length ?? 0,
+    failedSkillCount: failedMicroSkills.length,
+    masteredSkillCount: masteredSkills.length,
+    recentReportCount: recentReports?.length ?? 0,
+  });
 
   return {
     metaProfile,
@@ -1226,7 +1241,7 @@ export async function retrieveRelevantMemories(
   const { generateEmbedding } = await import('./embedding-service');
   const queryEmbedding = await generateEmbedding(queryText);
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // pgvector RPC를 통한 코사인 유사도 검색
   const { data, error } = await supabase.rpc('match_report_memories', {

@@ -7,6 +7,31 @@ export const dynamic = 'force-dynamic';
 
 const CHUNK_SIZE = 50;
 
+async function markIndexStatus(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  params: {
+    reportId: number;
+    studentId: number;
+    status: 'indexed' | 'skipped' | 'failed';
+    indexedChunks?: number;
+    lastError?: string | null;
+  }
+) {
+  const { error } = await supabase.from('embedding_index_status').upsert({
+    report_id: params.reportId,
+    student_id: params.studentId,
+    status: params.status,
+    indexed_chunks: params.indexedChunks ?? 0,
+    last_error: params.lastError ?? null,
+    last_attempted_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.warn('[Backfill] 상태 기록 실패:', error.message);
+  }
+}
+
 /**
  * POST /api/embeddings/backfill
  * 임베딩이 없는 리포트를 일괄 인덱싱
@@ -73,10 +98,26 @@ export async function POST(req: Request) {
 
   for (const report of toProcess) {
     const analysisData = report.analysis_data as Record<string, unknown>;
-    if (!analysisData) continue;
+    if (!analysisData) {
+      await markIndexStatus(supabase, {
+        reportId: report.id,
+        studentId: report.student_id,
+        status: 'skipped',
+        lastError: 'analysis_data 없음',
+      });
+      continue;
+    }
 
     const chunks = extractEmbeddableTextsFromAny(analysisData);
-    if (chunks.length === 0) continue;
+    if (chunks.length === 0) {
+      await markIndexStatus(supabase, {
+        reportId: report.id,
+        studentId: report.student_id,
+        status: 'skipped',
+        lastError: '추출 가능한 텍스트 없음',
+      });
+      continue;
+    }
 
     try {
       const texts = chunks.map((c) => c.text);
@@ -95,12 +136,30 @@ export async function POST(req: Request) {
       const { error } = await supabase.from('report_embeddings').insert(rows);
       if (error) {
         console.error(`[Backfill] report ${report.id} 저장 실패:`, error.message);
+        await markIndexStatus(supabase, {
+          reportId: report.id,
+          studentId: report.student_id,
+          status: 'failed',
+          lastError: error.message,
+        });
         errorCount++;
       } else {
+        await markIndexStatus(supabase, {
+          reportId: report.id,
+          studentId: report.student_id,
+          status: 'indexed',
+          indexedChunks: rows.length,
+        });
         successCount++;
       }
     } catch (err) {
       console.error(`[Backfill] report ${report.id} 임베딩 실패:`, err);
+      await markIndexStatus(supabase, {
+        reportId: report.id,
+        studentId: report.student_id,
+        status: 'failed',
+        lastError: err instanceof Error ? err.message : '임베딩 실패',
+      });
       errorCount++;
     }
 

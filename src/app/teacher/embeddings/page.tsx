@@ -13,7 +13,10 @@ interface EmbeddingStats {
   studentName: string;
   totalReports: number;
   indexedReports: number;
+  failedReports: number;
   lastIndexedAt: string | null;
+  lastAttemptedAt: string | null;
+  lastError: string | null;
 }
 
 export default function EmbeddingsAdminPage() {
@@ -60,7 +63,12 @@ export default function EmbeddingsAdminPage() {
       .from('report_embeddings')
       .select('student_id, report_id, created_at');
 
+    const statusCounts = await supabase
+      .from('embedding_index_status')
+      .select('student_id, status, last_error, last_attempted_at, updated_at');
+
     const embedData = embedCounts.data ?? [];
+    const statusData = statusCounts.data ?? [];
 
     const statsMap: Record<number, EmbeddingStats> = {};
     for (const s of studentList) {
@@ -76,12 +84,33 @@ export default function EmbeddingsAdminPage() {
           !max || e.created_at > max ? e.created_at : max,
         null
       );
+      const studentStatuses = statusData.filter(
+        (row: { student_id: number }) => row.student_id === s.id
+      );
+      const failedReports = studentStatuses.filter(
+        (row: { status: string }) => row.status === 'failed'
+      ).length;
+      const latestStatus = studentStatuses.reduce(
+        (
+          latest: { last_attempted_at: string | null; last_error: string | null } | null,
+          row: { last_attempted_at: string | null; last_error: string | null }
+        ) => {
+          if (!latest) return row;
+          if (!row.last_attempted_at) return latest;
+          if (!latest.last_attempted_at || row.last_attempted_at > latest.last_attempted_at) return row;
+          return latest;
+        },
+        null
+      );
       statsMap[s.id] = {
         studentId: s.id,
         studentName: s.name,
         totalReports,
         indexedReports: uniqueReports,
+        failedReports,
         lastIndexedAt: lastAt,
+        lastAttemptedAt: latestStatus?.last_attempted_at ?? null,
+        lastError: latestStatus?.last_error ?? null,
       };
     }
 
@@ -140,6 +169,7 @@ export default function EmbeddingsAdminPage() {
 
   const totalIndexed = stats.reduce((s, r) => s + r.indexedReports, 0);
   const totalReports = stats.reduce((s, r) => s + r.totalReports, 0);
+  const totalFailed = stats.reduce((s, r) => s + r.failedReports, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -154,7 +184,7 @@ export default function EmbeddingsAdminPage() {
 
       <main className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
         {/* 개요 */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div className="bg-white rounded-xl shadow-sm p-5 text-center">
             <div className="text-3xl font-bold text-indigo-600">{totalIndexed}</div>
             <div className="text-sm text-gray-500 mt-1">인덱싱된 리포트</div>
@@ -168,6 +198,12 @@ export default function EmbeddingsAdminPage() {
               {totalReports > 0 ? Math.round((totalIndexed / totalReports) * 100) : 0}%
             </div>
             <div className="text-sm text-gray-500 mt-1">인덱싱 완료율</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5 text-center">
+            <div className={`text-3xl font-bold ${totalFailed > 0 ? 'text-red-600' : 'text-gray-700'}`}>
+              {totalFailed}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">최근 실패</div>
           </div>
         </div>
 
@@ -202,6 +238,7 @@ export default function EmbeddingsAdminPage() {
                 <th className="text-center px-4 py-3">인덱싱</th>
                 <th className="text-center px-4 py-3">전체</th>
                 <th className="text-center px-4 py-3">커버리지</th>
+                <th className="text-left px-4 py-3">상태</th>
                 <th className="text-right px-6 py-3">액션</th>
               </tr>
             </thead>
@@ -224,8 +261,28 @@ export default function EmbeddingsAdminPage() {
                         {coverage}%
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-left">
+                      {s.failedReports > 0 ? (
+                        <div>
+                          <div className="text-xs font-semibold text-red-600">
+                            실패 {s.failedReports}건
+                          </div>
+                          {s.lastError && (
+                            <div className="text-xs text-gray-500 truncate max-w-[180px]" title={s.lastError}>
+                              {s.lastError}
+                            </div>
+                          )}
+                        </div>
+                      ) : s.lastAttemptedAt ? (
+                        <div className="text-xs text-gray-500">
+                          마지막 시도 {new Date(s.lastAttemptedAt).toLocaleDateString('ko-KR')}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">기록 없음</span>
+                      )}
+                    </td>
                     <td className="px-6 py-3 text-right">
-                      {s.indexedReports < s.totalReports && (
+                      {(s.indexedReports < s.totalReports || s.failedReports > 0) && (
                         <button
                           onClick={() => handleBackfill(s.studentId)}
                           disabled={backfilling !== null}
