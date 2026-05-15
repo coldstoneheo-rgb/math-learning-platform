@@ -11,10 +11,16 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "dist/**",
+    "node_modules/**",
+    ".npm-cache/**",
     "next-env.d.ts",
+    "*.generated.*",
     // Test and script files
     "e2e/**",
     "scripts/**",
+    "scratch/**",
+    "scratch_test.ts",
   ]),
   // Custom rule overrides
   {
@@ -24,6 +30,7 @@ const eslintConfig = defineConfig([
       "react-compiler/react-compiler": "off",
       // Relax react-hooks rules - function hoisting in useEffect is safe at runtime
       "react-hooks/immutability": "off",
+      "react-hooks/set-state-in-effect": "off",
     },
   },
 ]);

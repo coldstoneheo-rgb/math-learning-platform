@@ -5,9 +5,9 @@ Product Requirements Document v3.2
 
 Vercel \+ Supabase 기반 웹 플랫폼 구축
 
-문서 버전: 3.2 (Growth Loop System)
+문서 버전: 3.3 (상용화 준비)
 
-작성일: 2025년 12월 (최종 업데이트: 2025-12-30)
+작성일: 2025년 12월 (최종 업데이트: 2026-04-29)
 
 대상 사용자: 50명 (학생 25명 \+ 학부모 25명)
 
@@ -61,7 +61,7 @@ Vercel \+ Supabase 기반 웹 플랫폼 구축
 
 * 인증: Supabase Auth
 
-* AI: Google Gemini API (gemini-2.5-flash)
+* AI: Google Gemini API (gemini-pro-latest / gemini-flash-latest)
 
 * 도메인: \[프로젝트명\].vercel.app (무료)
 
@@ -168,7 +168,7 @@ Vercel \+ Supabase 기반 웹 플랫폼 구축
 | **Hosting** | Vercel | 무료 티어: 100GB 대역폭/월 |
 | **Database** | Supabase PostgreSQL | 무료 티어: 500MB DB |
 | **Auth** | Supabase Auth | 이메일/비밀번호 인증 |
-| **AI** | Google Gemini API | gemini-2.5-flash 모델 |
+| **AI** | Google Gemini API | gemini-pro-latest / gemini-flash-latest (하이브리드 라우팅) |
 | **Charts** | Recharts 2.12+ | 레이더, 선, 막대 차트 |
 | **Styling** | Tailwind CSS 3.4+ | 유틸리티 기반 스타일링 |
 
@@ -1122,7 +1122,19 @@ math-learning-platform/
 
 │   │   ├── gemini.ts                 \# Gemini API 래퍼
 
-│   │   └── student-profile-extractor.ts \# 프로필 자동 추출 (NEW)
+│   │   ├── model-router.ts           \# AI 모델 라우팅 (Pro/Flash) ✨
+
+│   │   ├── rate-limiter.ts           \# API Rate Limiting ✨
+
+│   │   ├── validations.ts            \# Zod 입력 검증 ✨
+
+│   │   ├── feature-flags.ts          \# Feature Flags ✨
+
+│   │   ├── email.ts                  \# 이메일 시스템 (Resend) ✨
+
+│   │   ├── context-builder.ts        \# AI 컨텍스트 빌더
+
+│   │   └── student-profile-extractor.ts \# 프로필 자동 추출
 
 │   │
 
@@ -1190,5 +1202,31 @@ math-learning-platform/
 | **새 API** | level-test/analyze, weekly-report/generate, semi-annual-report/generate, annual-report/generate, meta-profile/update 5개 API 추가 |
 | **학부모 대시보드** | Growth Loop 진행 상황 시각화, 성장 서사 요약, Baseline 경고 기능 추가 |
 | **StudentMetaProfile** | 5개 핵심 지표 (Baseline, ErrorSignature, AbsorptionRate, SolvingStamina, MetaCognitionLevel) |
+
+## **12.6 v3.3 업데이트 내역 (2026-04-29) - 상용화 준비** ✨
+
+| 구분 | 추가/변경 내용 |
+| ----- | ----- |
+| **AI 모델 라우팅** | `src/lib/model-router.ts` - Pro/Flash 하이브리드 모델 자동 선택 |
+| **Rate Limiting** | `src/lib/rate-limiter.ts` - Upstash Redis 기반 API 요청 제한 (In-memory fallback 지원) |
+| **Input Validation** | `src/lib/validations.ts` - Zod 스키마 기반 서버사이드 입력 검증 |
+| **Feature Flags** | `src/lib/feature-flags.ts` - 기능 토글 시스템 |
+| **E2E 테스트** | `e2e/` 디렉토리 - Playwright 기반 E2E 테스트 구현 |
+| **에러 모니터링** | `@sentry/nextjs` - Sentry 기반 실시간 에러 추적 |
+| **이메일 시스템** | `src/lib/email.ts` - Resend 연동 |
+| **PII 암호화** | `src/lib/pii-encryption.ts` - 개인정보 암호화 지원 |
+| **문서 정리** | E2E 테스트 문서 통합, IMPROVEMENT_ROADMAP에 ML 엔진 계획 통합 |
+
+## **12.7 관련 문서**
+
+| 문서 | 설명 |
+| ----- | ----- |
+| `CLAUDE.md` | AI 어시스턴트 가이드 (Primary) |
+| `COMMERCIALIZATION_PLAN.md` | 상용화 계획서 |
+| `IMPROVEMENT_ROADMAP.md` | 개발 로드맵 |
+| `docs/ML_Engine_Enhancement_Plan_v1.0.md` | ML 엔진 고도화 계획 |
+| `docs/AI_HYBRID_ROUTING_PLAN.md` | AI 모델 라우팅 계획 |
+| `docs/E2E_TEST_REPORT.md` | E2E 테스트 결과 보고서 |
+| `docs/FEATURE_PLAN_MODEL_SELECTOR.md` | 모델 선택 UI 기능 계획 |
 
 *— 문서 끝 —*

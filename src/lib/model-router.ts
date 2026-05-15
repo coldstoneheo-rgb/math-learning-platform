@@ -41,11 +41,16 @@ interface ModelConfig {
 
 /**
  * 환경변수에서 모델 설정 로드
+ *
+ * 모델 비용 참고 (2026-05):
+ * - gemini-pro-latest: Input $1.25 / Output $10.00 (→ gemini-3.1-pro-preview)
+ * - gemini-flash-latest: Input $0.30 / Output $2.50 (→ gemini-3-flash-preview)
+ * - gemini-flash-lite-latest: Input $0.10 / Output $0.40 (최저가)
  */
 function getModelConfig(): ModelConfig {
   return {
-    proModel: process.env.GEMINI_MODEL_PRO || 'gemini-2.5-pro',
-    flashModel: process.env.GEMINI_MODEL_FLASH || 'gemini-2.5-flash',
+    proModel: process.env.GEMINI_MODEL_PRO || 'gemini-pro-latest',
+    flashModel: process.env.GEMINI_MODEL_FLASH || 'gemini-flash-latest',
     testDefaultModel: (process.env.GEMINI_TEST_DEFAULT_MODEL || 'flash') as ModelTier,
     proGradeThreshold: parseInt(process.env.GEMINI_PRO_GRADE_THRESHOLD || '10', 10),
     proTestTypes: (process.env.GEMINI_PRO_TEST_TYPES || '모의고사,수능,기말고사,중간고사')
@@ -113,15 +118,15 @@ function shouldUseProForTest(context: ModelRoutingContext, config: ModelConfig):
  * 모델 라우팅 결정
  *
  * @param context - 라우팅 결정에 필요한 컨텍스트
- * @returns 사용할 Gemini 모델 ID (예: 'gemini-2.5-pro')
+ * @returns 사용할 Gemini 모델 ID (예: 'gemini-pro-latest')
  *
  * @example
  * const model = routeModel({ reportType: 'level_test' });
- * // => 'gemini-2.5-pro'
+ * // => 'gemini-pro-latest'
  *
  * @example
  * const model = routeModel({ reportType: 'weekly' });
- * // => 'gemini-2.5-flash'
+ * // => 'gemini-flash-latest'
  *
  * @example
  * const model = routeModel({
@@ -129,7 +134,7 @@ function shouldUseProForTest(context: ModelRoutingContext, config: ModelConfig):
  *   studentGrade: 11,
  *   testName: '3월 모의고사'
  * });
- * // => 'gemini-2.5-pro' (고등학생 + 모의고사)
+ * // => 'gemini-pro-latest' (고등학생 + 모의고사)
  */
 export function routeModel(context: ModelRoutingContext): string {
   const config = getModelConfig();

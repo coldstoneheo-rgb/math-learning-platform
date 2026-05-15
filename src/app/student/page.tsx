@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { MetaHeader } from '@/components/report';
 import type {
   User, Student, Report, AnalysisData, ReportType,
-  StudyPlan, StudyTask, GrowthPrediction, ActionablePrescriptionItem,
+  StudyPlan, StudyTask, GrowthPrediction, ActionablePrescriptionItem, SelfAnalysisReport
 } from '@/types';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -52,7 +52,7 @@ export default function StudentDashboard() {
     const { data: userData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
     if (!userData) { router.push('/login'); return; }
 
-    if (userData.role === 'teacher') { router.push('/admin'); return; }
+    if (userData.role === 'teacher') { router.push('/teacher'); return; }
     if (userData.role === 'parent') { router.push('/parent'); return; }
     if (userData.role !== 'student') { router.push('/'); return; }
 
@@ -203,6 +203,8 @@ export default function StudentDashboard() {
   const topPrescriptions = getTopPrescriptions();
   const motivation = getMotivation();
 
+  const latestSelfAnalysis = student?.reports?.find(r => r.report_type === 'self_analysis');
+
   // 최근 점수 향상 여부
   const recentScores = scoreTrendData.slice(-2);
   const scoreImproved = recentScores.length === 2 &&
@@ -298,6 +300,43 @@ export default function StudentDashboard() {
             </div>
           </div>
         </div>
+
+        {/* ===== 내 풀이 분석 하이라이트 (Phase 5.3) ===== */}
+        {latestSelfAnalysis && (() => {
+          const analysisData = latestSelfAnalysis.analysis_data as SelfAnalysisReport;
+          return (
+            <div className="mb-8 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl shadow-sm border border-emerald-100 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm shrink-0">
+                  ✨
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-lg font-bold text-emerald-900">최근 내 풀이 분석 결과</h2>
+                    <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                      {latestSelfAnalysis.test_date}
+                    </span>
+                  </div>
+                  <p className="text-sm text-emerald-700 mb-2">
+                    {analysisData.oneLineSummary || '스스로 학습을 분석하고 성장하는 모습이 멋져요!'}
+                  </p>
+                  {analysisData.nextSteps?.immediate && analysisData.nextSteps.immediate.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-emerald-600 bg-white/60 px-3 py-1.5 rounded-lg inline-flex">
+                      <span className="font-bold">🎯 당장 실천할 것:</span>
+                      <span>{analysisData.nextSteps.immediate[0]}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <Link
+                href={`/student/reports/${latestSelfAnalysis.id}`}
+                className="shrink-0 w-full md:w-auto text-center px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                리포트 다시 보기
+              </Link>
+            </div>
+          );
+        })()}
 
         {/* ===== 메타프로필 (학습 역량 지표) ===== */}
         {student.meta_profile && (

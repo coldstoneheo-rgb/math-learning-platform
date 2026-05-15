@@ -177,11 +177,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
     }
     const body = validation.data;
 
-    // 학생 ID가 있으면 컨텍스트 빌드
+    // 학생 ID가 있으면 컨텍스트 빌드 (RAG queryText 포함)
     let context = undefined;
     if (body.studentId) {
       const reportType: ReportType = body.reportType || 'test';
-      context = await buildAnalysisContext(body.studentId, reportType);
+      const formData = body.formData as { testName?: string; testRange?: string } | undefined;
+      const queryText = [formData?.testName, formData?.testRange].filter(Boolean).join(' ');
+      context = await buildAnalysisContext(body.studentId, reportType, {
+        queryText: queryText || undefined,
+      });
     }
 
     // 컨텍스트를 포함한 분석 실행

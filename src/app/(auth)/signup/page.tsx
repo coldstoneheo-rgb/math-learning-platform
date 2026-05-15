@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '', name: '', role: 'teacher' as 'teacher' | 'parent' });
+  const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '', name: '', role: 'teacher' as 'teacher' | 'parent' | 'student' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -64,7 +64,7 @@ export default function SignupPage() {
 
         setSuccess(true);
         if (!data.session) setTimeout(() => router.push('/login'), 3000);
-        else router.push(formData.role === 'teacher' ? '/admin' : '/parent');
+        else router.push(formData.role === 'teacher' ? '/teacher' : formData.role === 'parent' ? '/parent' : '/student');
       }
     } catch (err) {
       setError('회원가입 중 오류가 발생했습니다.');
@@ -120,8 +120,12 @@ export default function SignupPage() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white">
               <option value="teacher">선생님</option>
               <option value="parent">학부모</option>
+              <option value="student">학생</option>
             </select>
-            <p className="mt-1 text-xs text-gray-500">학부모 계정은 선생님의 초대를 통해 학생과 연결됩니다.</p>
+            <p className="mt-1 text-xs text-gray-500">
+              학부모 계정은 선생님의 초대를 통해 학생과 연결됩니다. 
+              학생 계정은 선생님이 발급한 연결 코드가 필요할 수 있습니다.
+            </p>
           </div>
 
           <div>

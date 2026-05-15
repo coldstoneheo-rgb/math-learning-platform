@@ -77,24 +77,66 @@ export default function ParentSelfAnalysisPage() {
     setLoading(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) ctx.drawImage(img, 0, 0, width, height);
+          
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(dataUrl);
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (images.length + files.length > 10) {
       setError('이미지는 최대 10장까지 업로드 가능합니다.');
       return;
     }
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
+    try {
+      const compressedDataUrls = await Promise.all(files.map(compressImage));
+      
+      compressedDataUrls.forEach((dataUrl) => {
         setPreviewUrls((prev) => [...prev, dataUrl]);
         const base64 = dataUrl.split(',')[1];
         setImages((prev) => [...prev, base64]);
-      };
-      reader.readAsDataURL(file);
-    });
-    setError('');
+      });
+      setError('');
+    } catch (err) {
+      console.error('이미지 압축 오류:', err);
+      setError('이미지 처리 중 오류가 발생했습니다.');
+    }
   };
 
   const removeImage = (index: number) => {
@@ -138,9 +180,18 @@ export default function ParentSelfAnalysisPage() {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      const textResponse = await response.text();
+      try {
+        data = JSON.parse(textResponse);
+      } catch (e) {
+        if (response.status === 413 || textResponse.includes('Request Entity Too Large')) {
+          throw new Error('업로드한 이미지 용량이 너무 큽니다. 사진 화질을 낮추거나 개수를 줄여주세요.');
+        }
+        throw new Error('서버 응답을 처리할 수 없습니다.');
+      }
 
-      if (!data.success) {
+      if (!response.ok || !data.success) {
         throw new Error(data.error || '분석에 실패했습니다.');
       }
 

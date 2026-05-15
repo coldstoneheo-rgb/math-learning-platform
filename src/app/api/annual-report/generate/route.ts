@@ -204,7 +204,14 @@ export async function POST(
     // 14. 컨텍스트 데이터 구성
     let context;
     try {
-      context = await buildAnalysisContext(studentId, 'annual');
+      const queryText = [
+        student.name,
+        `${year}년 연간 리포트`,
+        ...(semiAnnualReportsSummary || []).map(report => report.summary),
+      ].filter(Boolean).join(' ');
+      context = await buildAnalysisContext(studentId, 'annual', {
+        queryText: queryText || undefined,
+      });
     } catch (contextError) {
       console.warn('[Annual Report] Context building failed:', contextError);
     }

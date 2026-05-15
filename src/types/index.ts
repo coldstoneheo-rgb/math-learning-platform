@@ -1,4 +1,4 @@
-export type UserRole = 'teacher' | 'parent' | 'student';
+export type UserRole = 'super_admin' | 'teacher' | 'parent' | 'student';
 
 export interface User {
   id: string;
@@ -16,6 +16,7 @@ export interface Student {
   school?: string;
   start_date?: string;
   parent_id?: string;
+  user_id?: string; // 학생 계정과 연결되는 auth.users(id)
   learning_style?: 'visual' | 'verbal' | 'logical';
   personality_traits?: string[];
   // 학생 메타프로필 (JSONB)
@@ -426,6 +427,19 @@ export interface ConsolidatedReportData {
   };
 }
 
+export interface ProblemBehaviorData {
+  problemNumber: string;
+  selfConfidence?: 1 | 2 | 3; // 1: 찍음(낮음), 2: 헷갈림(보통), 3: 확신함(높음)
+  timeSpentMins?: number; // 유독 오래 머무른 문제의 체공 시간 (분)
+}
+
+export interface TeacherComments {
+  attitudeAndFocus?: string; // 문제 풀이 태도 및 집중도
+  hesitationAndTime?: string; // 망설임 및 체공 시간 관찰
+  metacognition?: string; // 메타인지 상태 (정답 확신도, 질문 빈도 등)
+  additionalNote?: string; // 기타 교사 관찰 특이사항
+}
+
 export interface TestAnalysisFormData {
   testName: string;
   testDate: string;
@@ -443,6 +457,9 @@ export interface TestAnalysisFormData {
   totalScore?: number;
   rank?: number;
   totalStudents?: number;
+  // Phase 1: 행동 데이터 트래킹
+  teacherComments?: TeacherComments;
+  problemBehaviorData?: ProblemBehaviorData[];
 }
 
 export interface ApiResponse<T> {
@@ -869,6 +886,16 @@ export interface StudentMetaProfile {
   solvingStamina: SolvingStamina;
   // 메타인지 수준
   metaCognitionLevel: MetaCognitionLevel;
+  // 과거 데이터 마이그레이션 핵심 시그널 (Phase 3 고도화)
+  legacySignals?: {
+    id: string;
+    date: string;
+    sourceType: string; // 시험지, 리포트 등
+    affectedPillars: ('ErrorSignature' | 'AbsorptionRate' | 'SolvingStamina' | 'MetaCognition')[];
+    insight: string; // 심층 분석 내용
+    relatedConcepts: string[]; // 관련 단원/개념
+    confidenceScore: number; // 추출에 대한 AI의 확신도 (1-100)
+  }[];
   // 마지막 업데이트 (any indicator)
   lastUpdated: string;
   // 프로필 버전 (스키마 변경 추적용)
@@ -1702,6 +1729,18 @@ export interface MacroLoopData {
 }
 
 /**
+ * RAG 기억 서랍 - 의미적으로 유사한 과거 리포트 메모리
+ */
+export interface RelevantMemory {
+  reportId: number;
+  reportType: string;
+  testDate: string | null;
+  sourceType: string;
+  text: string;
+  similarity: number;
+}
+
+/**
  * ContextData - AI 프롬프트 컨텍스트 데이터
  * 이전 리포트에서 주입할 데이터
  */
@@ -1730,6 +1769,15 @@ export interface AnalysisContextData {
     level: number;
     consistency: string;
   }[];
+  // 지식 추적 기반 하위 스킬 검증 (Phase 2)
+  failedMicroSkills?: string[];
+  // 망각 곡선 적용 대상 스킬 (Phase 2)
+  masteredSkills?: {
+    skillId: string;
+    skillName: string;
+    lastMasteredDate: string;
+    memoryStrength: number;
+  }[];
   // 현재 마이크로 루프 상태
   currentMicroLoop?: MicroLoopData;
   // 현재 매크로 루프 상태 (반기/연간 리포트용)
@@ -1743,6 +1791,8 @@ export interface AnalysisContextData {
   };
   // 전략 피드백 데이터 (Phase 2: 피드백 루프)
   strategyFeedback?: StrategyFeedbackContext;
+  // RAG 기억 서랍 (과거 유사 분석 메모리)
+  relevantMemories?: RelevantMemory[];
 }
 
 /**
@@ -1925,3 +1975,126 @@ export interface StudyPlanSummary {
 export interface StudyPlanWithTasks extends StudyPlan {
   tasks: StudyTask[];
 }
+
+// ============================================
+// Phase 5: CRM & 학부모-교사 상호작용 타입 정의
+// ============================================
+
+/**
+ * ReportComment - 리포트 단위 교사-학부모 코멘트 스레드
+ * 특정 AI 분석 리포트에 교사의 현장 의견 및 학부모 피드백을 기록
+ */
+export interface ReportComment {
+  id: number;
+  report_id: number;
+  author_id: string;          // auth.users(id) - UUID
+  content: string;
+  created_at: string;
+  updated_at: string;
+  // JOIN 결과 (author 정보)
+  author?: {
+    id: string;
+    name: string;
+    role: UserRole;
+    email: string;
+  };
+}
+
+export type ReportCommentInput = Omit<ReportComment, 'id' | 'created_at' | 'updated_at' | 'author'>;
+
+/**
+ * ParentChecklistItem - 학부모 주간 가이드 체크리스트 항목
+ * AI의 Actionable Prescription 기반으로 자동 생성
+ */
+export interface ParentChecklistItem {
+  id: string;                 // 항목 고유 ID (UUID 또는 sequential)
+  title: string;              // 항목 제목
+  description?: string;       // 상세 설명
+  priority: 1 | 2 | 3;       // 1=지금 바로, 2=이번 주, 3=꾸준히
+  completed: boolean;
+  source_report_id?: number;  // 해당 항목이 파생된 리포트 ID
+  completed_at?: string;      // 완료 시각
+}
+
+/**
+ * ParentChecklist - 학부모 주간 가이드 체크리스트
+ */
+export interface ParentChecklist {
+  id: number;
+  parent_id: string;          // auth.users(id)
+  student_id: number;
+  week_start_date: string;    // 'YYYY-MM-DD' (해당 주 월요일)
+  items: ParentChecklistItem[];
+  completed: boolean;         // 모든 항목 완료 여부
+  created_at: string;
+  updated_at: string;
+}
+
+export type ParentChecklistInput = Omit<ParentChecklist, 'id' | 'created_at' | 'updated_at'>;
+
+/**
+ * NotificationChannel - 알림 발송 채널
+ * 카카오 알림톡 확장을 고려한 유연한 설계
+ */
+export type NotificationChannel = 'email' | 'kakao' | 'push' | 'in_app';
+
+/**
+ * NotificationStatus - 알림 발송 상태
+ */
+export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'cancelled';
+
+/**
+ * Notification - 멀티채널 알림 레코드
+ * DB의 notifications 테이블과 1:1 매핑
+ */
+export interface Notification {
+  id: number;
+  user_id: string;              // 수신자 auth.users(id)
+  title: string;
+  message: string;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  template_id?: string;         // 카카오 알림톡 템플릿 코드 (향후 확장)
+  provider_response?: {
+    // Resend 응답: { id: string }
+    // 카카오 응답: { msgId: string, ... }
+    [key: string]: unknown;
+  };
+  read: boolean;
+  related_resource_type?: string; // 'report' | 'student' 등
+  related_resource_id?: string;
+  created_at: string;
+  sent_at?: string;
+}
+
+/**
+ * NotificationInput - 알림 생성용 입력 타입 (API 서버에서 사용)
+ */
+export type NotificationInput = Omit<
+  Notification,
+  'id' | 'created_at' | 'sent_at' | 'provider_response' | 'read' | 'status'
+> & {
+  status?: NotificationStatus;
+};
+
+/**
+ * SendNotificationRequest - 알림 발송 API 요청 타입
+ */
+export interface SendNotificationRequest {
+  recipientUserId: string;
+  title: string;
+  message: string;
+  channel: NotificationChannel;
+  templateId?: string;              // 카카오 알림톡 템플릿 코드
+  relatedResourceType?: string;
+  relatedResourceId?: string;
+  // 이메일 발송 시 추가 정보
+  emailData?: {
+    recipientEmail: string;
+    recipientName: string;
+    studentName?: string;
+    reportId?: number;
+    reportUrl?: string;
+  };
+}
+

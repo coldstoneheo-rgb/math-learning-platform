@@ -1,8 +1,21 @@
 # 품질 점검 및 최적화 계획 (QA & Optimization Plan)
 
 **프로젝트**: Math Learning Platform (Next.js + Supabase + Vercel)
-**최종 업데이트**: 2025-12-22
+**최종 업데이트**: 2026-04-29
 **핵심 목적**: "개인별 수학 학습 현황 분석 및 성장"
+
+---
+
+## 구현 현황 요약
+
+| 영역 | 상태 | 비고 |
+|------|------|------|
+| E2E 테스트 (Playwright) | ✅ 구현 완료 | `e2e/` 디렉토리 |
+| 에러 모니터링 (Sentry) | ✅ 구현 완료 | `@sentry/nextjs` |
+| Rate Limiting | ✅ 구현 완료 | `src/lib/rate-limiter.ts` |
+| Input Validation (Zod) | ✅ 구현 완료 | `src/lib/validations.ts` |
+| Feature Flags | ✅ 구현 완료 | `src/lib/feature-flags.ts` |
+| AI 모델 라우팅 | ✅ 구현 완료 | `src/lib/model-router.ts` |
 
 ---
 
@@ -766,41 +779,41 @@ log('error', 'Gemini API failed', { error: error.message, studentName });
 
 ## 6. 리팩토링 로드맵
 
-### 단기 (1-2주)
+### 단기 (1-2주) ✅ 대부분 완료
 
 1. **테스트 환경 구축**
-   - [ ] Vitest 설정
-   - [ ] 기본 유틸리티 함수 테스트 작성
-   - [ ] API Route 테스트 작성
+   - [x] Playwright E2E 테스트 설정 ✅
+   - [x] API Route 테스트 작성 (`e2e/anchor-loop/`) ✅
+   - [ ] Vitest 단위 테스트 설정
 
 2. **에러 처리 개선**
-   - [ ] 글로벌 에러 바운더리 구현
-   - [ ] API 에러 응답 표준화
-   - [ ] 사용자 친화적 에러 메시지
+   - [x] Sentry 에러 모니터링 구현 ✅
+   - [x] API 에러 응답 표준화 (`src/lib/validations.ts`) ✅
+   - [x] Rate Limiting 에러 처리 ✅
 
-### 중기 (1개월)
+### 중기 (1개월) ✅ 대부분 완료
 
 1. **성능 최적화**
    - [ ] 번들 크기 분석 및 최적화
-   - [ ] 이미지 최적화 적용
-   - [ ] 데이터베이스 쿼리 최적화
+   - [x] 이미지 최적화 (Base64 크기 제한 - Zod 스키마) ✅
+   - [x] AI 모델 라우팅 (비용 최적화) ✅
 
 2. **모니터링 구축**
-   - [ ] Vercel Analytics 설정
-   - [ ] 커스텀 로깅 시스템 구현
-   - [ ] 알림 설정
+   - [x] Sentry 에러 모니터링 ✅
+   - [x] Rate Limiter 분석 로깅 ✅
+   - [ ] 알림 설정 (Slack/Email 연동)
 
-### 장기 (3개월)
+### 장기 (3개월) 🔄 진행 중
 
 1. **테스트 커버리지 확대**
-   - [ ] E2E 테스트 구현
-   - [ ] 통합 테스트 확대
+   - [x] E2E 테스트 구현 (Playwright) ✅
+   - [x] Anchor Loop 통합 테스트 ✅
    - [ ] CI/CD 파이프라인에 테스트 통합
 
 2. **고급 최적화**
+   - [x] Feature Flags 시스템 구현 ✅
    - [ ] Edge Functions 활용 검토
    - [ ] ISR (Incremental Static Regeneration) 적용
-   - [ ] 데이터베이스 파티셔닝 검토
 
 ---
 
@@ -848,6 +861,16 @@ vercel rollback
 
 ---
 
+## 변경 이력
+
+| 버전 | 날짜 | 변경 내용 |
+|------|------|----------|
+| v1.0 | 2025-11-25 | 최초 작성 |
+| v1.1 | 2025-12-22 | 테스트 전략 업데이트 |
+| v1.2 | 2026-04-29 | E2E 테스트, Sentry, Rate Limiting 등 구현 완료 상태 반영 |
+
+---
+
 **작성일**: 2025-11-25
-**최종 업데이트**: 2025-12-22
-**다음 검토일**: 2026-01-15
+**최종 업데이트**: 2026-04-29
+**다음 검토일**: 상용화 배포 전

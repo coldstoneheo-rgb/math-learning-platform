@@ -76,6 +76,6 @@ export const getCachedAllReports = unstable_cache(
  * 리포트 생성/수정/삭제 후 호출
  */
 export function invalidateReportCache(): void {
-  revalidatePath('/admin/reports', 'layout');
+  revalidatePath('/teacher/reports', 'layout');
   revalidatePath('/parent', 'layout');
 }

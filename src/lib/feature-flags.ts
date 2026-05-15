@@ -44,7 +44,7 @@ const DEFAULT_FLAGS: Record<FeatureFlagKey, FeatureFlagConfig> = {
   // Phase 3.1
   [FEATURE_FLAGS.PARENT_NOTIFICATIONS]: {
     status: 'enabled',
-    description: '학부모 이메일/푸시 알림 시스템',
+    description: '학부모 이메일/인앱 알림 시스템',
     enabledForRoles: ['teacher', 'parent'],
     createdAt: '2025-01-01',
     updatedAt: '2026-04-21',

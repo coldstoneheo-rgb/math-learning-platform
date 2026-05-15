@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis } from '@/types';
+import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis, Notification, ParentChecklist } from '@/types';
 import { HabitTrendChart } from '@/components/report';
+import { ThemeToggle } from '@/components/common/ThemeToggle';
 import {
   LineChart,
   Line,
@@ -35,10 +36,20 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState<StudentWithReports | null>(null);
   const [reportTypeFilter, setReportTypeFilter] = useState<string>('all');
+  // Phase 5: 알림 및 체크리스트 상태
+  const [unreadNotifications, setUnreadNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [checklistSummary, setChecklistSummary] = useState<{ completed: number; total: number } | null>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
+
+  useEffect(() => {
+    if (user && selectedChild) {
+      loadChecklistSummary(user.id, selectedChild.id);
+    }
+  }, [user, selectedChild]);
 
   const checkAuthAndLoad = async () => {
     const supabase = createClient();
@@ -62,7 +73,7 @@ export default function ParentDashboard() {
 
     // 선생님이면 admin으로 리다이렉트
     if (userData.role === 'teacher') {
-      router.push('/admin');
+      router.push('/teacher');
       return;
     }
 
@@ -74,8 +85,57 @@ export default function ParentDashboard() {
 
     setUser(userData);
     await loadChildren(authUser.id);
+    // Phase 5: 알림 및 체크리스트 로드
+    await loadUnreadNotifications(authUser.id);
     setLoading(false);
   };
+
+  const loadUnreadNotifications = async (userId: string) => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('read', false)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (data) setUnreadNotifications(data as Notification[]);
+  };
+
+  const markNotificationRead = async (notificationId: number) => {
+    const supabase = createClient();
+    await supabase.from('notifications').update({ read: true }).eq('id', notificationId);
+    setUnreadNotifications(prev => prev.filter(n => n.id !== notificationId));
+  };
+
+  const loadChecklistSummary = async (userId: string, studentId: number) => {
+    const supabase = createClient();
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diff);
+    const weekStart = monday.toISOString().split('T')[0];
+
+    const { data } = await supabase
+      .from('parent_checklists')
+      .select('items')
+      .eq('parent_id', userId)
+      .eq('student_id', studentId)
+      .eq('week_start_date', weekStart)
+      .single();
+
+    if (data) {
+      const items = (data as ParentChecklist).items;
+      setChecklistSummary({
+        completed: items.filter(i => i.completed).length,
+        total: items.length,
+      });
+    } else {
+      setChecklistSummary(null);
+    }
+  };
+
 
   const loadChildren = async (parentId: string) => {
     const supabase = createClient();
@@ -312,14 +372,60 @@ export default function ParentDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm relative">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-indigo-600">수학 학습 분석</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600">{user?.name}님</span>
+          <div className="flex items-center gap-3">
+            <span className="text-gray-600 text-sm">{user?.name}님</span>
+
+            {/* 알림 벨 (Phase 5) */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(prev => !prev)}
+                className="relative p-2 rounded-xl hover:bg-gray-50 transition-colors"
+                aria-label="알림"
+              >
+                <svg className="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadNotifications.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadNotifications.length > 9 ? '9+' : unreadNotifications.length}
+                  </span>
+                )}
+              </button>
+
+              {/* 알림 드롭다운 */}
+              {showNotifications && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-50">
+                    <h3 className="font-semibold text-gray-800 text-sm">알림</h3>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {unreadNotifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-gray-400 text-sm">새 알림이 없습니다</div>
+                    ) : (
+                      unreadNotifications.map(n => (
+                        <button
+                          key={n.id}
+                          onClick={() => { markNotificationRead(n.id); setShowNotifications(false); }}
+                          className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                        >
+                          <p className="text-sm font-medium text-gray-800 truncate">{n.title}</p>
+                          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{n.message}</p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <ThemeToggle />
+
             <button
               onClick={handleLogout}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors border border-gray-200 rounded-lg"
             >
               로그아웃
             </button>
@@ -417,8 +523,128 @@ export default function ParentDashboard() {
                   />
                 </div>
 
+                {/* Phase 5: 체크리스트 요약 위젯 */}
+                {checklistSummary && (
+                  <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border border-indigo-50 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-xl">
+                        📋
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">이번 주 학습 가이드 체크리스트</h3>
+                        <p className="text-sm text-gray-500">
+                          {checklistSummary.total}개의 항목 중 <span className="font-medium text-indigo-600">{checklistSummary.completed}개</span> 완료
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => router.push('/parent/checklist')}
+                      className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      체크리스트 보기
+                    </button>
+                  </div>
+                )}
+                {user && (() => {
+                  const pct = checklistSummary ? Math.round((checklistSummary.completed / checklistSummary.total) * 100) : 0;
+                  const hasPending = checklistSummary && checklistSummary.completed < checklistSummary.total;
+                  return (
+                    <a
+                      href="/parent/checklist"
+                      onClick={() => user && loadChecklistSummary(user.id, selectedChild.id)}
+                      className={`block rounded-xl p-5 mb-6 transition-all hover:shadow-md ${
+                        !checklistSummary
+                          ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white'
+                          : pct === 100
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                          : hasPending
+                          ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white'
+                          : 'bg-white border border-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">
+                            {!checklistSummary ? '📋' : pct === 100 ? '🎉' : hasPending ? '⚡' : '✅'}
+                          </span>
+                          <div>
+                            <h3 className="font-semibold text-sm">
+                              {!checklistSummary
+                                ? '이번 주 가이드 체크리스트'
+                                : pct === 100
+                                ? '이번 주 체크리스트 완료!'
+                                : `${checklistSummary.completed}/${checklistSummary.total}개 완료`}
+                            </h3>
+                            <p className={`text-xs mt-0.5 ${
+                              !checklistSummary || hasPending || pct === 100 ? 'text-white/80' : 'text-gray-400'
+                            }`}>
+                              {!checklistSummary
+                                ? '탭하여 이번 주 가이드를 확인하세요'
+                                : pct === 100
+                                ? '훌륭한 한 주였어요!'
+                                : `${checklistSummary.total - checklistSummary.completed}개 항목이 남아있어요`}
+                            </p>
+                          </div>
+                        </div>
+                        {checklistSummary && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-2 bg-white/30 rounded-full overflow-hidden">
+                              <div className="h-full bg-white rounded-full transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-sm font-bold">{pct}%</span>
+                          </div>
+                        )}
+                      </div>
+                    </a>
+                  );
+                })()}
+
+                {/* ===== 자녀 풀이 분석 하이라이트 (Phase 5.3) ===== */}
+                {(() => {
+                  const latestSelfAnalysis = selectedChild.reports.find(r => r.report_type === 'self_analysis');
+                  if (!latestSelfAnalysis) return null;
+                  const analysisData = latestSelfAnalysis.analysis_data as {
+                    oneLineSummary?: string;
+                    strengthsObserved?: string[];
+                    comparisonWithHistory?: { overallTrend?: string };
+                  };
+                  return (
+                    <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl shadow-sm border border-emerald-100 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm shrink-0">
+                          ✨
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h2 className="text-lg font-bold text-emerald-900">최근 자녀 풀이 분석 결과</h2>
+                            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                              {latestSelfAnalysis.test_date}
+                            </span>
+                          </div>
+                          <p className="text-sm text-emerald-700 mb-2">
+                            {analysisData.oneLineSummary || '자녀가 스스로 학습을 점검하고 성장하는 중입니다!'}
+                          </p>
+                          {analysisData.strengthsObserved && analysisData.strengthsObserved.length > 0 && (
+                            <div className="flex items-center gap-2 text-xs text-emerald-600 bg-white/60 px-3 py-1.5 rounded-lg inline-flex">
+                              <span className="font-bold">💪 칭찬 포인트:</span>
+                              <span>{analysisData.strengthsObserved[0]}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => router.push(`/parent/reports/${latestSelfAnalysis.id}`)}
+                        className="shrink-0 w-full md:w-auto text-center px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                      >
+                        리포트 보기
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 {/* Growth Loop 진행 상황 */}
                 <GrowthLoopStatus reports={selectedChild.reports} />
+
 
                 {/* 성장 그래프 섹션 */}
                 <GrowthChartSection

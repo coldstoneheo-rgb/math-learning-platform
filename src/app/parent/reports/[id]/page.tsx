@@ -1,15 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge } from '@/components/report';
+import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge, ReportComments } from '@/components/report';
 import GrowthRadarChart, { buildRadarData } from '@/components/report/GrowthRadarChart';
 import WeaknessResolutionMap, { buildWeaknessItems } from '@/components/report/WeaknessResolutionMap';
 import TrajectoryAreaChart from '@/components/report/TrajectoryAreaChart';
 import MetaProfileComparison, { buildMetaProfileMetrics } from '@/components/report/MetaProfileComparison';
 import AnnualGrowthStory from '@/components/report/AnnualGrowthStory';
-import { exportReportToPdf } from '@/lib/pdf-export';
+import {
+  ReportGrowthHero,
+  HomeActionCard,
+  GrowthProjectionChart,
+  ConfidenceBadge,
+  getConfidenceLevel,
+  EvidenceBadge,
+  ReportPDFExporter,
+} from '@/components/report/premium';
 import {
   calculateHabitScore,
   convertMomentumStatus,
@@ -61,7 +69,7 @@ export default function ParentReportDetailPage() {
   const [report, setReport] = useState<ReportWithStudent | null>(null);
   const [loading, setLoading] = useState(true);
   const { toasts, addToast, removeToast } = useToast();
-  const [exporting, setExporting] = useState(false);
+  const reportContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     checkAuthAndLoadReport();
@@ -111,28 +119,6 @@ export default function ParentReportDetailPage() {
     return `고${grade - 9}`;
   };
 
-  const handleExportPdf = async () => {
-    if (!report) return;
-    setExporting(true);
-    try {
-      const success = await exportReportToPdf(
-        'report-content',
-        report.students?.name || '학생',
-        report.test_name || '리포트',
-        report.test_date || new Date().toISOString().split('T')[0]
-      );
-      if (!success) {
-        addToast('PDF 내보내기에 실패했습니다.', 'error');
-      } else {
-        addToast('PDF가 저장되었습니다.', 'success');
-      }
-    } catch {
-      addToast('PDF 내보내기 중 오류가 발생했습니다.', 'error');
-    } finally {
-      setExporting(false);
-    }
-  };
-
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -163,6 +149,37 @@ export default function ParentReportDetailPage() {
   const semiAnnualAnalysis = reportType === 'semi_annual' ? report.analysis_data as SemiAnnualReportAnalysis : null;
   const annualAnalysis = reportType === 'annual' ? report.analysis_data as AnnualReportAnalysis : null;
   const selfAnalysis = reportType === 'self_analysis' ? report.analysis_data as SelfAnalysisReport : null;
+  const confidenceDataCount = [
+    report.students?.meta_profile?.baseline?.assessmentDate,
+    ...(report.students?.meta_profile?.errorSignature?.signaturePatterns || []),
+    ...(report.students?.meta_profile?.legacySignals || []),
+    ...(testAnalysis?.detailedAnalysis || []),
+    ...(testAnalysis?.growthPredictions || []),
+  ].filter(Boolean).length;
+  const evidenceSources = [
+    {
+      type: 'ai_analysis' as const,
+      label: 'AI 분석 결과',
+      date: report.test_date || report.created_at,
+      description: report.test_name || typeLabel,
+    },
+    ...(testAnalysis?.detailedAnalysis?.length
+      ? [{
+          type: 'test_paper' as const,
+          label: '문항별 분석',
+          date: report.test_date || undefined,
+          description: `${testAnalysis.detailedAnalysis.length}개 문항 근거`,
+        }]
+      : []),
+    ...(report.students?.meta_profile?.legacySignals?.length
+      ? [{
+          type: 'teacher_observation' as const,
+          label: '누적 관찰 데이터',
+          date: report.students.meta_profile.legacySignals.at(-1)?.date,
+          description: `${report.students.meta_profile.legacySignals.length}건 누적`,
+        }]
+      : []),
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -175,13 +192,14 @@ export default function ParentReportDetailPage() {
             <h1 className="text-xl font-bold text-gray-900">{typeLabel}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportPdf}
-              disabled={exporting}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2"
-            >
-              {exporting ? <><span className="animate-spin">⏳</span>PDF 생성 중...</> : <>📄 PDF 저장</>}
-            </button>
+            <ReportPDFExporter
+              targetRef={reportContentRef}
+              studentName={report.students?.name || '학생'}
+              reportType={report.test_name || typeLabel}
+              reportDate={report.test_date || report.created_at}
+              compact
+              onExportComplete={(success) => addToast(success ? 'PDF가 저장되었습니다.' : 'PDF 내보내기에 실패했습니다.', success ? 'success' : 'error')}
+            />
             <button
               onClick={() => window.print()}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -192,7 +210,7 @@ export default function ParentReportDetailPage() {
         </div>
       </header>
 
-      <main id="report-content" className="container mx-auto px-4 py-8 max-w-4xl">
+      <main id="report-content" ref={reportContentRef} data-pdf-target className="container mx-auto px-4 py-8 max-w-4xl">
         {/* 메타프로필 헤더 */}
         {report.students && (
           <MetaHeader
@@ -202,6 +220,41 @@ export default function ParentReportDetailPage() {
             compact
           />
         )}
+
+        {/* 🌟 프리미엄: 성장 한 줄 요약 Hero */}
+        <div className="mb-6">
+          <ReportGrowthHero
+            reportType={report.report_type as 'level_test' | 'test' | 'weekly' | 'monthly' | 'semi_annual' | 'annual' | 'consolidated'}
+            studentName={report.students?.name || '학생'}
+            reportDate={report.test_date || report.created_at}
+            headline={
+              testAnalysis?.macroAnalysis?.oneLineSummary ||
+              levelTestAnalysis?.initialBaseline?.overallLevel ||
+              monthlyAnalysis?.monthlyGrowthSummary?.headline ||
+              semiAnnualAnalysis?.growthSummaryBanner?.headline ||
+              annualAnalysis?.growthNarrativeFinal?.headline ||
+              '이번 리포트의 핵심 분석 결과입니다.'
+            }
+            subheadline={
+              testAnalysis?.macroAnalysis?.analysisMessage ||
+              levelTestAnalysis?.parentBriefing ||
+              monthlyAnalysis?.monthlyGrowthSummary?.keyAchievement ||
+              undefined
+            }
+            currentScore={report.total_score ?? undefined}
+            targetScore={report.max_score ?? undefined}
+            percentile={
+              report.rank && report.total_students
+                ? Math.round((1 - report.rank / report.total_students) * 100)
+                : undefined
+            }
+            emotionType={
+              (report.total_score ?? 0) >= (report.max_score ?? 100) * 0.9 ? 'celebrate' :
+              (report.total_score ?? 0) >= (report.max_score ?? 100) * 0.7 ? 'encourage' :
+              (report.total_score ?? 0) >= (report.max_score ?? 100) * 0.5 ? 'neutral' : 'alert'
+            }
+          />
+        </div>
 
         {/* 공통 헤더 배너 */}
         <div className={`bg-gradient-to-r ${gradientColor} rounded-xl shadow-lg p-6 mb-6 text-white`}>
@@ -225,6 +278,16 @@ export default function ParentReportDetailPage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <ConfidenceBadge
+            level={getConfidenceLevel(confidenceDataCount)}
+            dataCount={confidenceDataCount}
+            dataPeriod={report.test_date || report.created_at?.slice(0, 10)}
+            description="누적 리포트와 학생 성장 데이터를 함께 반영한 분석 신뢰도입니다."
+          />
+          <EvidenceBadge sources={evidenceSources} />
         </div>
 
         {/* ===== 시험 분석 리포트 ===== */}
@@ -386,6 +449,45 @@ export default function ParentReportDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* 🌟 프리미엄: 학부모 행동 가이드 */}
+            {report.students && (
+              <HomeActionCard
+                studentName={report.students.name}
+                praisePoint={
+                  testAnalysis.macroAnalysis?.strengths?.split('.')[0] ||
+                  '꾸준히 노력하고 있는 점'
+                }
+                praiseExample={`"${report.students.name}아, 이번 시험에서 ${testAnalysis.macroAnalysis?.strengths?.split('.')[0] || '열심히 푼 점'}이 정말 대단해!"`}
+                observePoint={
+                  testAnalysis.riskFactors?.[0]?.factor ||
+                  testAnalysis.macroAnalysis?.weaknesses?.split('.')[0] ||
+                  '집중력 유지'
+                }
+                questionToAsk={`"오늘 수학 공부하면서 가장 어려웠던 건 뭐야?"`}
+                weekendActivity={
+                  testAnalysis.actionablePrescription?.[0]?.howTo ||
+                  '틀린 문제 함께 다시 풀어보기'
+                }
+              />
+            )}
+
+            {/* 🌟 프리미엄: 성장 예측 차트 */}
+            {testAnalysis.growthPredictions && testAnalysis.growthPredictions.length > 0 && (
+              <GrowthProjectionChart
+                historicalData={[
+                  { date: report.test_date || '현재', score: report.total_score ?? 0 },
+                ]}
+                projectedData={testAnalysis.growthPredictions.map(p => ({
+                  date: p.timeframe,
+                  score: p.predictedScore,
+                  label: `${p.timeframe} 예상`,
+                  isProjection: true,
+                }))}
+                targetScore={testAnalysis.growthPredictions[testAnalysis.growthPredictions.length - 1]?.predictedScore || 90}
+                studentName={report.students?.name}
+              />
+            )}
 
             {/* 미래 비전 */}
             {report.students && (testAnalysis.macroAnalysis?.futureVision || testAnalysis.growthPredictions) && (
@@ -1306,6 +1408,14 @@ export default function ParentReportDetailPage() {
               <p className="text-yellow-800 font-medium">{selfAnalysis.encouragement}</p>
             </div>
           </>
+        )}
+
+        {/* Phase 5: 교사-학부모 코멘트 스레드 */}
+        {user && (
+          <ReportComments
+            reportId={parseInt(reportId, 10)}
+            currentUser={user}
+          />
         )}
 
         {/* 하단 네비게이션 */}

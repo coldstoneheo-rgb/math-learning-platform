@@ -49,7 +49,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     let context = undefined;
     if (job.student_id) {
       try {
-        context = await buildAnalysisContext(job.student_id, reportType);
+        const typedFormData = formData as Partial<TestAnalysisFormData>;
+        const queryText = [
+          typedFormData.testName,
+          typedFormData.testRange,
+          typedFormData.teacherComments?.additionalNote,
+        ].filter(Boolean).join(' ');
+        context = await buildAnalysisContext(job.student_id, reportType, {
+          queryText: queryText || undefined,
+        });
       } catch {
         // 컨텍스트 빌드 실패 시 무시하고 진행
       }
