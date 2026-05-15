@@ -9,6 +9,46 @@ import type { AnalyzeApiResponse, ReportType, TestAnalysisFormData, StudentMetaP
 // Route Segment Config: 2분 타임아웃 (Vercel Pro/Enterprise)
 export const maxDuration = 120;
 
+function buildTestAnalysisQueryText(
+  studentName: string,
+  reportType: ReportType,
+  formData?: TestAnalysisFormData
+): string {
+  if (!formData) return [studentName, reportType].filter(Boolean).join(' ');
+
+  const teacherComments = formData.teacherComments;
+  const behaviorSummary = formData.problemBehaviorData?.length
+    ? formData.problemBehaviorData
+        .slice(0, 8)
+        .map((item) => {
+          const confidence = item.selfConfidence
+            ? item.selfConfidence === 1 ? '낮은 확신' : item.selfConfidence === 2 ? '헷갈림' : '높은 확신'
+            : '확신도 미기록';
+          const time = item.timeSpentMins ? `${item.timeSpentMins}분 체류` : '체류시간 미기록';
+          return `${item.problemNumber}번 ${confidence} ${time}`;
+        })
+        .join(' | ')
+    : '';
+
+  return [
+    studentName,
+    reportType,
+    formData.testName,
+    formData.testRange,
+    formData.testDate,
+    formData.difficulty,
+    formData.totalScore !== undefined && `총점 ${formData.totalScore}`,
+    formData.rank !== undefined && formData.totalStudents !== undefined && `석차 ${formData.rank}/${formData.totalStudents}`,
+    teacherComments?.attitudeAndFocus,
+    teacherComments?.hesitationAndTime,
+    teacherComments?.metacognition,
+    teacherComments?.additionalNote,
+    behaviorSummary,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 /**
  * AI 분석 결과에서 메타프로필 업데이트 데이터 추출
  */
@@ -181,8 +221,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
     let context = undefined;
     if (body.studentId) {
       const reportType: ReportType = body.reportType || 'test';
-      const formData = body.formData as { testName?: string; testRange?: string } | undefined;
-      const queryText = [formData?.testName, formData?.testRange].filter(Boolean).join(' ');
+      const queryText = buildTestAnalysisQueryText(
+        body.studentName,
+        reportType,
+        body.formData as TestAnalysisFormData | undefined
+      );
       context = await buildAnalysisContext(body.studentId, reportType, {
         queryText: queryText || undefined,
       });
