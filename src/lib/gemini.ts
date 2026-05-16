@@ -18,6 +18,7 @@ import type {
 import { routeModel, createRoutingLog, type ModelRoutingContext } from './model-router';
 import { generateKnowledgeTracingContext } from './knowledge-graph';
 import { generatePredictiveAnalysisContext } from './predictive-analysis';
+import { assertCompleteVerifiedDerivedGuidance } from './teacher-verified-analysis';
 
 export class GeminiApiError extends Error {
   constructor(message: string, public readonly cause?: unknown) {
@@ -899,35 +900,6 @@ const VERIFIED_DERIVED_GUIDANCE_SCHEMA = {
     'trendComment',
   ],
 };
-
-function assertCompleteVerifiedDerivedGuidance(
-  value: VerifiedDerivedGuidance
-): VerifiedDerivedGuidance {
-  const macro = value.macroAnalysis;
-  const hasMacro =
-    Boolean(macro?.summary?.trim()) &&
-    Boolean(macro?.strengths?.trim()) &&
-    Boolean(macro?.weaknesses?.trim()) &&
-    Boolean(macro?.errorPattern?.trim());
-
-  if (
-    !hasMacro ||
-    !Array.isArray(value.actionablePrescription) ||
-    value.actionablePrescription.length === 0 ||
-    !Array.isArray(value.growthPredictions) ||
-    value.growthPredictions.length === 0 ||
-    !Array.isArray(value.learningHabits) ||
-    value.learningHabits.length === 0 ||
-    !Array.isArray(value.riskFactors) ||
-    value.riskFactors.length === 0 ||
-    !value.swotAnalysis ||
-    !value.trendComment?.trim()
-  ) {
-    throw new GeminiParseError('교사 확정 기반 파생 분석의 필수 성장 섹션이 누락되었습니다.');
-  }
-
-  return value;
-}
 
 /**
  * 기존 시험 분석 함수 (레거시 호환)
