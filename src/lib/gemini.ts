@@ -889,8 +889,45 @@ const VERIFIED_DERIVED_GUIDANCE_SCHEMA = {
     },
     trendComment: { type: 'string' },
   },
-  required: ['macroAnalysis', 'actionablePrescription'],
+  required: [
+    'macroAnalysis',
+    'actionablePrescription',
+    'growthPredictions',
+    'learningHabits',
+    'riskFactors',
+    'swotAnalysis',
+    'trendComment',
+  ],
 };
+
+function assertCompleteVerifiedDerivedGuidance(
+  value: VerifiedDerivedGuidance
+): VerifiedDerivedGuidance {
+  const macro = value.macroAnalysis;
+  const hasMacro =
+    Boolean(macro?.summary?.trim()) &&
+    Boolean(macro?.strengths?.trim()) &&
+    Boolean(macro?.weaknesses?.trim()) &&
+    Boolean(macro?.errorPattern?.trim());
+
+  if (
+    !hasMacro ||
+    !Array.isArray(value.actionablePrescription) ||
+    value.actionablePrescription.length === 0 ||
+    !Array.isArray(value.growthPredictions) ||
+    value.growthPredictions.length === 0 ||
+    !Array.isArray(value.learningHabits) ||
+    value.learningHabits.length === 0 ||
+    !Array.isArray(value.riskFactors) ||
+    value.riskFactors.length === 0 ||
+    !value.swotAnalysis ||
+    !value.trendComment?.trim()
+  ) {
+    throw new GeminiParseError('교사 확정 기반 파생 분석의 필수 성장 섹션이 누락되었습니다.');
+  }
+
+  return value;
+}
 
 /**
  * 기존 시험 분석 함수 (레거시 호환)
@@ -1118,7 +1155,7 @@ ${JSON.stringify(verifiedPayload, null, 2)}
     if (!text) throw new GeminiApiError('Gemini API 응답이 비어있습니다.');
 
     try {
-      return JSON.parse(text) as VerifiedDerivedGuidance;
+      return assertCompleteVerifiedDerivedGuidance(JSON.parse(text) as VerifiedDerivedGuidance);
     } catch {
       throw new GeminiParseError('교사 확정 기반 파생 분석 응답을 파싱할 수 없습니다.', text);
     }
