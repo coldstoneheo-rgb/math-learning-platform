@@ -13,6 +13,7 @@ import type {
   AnnualReportAnalysis,
   SelfAnalysisReport,
   SelfAnalysisProblemType,
+  VerifiedDerivedGuidance,
 } from '@/types';
 import { routeModel, createRoutingLog, type ModelRoutingContext } from './model-router';
 import { generateKnowledgeTracingContext } from './knowledge-graph';
@@ -783,6 +784,151 @@ const ANALYSIS_SCHEMA = {
   required: ['testInfo', 'testResults', 'detailedAnalysis', 'macroAnalysis', 'actionablePrescription']
 };
 
+const VERIFIED_DERIVED_GUIDANCE_SCHEMA = {
+  type: 'object',
+  properties: {
+    macroAnalysis: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string' },
+        oneLineSummary: { type: 'string' },
+        analysisKeyword: { type: 'string' },
+        analysisMessage: { type: 'string' },
+        strengths: { type: 'string' },
+        weaknesses: { type: 'string' },
+        errorPattern: { type: 'string' },
+        futureVision: {
+          type: 'object',
+          properties: {
+            threeMonths: { type: 'string' },
+            sixMonths: { type: 'string' },
+            longTerm: { type: 'string' },
+            encouragement: { type: 'string' },
+          },
+        },
+        weaknessFlow: {
+          type: 'object',
+          properties: {
+            step1: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' } } },
+            step2: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' } } },
+            step3: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' } } },
+          },
+        },
+        mathCapability: {
+          type: 'object',
+          properties: {
+            calculationSpeed: { type: 'number' },
+            calculationAccuracy: { type: 'number' },
+            applicationAbility: { type: 'number' },
+            logic: { type: 'number' },
+            anxietyControl: { type: 'number' },
+          },
+        },
+      },
+    },
+    actionablePrescription: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          priority: { type: 'number' },
+          type: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          whatToDo: { type: 'string' },
+          where: { type: 'string' },
+          howMuch: { type: 'string' },
+          howTo: { type: 'string' },
+          measurementMethod: { type: 'string' },
+          expectedEffect: { type: 'string' },
+        },
+      },
+    },
+    growthPredictions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          timeframe: { type: 'string' },
+          predictedScore: { type: 'number' },
+          confidenceLevel: { type: 'number' },
+          assumptions: { type: 'array', items: { type: 'string' } },
+        },
+      },
+    },
+    learningHabits: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['good', 'bad'] },
+          description: { type: 'string' },
+          frequency: { type: 'string', enum: ['always', 'often', 'sometimes'] },
+        },
+      },
+    },
+    riskFactors: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          factor: { type: 'string' },
+          severity: { type: 'string', enum: ['high', 'medium', 'low'] },
+          recommendation: { type: 'string' },
+        },
+      },
+    },
+    swotAnalysis: {
+      type: 'object',
+      properties: {
+        strength: { type: 'string' },
+        weakness: { type: 'string' },
+        opportunity: { type: 'string' },
+        threat: { type: 'string' },
+      },
+    },
+    trendComment: { type: 'string' },
+  },
+  required: [
+    'macroAnalysis',
+    'actionablePrescription',
+    'growthPredictions',
+    'learningHabits',
+    'riskFactors',
+    'swotAnalysis',
+    'trendComment',
+  ],
+};
+
+function assertCompleteVerifiedDerivedGuidance(
+  value: VerifiedDerivedGuidance
+): VerifiedDerivedGuidance {
+  const macro = value.macroAnalysis;
+  const hasMacro =
+    Boolean(macro?.summary?.trim()) &&
+    Boolean(macro?.strengths?.trim()) &&
+    Boolean(macro?.weaknesses?.trim()) &&
+    Boolean(macro?.errorPattern?.trim());
+
+  if (
+    !hasMacro ||
+    !Array.isArray(value.actionablePrescription) ||
+    value.actionablePrescription.length === 0 ||
+    !Array.isArray(value.growthPredictions) ||
+    value.growthPredictions.length === 0 ||
+    !Array.isArray(value.learningHabits) ||
+    value.learningHabits.length === 0 ||
+    !Array.isArray(value.riskFactors) ||
+    value.riskFactors.length === 0 ||
+    !value.swotAnalysis ||
+    !value.trendComment?.trim()
+  ) {
+    throw new GeminiParseError('교사 확정 기반 파생 분석의 필수 성장 섹션이 누락되었습니다.');
+  }
+
+  return value;
+}
+
 /**
  * 기존 시험 분석 함수 (레거시 호환)
  */
@@ -937,6 +1083,85 @@ ${context?.relevantMemories?.length ? `
   } catch (error) {
     if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
     throw new GeminiApiError('AI 분석 중 오류가 발생했습니다.', error);
+  }
+}
+
+export async function regenerateVerifiedDerivedGuidance(
+  studentName: string,
+  formData: TestAnalysisFormData,
+  verifiedAnalysis: AnalysisData,
+  context?: AnalysisContextData,
+  studentGrade?: number
+): Promise<VerifiedDerivedGuidance> {
+  const ai = getGeminiClient();
+  const selectedModel = routeModel({
+    reportType: 'test',
+    studentGrade,
+    testName: formData.testName,
+  });
+  const contextPrompt = buildContextPrompt(context);
+
+  const verifiedPayload = {
+    testInfo: verifiedAnalysis.testInfo,
+    testResults: verifiedAnalysis.testResults,
+    detailedAnalysis: verifiedAnalysis.detailedAnalysis,
+    teacherVerified: verifiedAnalysis.teacherVerified,
+    teacherComments: formData.teacherComments,
+    problemBehaviorData: formData.problemBehaviorData,
+  };
+
+  const userPrompt = `
+${contextPrompt}
+
+## 목적
+아래 데이터는 AI 초안이 아니라 교사가 확인 및 보정한 최종 채점 데이터입니다.
+이미지를 다시 채점하지 말고, 이 확정값만 근거로 약점/처방/성장 비전을 다시 작성하세요.
+
+## 학생 및 시험 정보
+- 학생명: ${studentName}
+- 시험명: ${formData.testName}
+- 시험일: ${formData.testDate}
+- 시험 범위: ${formData.testRange}
+- 총 문항 수: ${formData.totalQuestions}
+- 만점: ${formData.maxScore}
+
+## 교사 확정 데이터(JSON)
+${JSON.stringify(verifiedPayload, null, 2)}
+
+## 작성 규칙
+1. macroAnalysis는 교사 확정 정오/오류 유형에만 근거하세요.
+2. actionablePrescription은 3개 이내로, 반드시 무엇을/어디서/얼마나/어떻게/측정 방법을 채우세요.
+3. growthPredictions는 현재 점수와 확정 오류 유형을 기준으로 현실적인 1개월/3개월/6개월 예측을 제시하세요.
+4. 교사가 정답으로 보정한 문항을 약점으로 언급하지 마세요.
+5. "AI 초안"이나 "이미지상으로 보임" 같은 표현은 사용하지 마세요.
+6. 응답은 지정된 JSON 스키마만 반환하세요.
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: selectedModel,
+      contents: [
+        { role: 'user', parts: [{ text: TEST_ANALYSIS_PROMPT }] },
+        { role: 'model', parts: [{ text: '네, 교사 확정 채점 데이터를 기준으로 파생 분석만 재작성하겠습니다.' }] },
+        { role: 'user', parts: [{ text: userPrompt }] },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: VERIFIED_DERIVED_GUIDANCE_SCHEMA,
+      },
+    });
+
+    const text = response.text;
+    if (!text) throw new GeminiApiError('Gemini API 응답이 비어있습니다.');
+
+    try {
+      return assertCompleteVerifiedDerivedGuidance(JSON.parse(text) as VerifiedDerivedGuidance);
+    } catch {
+      throw new GeminiParseError('교사 확정 기반 파생 분석 응답을 파싱할 수 없습니다.', text);
+    }
+  } catch (error) {
+    if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
+    throw new GeminiApiError('교사 확정 기반 파생 분석 중 오류가 발생했습니다.', error);
   }
 }
 

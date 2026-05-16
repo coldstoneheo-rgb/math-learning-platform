@@ -142,6 +142,16 @@ export interface GrowthPrediction {
   assumptions: string[];
 }
 
+export interface VerifiedDerivedGuidance {
+  macroAnalysis: MacroAnalysis;
+  actionablePrescription: ActionablePrescriptionItem[];
+  growthPredictions?: GrowthPrediction[];
+  learningHabits?: LearningHabit[];
+  riskFactors?: RiskFactor[];
+  swotAnalysis?: SwotData;
+  trendComment?: string;
+}
+
 /**
  * MetaCognitionAnalysis - 시험 풀이에서 관찰된 메타인지 분석
  * AI가 시험지 이미지에서 추론한 학생의 메타인지 능력
@@ -265,7 +275,9 @@ export interface TestAnalysisData {
     detailedAnalysis: DetailedProblemAnalysis[];
     verificationNote?: string;
     adjustedFields: string[];
-    derivedGuidanceStatus?: 'ai_draft_retained' | 'excluded_after_teacher_adjustment';
+    derivedGuidanceStatus?: 'ai_draft_retained' | 'excluded_after_teacher_adjustment' | 'regenerated_from_teacher_verified';
+    derivedGuidanceRegeneratedAt?: string;
+    derivedGuidanceError?: string;
   };
 }
 
@@ -497,6 +509,12 @@ export interface AnalyzeApiRequest {
 export interface AnalyzeApiResponse {
   success: boolean;
   analysisData?: AnalysisData;
+  error?: string;
+}
+
+export interface RegenerateVerifiedDerivedAnalysisResponse {
+  success: boolean;
+  derivedGuidance?: VerifiedDerivedGuidance;
   error?: string;
 }
 
