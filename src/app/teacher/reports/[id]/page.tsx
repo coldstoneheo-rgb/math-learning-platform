@@ -43,6 +43,33 @@ interface ReportWithStudent extends Report {
   students: Student;
 }
 
+type VerifiedGuidanceStatus = NonNullable<AnalysisData['teacherVerified']>['derivedGuidanceStatus'];
+
+function getTeacherVerificationStatusInfo(status?: VerifiedGuidanceStatus) {
+  switch (status) {
+    case 'regenerated_from_teacher_verified':
+      return {
+        label: '교사 확정값 기반 분석',
+        description: '교사가 확인한 채점과 문항 판정을 기준으로 약점, 처방, 성장 비전을 다시 생성했습니다.',
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+      };
+    case 'excluded_after_teacher_adjustment':
+      return {
+        label: '교사 확정 완료, 파생 처방 제외',
+        description: '점수와 문항 판정은 교사가 확정한 값으로 저장되었습니다. 확정값 기반 처방 재생성은 실패하여 AI 초안 처방을 성장 데이터에서 제외했습니다.',
+        className: 'border-amber-200 bg-amber-50 text-amber-800',
+      };
+    case 'ai_draft_retained':
+      return {
+        label: 'AI 초안 기반, 교사 확인 완료',
+        description: '교사 보정이 없어 AI 분석 초안을 교사가 확인한 최종 리포트로 저장했습니다.',
+        className: 'border-indigo-200 bg-indigo-50 text-indigo-800',
+      };
+    default:
+      return null;
+  }
+}
+
 export default function ReportDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -209,6 +236,9 @@ export default function ReportDetailPage() {
   const notificationsEnabled = user
     ? isFeatureEnabledForUser(FEATURE_FLAGS.PARENT_NOTIFICATIONS, user.id, 'teacher')
     : false;
+  const verificationStatusInfo = getTeacherVerificationStatusInfo(
+    analysis?.teacherVerified?.derivedGuidanceStatus
+  );
 
   const selfAnalysis = report?.report_type === 'self_analysis'
     ? (report?.analysis_data as SelfAnalysisReport)
@@ -369,6 +399,30 @@ export default function ReportDetailPage() {
             }
           />
         </div>
+
+        {analysis?.teacherVerified && verificationStatusInfo && (
+          <div className={`mb-6 rounded-xl border p-4 ${verificationStatusInfo.className}`}>
+            <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-sm font-semibold">{verificationStatusInfo.label}</p>
+                <p className="mt-1 text-sm leading-relaxed">{verificationStatusInfo.description}</p>
+                {analysis.teacherVerified.derivedGuidanceRegeneratedAt && (
+                  <p className="mt-2 text-xs opacity-75">
+                    재생성 시각: {new Date(analysis.teacherVerified.derivedGuidanceRegeneratedAt).toLocaleString('ko-KR')}
+                  </p>
+                )}
+                {analysis.teacherVerified.derivedGuidanceError && (
+                  <p className="mt-2 text-xs opacity-75">
+                    재생성 실패 사유: {analysis.teacherVerified.derivedGuidanceError}
+                  </p>
+                )}
+              </div>
+              <div className="shrink-0 rounded-full bg-white/70 px-3 py-1 text-xs font-semibold">
+                교사 확인 {analysis.teacherVerified.adjustedFields.length}개 항목
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Growth Loop 위치 표시 */}
         <GrowthLoopIndicator
