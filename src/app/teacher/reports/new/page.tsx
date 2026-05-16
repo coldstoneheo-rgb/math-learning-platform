@@ -13,7 +13,16 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import MultiFileUpload, { UploadedFile } from '@/components/common/MultiFileUpload';
-import type { Student, User, TestAnalysisFormData, AnalysisData, DetailedProblemAnalysis, TestResults } from '@/types';
+import type {
+  Student,
+  User,
+  TestAnalysisFormData,
+  AnalysisData,
+  DetailedProblemAnalysis,
+  TestResults,
+  RegenerateVerifiedDerivedAnalysisResponse,
+  VerifiedDerivedGuidance,
+} from '@/types';
 
 type VerificationDraft = {
   totalScore: number;
@@ -115,6 +124,42 @@ const excludeDraftDerivedGuidance = (analysisData: AnalysisData): AnalysisData =
   riskFactors: [],
   swotAnalysis: undefined,
   trendComment: DERIVED_GUIDANCE_EXCLUDED_NOTE,
+});
+
+const applyRegeneratedDerivedGuidance = (
+  analysisData: AnalysisData,
+  derivedGuidance: VerifiedDerivedGuidance
+): AnalysisData => ({
+  ...analysisData,
+  macroAnalysis: derivedGuidance.macroAnalysis,
+  actionablePrescription: derivedGuidance.actionablePrescription,
+  growthPredictions: derivedGuidance.growthPredictions,
+  learningHabits: derivedGuidance.learningHabits,
+  riskFactors: derivedGuidance.riskFactors,
+  swotAnalysis: derivedGuidance.swotAnalysis,
+  trendComment: derivedGuidance.trendComment,
+  teacherVerified: analysisData.teacherVerified
+    ? {
+        ...analysisData.teacherVerified,
+        derivedGuidanceStatus: 'regenerated_from_teacher_verified',
+        derivedGuidanceRegeneratedAt: new Date().toISOString(),
+        derivedGuidanceError: undefined,
+      }
+    : analysisData.teacherVerified,
+});
+
+const markDerivedGuidanceRegenerationFailed = (
+  analysisData: AnalysisData,
+  error: string
+): AnalysisData => ({
+  ...analysisData,
+  teacherVerified: analysisData.teacherVerified
+    ? {
+        ...analysisData.teacherVerified,
+        derivedGuidanceStatus: 'excluded_after_teacher_adjustment',
+        derivedGuidanceError: error,
+      }
+    : analysisData.teacherVerified,
 });
 
 const getVerificationError = (draft: VerificationDraft): string | null => {
@@ -343,7 +388,40 @@ export default function NewReportPage() {
 
     try {
       const supabase = createClient();
-      const verifiedAnalysis = buildTeacherVerifiedAnalysis(analysisResult, verificationDraft);
+      let verifiedAnalysis = buildTeacherVerifiedAnalysis(analysisResult, verificationDraft);
+      const selectedStudent = students.find((student) => student.id === selectedStudentId);
+
+      if (verifiedAnalysis.teacherVerified?.derivedGuidanceStatus === 'excluded_after_teacher_adjustment') {
+        try {
+          const response = await fetch('/api/reports/regenerate-derived-analysis', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              studentId: selectedStudentId,
+              studentName: selectedStudent?.name || analysisResult.testInfo.studentName || '학생',
+              formData,
+              analysisData: verifiedAnalysis,
+            }),
+          });
+          const result: RegenerateVerifiedDerivedAnalysisResponse = await response.json();
+
+          if (response.ok && result.success && result.derivedGuidance) {
+            verifiedAnalysis = applyRegeneratedDerivedGuidance(verifiedAnalysis, result.derivedGuidance);
+          } else {
+            verifiedAnalysis = markDerivedGuidanceRegenerationFailed(
+              verifiedAnalysis,
+              result.error || '교사 확정 기반 파생 분석을 생성하지 못했습니다.'
+            );
+          }
+        } catch (regenerationError) {
+          verifiedAnalysis = markDerivedGuidanceRegenerationFailed(
+            verifiedAnalysis,
+            regenerationError instanceof Error
+              ? regenerationError.message
+              : '교사 확정 기반 파생 분석 호출에 실패했습니다.'
+          );
+        }
+      }
 
       const { data: insertedReport, error: insertError } = await supabase
         .from('reports')
