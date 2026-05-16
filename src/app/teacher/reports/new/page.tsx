@@ -231,6 +231,7 @@ export default function NewReportPage() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveStatusMessage, setSaveStatusMessage] = useState('');
   const [error, setError] = useState('');
   const { toasts, addToast, removeToast } = useToast();
 
@@ -384,6 +385,7 @@ export default function NewReportPage() {
     }
 
     setSaving(true);
+    setSaveStatusMessage('확정 리포트를 저장할 준비 중입니다.');
     setError('');
 
     try {
@@ -393,6 +395,7 @@ export default function NewReportPage() {
 
       if (verifiedAnalysis.teacherVerified?.derivedGuidanceStatus === 'excluded_after_teacher_adjustment') {
         try {
+          setSaveStatusMessage('교사 확정값 기준으로 약점, 처방, 성장 비전을 다시 생성하는 중입니다.');
           const response = await fetch('/api/reports/regenerate-derived-analysis', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -407,11 +410,13 @@ export default function NewReportPage() {
 
           if (response.ok && result.success && result.derivedGuidance) {
             verifiedAnalysis = applyRegeneratedDerivedGuidance(verifiedAnalysis, result.derivedGuidance);
+            setSaveStatusMessage('확정값 기반 처방을 반영해 리포트를 저장하는 중입니다.');
           } else {
             verifiedAnalysis = markDerivedGuidanceRegenerationFailed(
               verifiedAnalysis,
               result.error || '교사 확정 기반 파생 분석을 생성하지 못했습니다.'
             );
+            setSaveStatusMessage('확정값은 저장하고, 초안 기반 처방은 제외하는 중입니다.');
           }
         } catch (regenerationError) {
           verifiedAnalysis = markDerivedGuidanceRegenerationFailed(
@@ -420,6 +425,7 @@ export default function NewReportPage() {
               ? regenerationError.message
               : '교사 확정 기반 파생 분석 호출에 실패했습니다.'
           );
+          setSaveStatusMessage('확정값은 저장하고, 초안 기반 처방은 제외하는 중입니다.');
         }
       }
 
@@ -526,6 +532,7 @@ export default function NewReportPage() {
       setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
+      setSaveStatusMessage('');
     }
   };
 
@@ -1137,24 +1144,30 @@ export default function NewReportPage() {
             )}
 
             {/* 저장 버튼 */}
-            <div className="flex gap-4">
-              <button
-                onClick={() => {
-                  setAnalysisResult(null);
-                  setVerificationDraft(null);
-                  setIsTeacherVerified(false);
-                }}
-                className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                다시 분석하기
-              </button>
-              <button
-                onClick={handleSaveReport}
-                disabled={saving || !isTeacherVerified}
-                className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-              >
-                {saving ? '저장 중...' : isTeacherVerified ? '💾 확정 리포트 저장' : '교사 확인 후 저장 가능'}
-              </button>
+            <div className="space-y-3">
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setAnalysisResult(null);
+                    setVerificationDraft(null);
+                    setIsTeacherVerified(false);
+                    setSaveStatusMessage('');
+                  }}
+                  className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  다시 분석하기
+                </button>
+                <button
+                  onClick={handleSaveReport}
+                  disabled={saving || !isTeacherVerified}
+                  className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? '저장 중...' : isTeacherVerified ? '💾 확정 리포트 저장' : '교사 확인 후 저장 가능'}
+                </button>
+              </div>
+              {saving && saveStatusMessage && (
+                <p className="text-center text-sm text-indigo-700">{saveStatusMessage}</p>
+              )}
             </div>
           </div>
         )}

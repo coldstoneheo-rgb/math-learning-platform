@@ -38,6 +38,26 @@ interface ReportWithStudent extends Report {
   students: Student;
 }
 
+type VerifiedGuidanceStatus = NonNullable<AnalysisData['teacherVerified']>['derivedGuidanceStatus'];
+
+function getParentVerificationStatusInfo(status?: VerifiedGuidanceStatus) {
+  if (!status) return null;
+
+  if (status === 'excluded_after_teacher_adjustment') {
+    return {
+      label: '교사 확인 완료',
+      description: '점수와 문항 판정은 선생님이 확인한 값입니다. 이번 리포트는 확정된 채점 결과를 중심으로 확인해 주세요.',
+    };
+  }
+
+  return {
+    label: '교사 확인 완료',
+    description: status === 'regenerated_from_teacher_verified'
+      ? '선생님이 확인한 채점 결과를 기준으로 분석과 학습 방향을 정리했습니다.'
+      : '선생님이 AI 분석 결과를 확인한 뒤 최종 리포트로 공개했습니다.',
+  };
+}
+
 const REPORT_TYPE_LABELS: Record<string, string> = {
   level_test: '레벨 테스트',
   test: '시험 분석',
@@ -149,6 +169,9 @@ export default function ParentReportDetailPage() {
   const semiAnnualAnalysis = reportType === 'semi_annual' ? report.analysis_data as SemiAnnualReportAnalysis : null;
   const annualAnalysis = reportType === 'annual' ? report.analysis_data as AnnualReportAnalysis : null;
   const selfAnalysis = reportType === 'self_analysis' ? report.analysis_data as SelfAnalysisReport : null;
+  const verificationStatusInfo = getParentVerificationStatusInfo(
+    testAnalysis?.teacherVerified?.derivedGuidanceStatus
+  );
   const confidenceDataCount = [
     report.students?.meta_profile?.baseline?.assessmentDate,
     ...(report.students?.meta_profile?.errorSignature?.signaturePatterns || []),
@@ -255,6 +278,13 @@ export default function ParentReportDetailPage() {
             }
           />
         </div>
+
+        {testAnalysis?.teacherVerified && verificationStatusInfo && (
+          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+            <p className="text-sm font-semibold">{verificationStatusInfo.label}</p>
+            <p className="mt-1 text-sm leading-relaxed">{verificationStatusInfo.description}</p>
+          </div>
+        )}
 
         {/* 공통 헤더 배너 */}
         <div className={`bg-gradient-to-r ${gradientColor} rounded-xl shadow-lg p-6 mb-6 text-white`}>
