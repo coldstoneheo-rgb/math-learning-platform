@@ -8,7 +8,9 @@ import { MetaHeader } from '@/components/report';
 import {
   getDashboardGrowthTruthSummary,
   getDisplayableDerivedGuidance,
+  getGrowthTruthBrief,
   selectLatestDisplayableGuidanceWithSection,
+  summarizeGrowthReadiness,
   type DashboardGrowthTruthSummary,
 } from '@/lib/teacher-verified-analysis';
 import type {
@@ -691,21 +693,31 @@ export default function StudentDashboard() {
                 {filtered.map((report) => {
                   const config = REPORT_TYPE_CONFIG[report.report_type as ReportType];
                   const analysis = report.analysis_data as AnalysisData | null;
+                  const growthReadiness = summarizeGrowthReadiness(analysis, report.report_type);
+                  const growthBrief = getGrowthTruthBrief(analysis, report.report_type);
+                  const displayableGuidance = getDisplayableDerivedGuidance(analysis);
                   return (
                     <Link key={report.id} href={`/student/reports/${report.id}`}
                       className="block border rounded-xl p-4 hover:shadow-md transition-shadow hover:border-indigo-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-xs px-2 py-1 rounded-full ${config?.bgColor} ${config?.color}`}>
-                          {config?.name || report.report_type}
-                        </span>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={`text-xs px-2 py-1 rounded-full ${config?.bgColor} ${config?.color}`}>
+                            {config?.name || report.report_type}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${STUDENT_GROWTH_TRUTH_BADGE_CLASS[growthReadiness.tone]}`}>
+                            {growthReadiness.label}
+                          </span>
+                        </div>
                         {report.total_score != null && (
-                          <span className="text-lg font-bold text-indigo-600">{report.total_score}점</span>
+                          <span className="shrink-0 text-lg font-bold text-indigo-600">{report.total_score}점</span>
                         )}
                       </div>
                       <h3 className="font-medium text-gray-800 truncate text-sm">{report.test_name || '리포트'}</h3>
                       <p className="text-xs text-gray-500 mt-1">{report.test_date}</p>
-                      {analysis?.macroAnalysis?.oneLineSummary && (
+                      {displayableGuidance.canShowDerivedGuidance && analysis?.macroAnalysis?.oneLineSummary ? (
                         <p className="text-xs text-gray-400 mt-2 line-clamp-2">{analysis.macroAnalysis.oneLineSummary}</p>
+                      ) : (
+                        <p className="text-xs text-gray-400 mt-2 line-clamp-2">{growthBrief.compactText}</p>
                       )}
                     </Link>
                   );

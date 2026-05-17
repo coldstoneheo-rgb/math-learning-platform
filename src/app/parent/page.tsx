@@ -6,7 +6,9 @@ import { createClient } from '@/lib/supabase/client';
 import {
   getDashboardGrowthTruthSummary,
   getDisplayableDerivedGuidance,
+  getGrowthTruthBrief,
   selectLatestDisplayableGuidanceWithSection,
+  summarizeGrowthReadiness,
   type DashboardGrowthTruthSummary,
 } from '@/lib/teacher-verified-analysis';
 import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis, Notification, ParentChecklist, ParentChecklistItem } from '@/types';
@@ -857,39 +859,58 @@ export default function ParentDashboard() {
                         <div className="space-y-3">
                           {selectedChild.reports
                             .filter(r => reportTypeFilter === 'all' || r.report_type === reportTypeFilter)
-                            .map((report) => (
-                              <a
-                                key={report.id}
-                                href={`/parent/reports/${report.id}`}
-                                className="block p-4 border border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-                              >
-                                <div className="flex justify-between items-start gap-3">
-                                  <div className="min-w-0">
-                                    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded mb-1.5 ${getReportTypeBadgeColor(report.report_type)}`}>
-                                      {getReportTypeLabel(report.report_type)}
-                                    </span>
-                                    <h4 className="font-medium text-gray-900 truncate">{report.test_name || '리포트'}</h4>
-                                    <p className="text-sm text-gray-500 mt-0.5">
-                                      {report.test_date || new Date(report.created_at).toLocaleDateString('ko-KR')}
-                                    </p>
-                                  </div>
-                                  {report.total_score !== null && report.max_score ? (
-                                    <div className="text-right shrink-0">
-                                      <div className="text-2xl font-bold text-indigo-600">{report.total_score}</div>
-                                      <div className="text-xs text-gray-500">/ {report.max_score}점</div>
-                                    </div>
-                                  ) : (() => {
-                                    const metric = getReportKeyMetric(report);
-                                    return metric ? (
-                                      <div className="text-right shrink-0">
-                                        <div className={`text-xl font-bold ${metric.color}`}>{metric.value}</div>
-                                        <div className="text-xs text-gray-500">{metric.label}</div>
+                            .map((report) => {
+                              const growthReadiness = summarizeGrowthReadiness(
+                                report.analysis_data as AnalysisData | null,
+                                report.report_type
+                              );
+                              const growthBrief = getGrowthTruthBrief(
+                                report.analysis_data as AnalysisData | null,
+                                report.report_type
+                              );
+
+                              return (
+                                <a
+                                  key={report.id}
+                                  href={`/parent/reports/${report.id}`}
+                                  className="block p-4 border border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                                >
+                                  <div className="flex justify-between items-start gap-3">
+                                    <div className="min-w-0">
+                                      <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                                        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${getReportTypeBadgeColor(report.report_type)}`}>
+                                          {getReportTypeLabel(report.report_type)}
+                                        </span>
+                                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${GROWTH_TRUTH_BADGE_CLASS[growthReadiness.tone]}`}>
+                                          {growthReadiness.label}
+                                        </span>
                                       </div>
-                                    ) : null;
-                                  })()}
-                                </div>
-                              </a>
-                            ))}
+                                      <h4 className="font-medium text-gray-900 truncate">{report.test_name || '리포트'}</h4>
+                                      <p className="text-sm text-gray-500 mt-0.5">
+                                        {report.test_date || new Date(report.created_at).toLocaleDateString('ko-KR')}
+                                      </p>
+                                      <p className="mt-1 text-xs text-gray-500 line-clamp-2">
+                                        {growthBrief.compactText}
+                                      </p>
+                                    </div>
+                                    {report.total_score !== null && report.max_score ? (
+                                      <div className="text-right shrink-0">
+                                        <div className="text-2xl font-bold text-indigo-600">{report.total_score}</div>
+                                        <div className="text-xs text-gray-500">/ {report.max_score}점</div>
+                                      </div>
+                                    ) : (() => {
+                                      const metric = getReportKeyMetric(report);
+                                      return metric ? (
+                                        <div className="text-right shrink-0">
+                                          <div className={`text-xl font-bold ${metric.color}`}>{metric.value}</div>
+                                          <div className="text-xs text-gray-500">{metric.label}</div>
+                                        </div>
+                                      ) : null;
+                                    })()}
+                                  </div>
+                                </a>
+                              );
+                            })}
                         </div>
                       )}
                     </>
