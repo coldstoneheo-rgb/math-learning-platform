@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   getDashboardGrowthTruthSummary,
   getDisplayableDerivedGuidance,
+  selectLatestDisplayableGuidanceWithSection,
   type DashboardGrowthTruthSummary,
 } from '@/lib/teacher-verified-analysis';
 import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis, Notification, ParentChecklist, ParentChecklistItem } from '@/types';
@@ -400,25 +401,29 @@ export default function ParentDashboard() {
   };
 
   // 수학 역량 레이더 차트 데이터 추출
-  const getMathCapabilityData = (reports: Report[]) => {
-    const latestReport = reports.find(r =>
-      r.report_type === 'test' &&
-      r.analysis_data &&
-      (r.analysis_data as AnalysisData).macroAnalysis?.mathCapability
+  const getMathCapabilityView = (reports: Report[]): MathCapabilityView | null => {
+    const displayable = selectLatestDisplayableGuidanceWithSection(
+      reports,
+      guidance => Boolean(guidance.mathCapability)
     );
 
-    if (!latestReport) return null;
+    if (!displayable.canShowDerivedGuidance) {
+      return { status: 'withheld', data: null };
+    }
 
-    const capability = (latestReport.analysis_data as AnalysisData).macroAnalysis?.mathCapability;
+    const capability = displayable.mathCapability;
     if (!capability) return null;
 
-    return [
-      { subject: '계산 속도', value: capability.calculationSpeed, fullMark: 100 },
-      { subject: '계산 정확도', value: capability.calculationAccuracy, fullMark: 100 },
-      { subject: '응용력', value: capability.applicationAbility, fullMark: 100 },
-      { subject: '논리력', value: capability.logic, fullMark: 100 },
-      { subject: '불안 조절', value: capability.anxietyControl, fullMark: 100 },
-    ];
+    return {
+      status: 'available',
+      data: [
+        { subject: '계산 속도', value: capability.calculationSpeed, fullMark: 100 },
+        { subject: '계산 정확도', value: capability.calculationAccuracy, fullMark: 100 },
+        { subject: '응용력', value: capability.applicationAbility, fullMark: 100 },
+        { subject: '논리력', value: capability.logic, fullMark: 100 },
+        { subject: '불안 조절', value: capability.anxietyControl, fullMark: 100 },
+      ],
+    };
   };
 
   // 성장률 계산 (최근 5개 vs 이전 5개)
@@ -764,7 +769,7 @@ export default function ParentDashboard() {
                 {/* 성장 그래프 섹션 */}
                 <GrowthChartSection
                   scoreTrend={getScoreTrend(selectedChild.reports)}
-                  mathCapability={getMathCapabilityData(selectedChild.reports)}
+                  mathCapability={getMathCapabilityView(selectedChild.reports)}
                   growthRate={getGrowthRate(selectedChild.reports)}
                 />
 
@@ -929,14 +934,20 @@ interface MathCapabilityItem {
   fullMark: number;
 }
 
+type MathCapabilityView =
+  | { status: 'available'; data: MathCapabilityItem[] }
+  | { status: 'withheld'; data: null };
+
 interface GrowthChartSectionProps {
   scoreTrend: ScoreTrendItem[];
-  mathCapability: MathCapabilityItem[] | null;
+  mathCapability: MathCapabilityView | null;
   growthRate: number | null;
 }
 
 function GrowthChartSection({ scoreTrend, mathCapability, growthRate }: GrowthChartSectionProps) {
   const [activeTab, setActiveTab] = useState<'trend' | 'capability'>('trend');
+  const mathCapabilityData = mathCapability?.status === 'available' ? mathCapability.data : null;
+  const visibleTab = scoreTrend.length === 0 && mathCapability ? 'capability' : activeTab;
 
   if (scoreTrend.length === 0 && !mathCapability) {
     return null;
@@ -967,7 +978,7 @@ function GrowthChartSection({ scoreTrend, mathCapability, growthRate }: GrowthCh
             <button
               onClick={() => setActiveTab('trend')}
               className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'trend'
+                visibleTab === 'trend'
                   ? 'bg-white text-indigo-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
@@ -977,7 +988,7 @@ function GrowthChartSection({ scoreTrend, mathCapability, growthRate }: GrowthCh
             <button
               onClick={() => setActiveTab('capability')}
               className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'capability'
+                visibleTab === 'capability'
                   ? 'bg-white text-indigo-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
@@ -989,7 +1000,7 @@ function GrowthChartSection({ scoreTrend, mathCapability, growthRate }: GrowthCh
       </div>
 
       {/* 성적 추이 차트 */}
-      {activeTab === 'trend' && scoreTrend.length > 0 && (
+      {visibleTab === 'trend' && scoreTrend.length > 0 && (
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
@@ -1051,10 +1062,19 @@ function GrowthChartSection({ scoreTrend, mathCapability, growthRate }: GrowthCh
       )}
 
       {/* 수학 역량 레이더 차트 */}
-      {activeTab === 'capability' && mathCapability && (
+      {visibleTab === 'capability' && mathCapability?.status === 'withheld' && (
+        <div className="h-72 flex flex-col items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-6 text-center">
+          <p className="text-sm font-semibold text-amber-900">교사 확정값 기반 역량 분석 준비 중</p>
+          <p className="mt-2 max-w-md text-sm text-amber-800">
+            선생님이 AI 초안의 채점 또는 문항 판정을 보정했기 때문에, 이전 초안에서 만든 수학 역량 지표는 표시하지 않습니다.
+          </p>
+        </div>
+      )}
+
+      {visibleTab === 'capability' && mathCapabilityData && (
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={mathCapability}>
+            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={mathCapabilityData}>
               <PolarGrid stroke="#e5e7eb" />
               <PolarAngleAxis
                 dataKey="subject"

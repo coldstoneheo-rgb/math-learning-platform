@@ -79,6 +79,13 @@ function createAnalysisData(): AnalysisData {
       strengths: '도형 계산 강점',
       weaknesses: '외각 개념 약점',
       errorPattern: '개념 오류 반복',
+      mathCapability: {
+        calculationSpeed: 72,
+        calculationAccuracy: 82,
+        applicationAbility: 68,
+        logic: 75,
+        anxietyControl: 58,
+      },
     },
     actionablePrescription: [
       {
@@ -111,6 +118,13 @@ function createCompleteGuidance(): VerifiedDerivedGuidance {
       strengths: '통계 문항 처리 강점',
       weaknesses: '시간 관리 보완 필요',
       errorPattern: '후반부 미풀이 패턴',
+      mathCapability: {
+        calculationSpeed: 78,
+        calculationAccuracy: 86,
+        applicationAbility: 74,
+        logic: 80,
+        anxietyControl: 70,
+      },
     },
     actionablePrescription: [
       {
@@ -186,6 +200,7 @@ test('grading corrections exclude draft-derived guidance from downstream growth 
   assert.equal(verified.macroAnalysis.strengths, '');
   assert.equal(verified.macroAnalysis.weaknesses, '');
   assert.equal(verified.macroAnalysis.errorPattern, '');
+  assert.equal(verified.macroAnalysis.mathCapability, undefined);
   assert.deepEqual(verified.actionablePrescription, []);
   assert.deepEqual(verified.growthPredictions, []);
   assert.ok(verified.teacherVerified?.adjustedFields.includes('totalScore'));
@@ -269,6 +284,10 @@ test('verified guidance display helpers gate excluded draft-derived guidance', (
   const unchanged = buildTeacherVerifiedAnalysis(analysis, buildVerificationDraft(analysis, 100));
   assert.equal(hasUsableVerifiedDerivedGuidance(unchanged), true);
   assert.equal(getVerifiedGuidanceDisplayStatus(unchanged)?.label, 'AI 초안 기반, 교사 확인 완료');
+  assert.deepEqual(
+    getDisplayableDerivedGuidance(unchanged).mathCapability,
+    analysis.macroAnalysis.mathCapability
+  );
 
   const correctedDraft = buildVerificationDraft(analysis, 100);
   correctedDraft.totalScore = 90;
@@ -303,6 +322,7 @@ test('displayable guidance hides stale derived sections after teacher correction
     step2: { title: '숨겨야 하는 훈련', description: 'stale' },
     step3: { title: '숨겨야 하는 목표', description: 'stale' },
   };
+  excluded.macroAnalysis.mathCapability = createCompleteGuidance().macroAnalysis.mathCapability;
 
   const displayable = getDisplayableDerivedGuidance(excluded);
 
@@ -314,6 +334,7 @@ test('displayable guidance hides stale derived sections after teacher correction
   assert.equal(displayable.swotAnalysis, undefined);
   assert.equal(displayable.futureVision, undefined);
   assert.equal(displayable.weaknessFlow, undefined);
+  assert.equal(displayable.mathCapability, undefined);
 });
 
 test('student derived narrative is hidden after teacher corrections', () => {
@@ -621,6 +642,17 @@ test('latest guidance selector stops at withheld current test reports', () => {
 
   assert.equal(selected.canShowDerivedGuidance, false);
   assert.deepEqual(selected.growthPredictions, []);
+
+  const selectedCapability = selectLatestDisplayableGuidanceWithSection(
+    [
+      { report_type: 'test', analysis_data: excluded },
+      { report_type: 'test', analysis_data: older },
+    ],
+    guidance => Boolean(guidance.mathCapability)
+  );
+
+  assert.equal(selectedCapability.canShowDerivedGuidance, false);
+  assert.equal(selectedCapability.mathCapability, undefined);
 });
 
 test('latest guidance selector falls back past legacy reports missing a section', () => {
