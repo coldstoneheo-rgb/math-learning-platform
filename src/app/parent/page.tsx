@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis, Notification, ParentChecklist } from '@/types';
+import { getDisplayableDerivedGuidance } from '@/lib/teacher-verified-analysis';
+import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis, Notification, ParentChecklist, ParentChecklistItem } from '@/types';
 import { HabitTrendChart } from '@/components/report';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import {
@@ -44,12 +45,6 @@ export default function ParentDashboard() {
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
-
-  useEffect(() => {
-    if (user && selectedChild) {
-      loadChecklistSummary(user.id, selectedChild.id);
-    }
-  }, [user, selectedChild]);
 
   const checkAuthAndLoad = async () => {
     const supabase = createClient();
@@ -108,7 +103,33 @@ export default function ParentDashboard() {
     setUnreadNotifications(prev => prev.filter(n => n.id !== notificationId));
   };
 
-  const loadChecklistSummary = async (userId: string, studentId: number) => {
+  const getVisibleChecklistItems = useCallback((
+    items: ParentChecklistItem[],
+    reports: Report[]
+  ): ParentChecklistItem[] => {
+    return items.flatMap((item) => {
+      if (!item.source_report_id) return [item];
+
+      const sourceReport = reports.find((report) => report.id === item.source_report_id);
+      if (!sourceReport || sourceReport.report_type !== 'test') return [item];
+
+      const displayablePrescriptions = getDisplayableDerivedGuidance(
+        sourceReport.analysis_data as AnalysisData
+      ).actionablePrescription;
+
+      const currentPrescription = displayablePrescriptions.find((prescription) => prescription.title === item.title);
+      if (!currentPrescription) return [];
+
+      return [{
+        ...item,
+        title: currentPrescription.title,
+        description: `${currentPrescription.whatToDo} ${currentPrescription.howMuch ? `(${currentPrescription.howMuch})` : ''}`.trim(),
+        priority: currentPrescription.priority as 1 | 2 | 3,
+      }];
+    });
+  }, []);
+
+  const loadChecklistSummary = useCallback(async (userId: string, child: StudentWithReports) => {
     const supabase = createClient();
     const today = new Date();
     const dayOfWeek = today.getDay();
@@ -121,12 +142,17 @@ export default function ParentDashboard() {
       .from('parent_checklists')
       .select('items')
       .eq('parent_id', userId)
-      .eq('student_id', studentId)
+      .eq('student_id', child.id)
       .eq('week_start_date', weekStart)
       .single();
 
     if (data) {
-      const items = (data as ParentChecklist).items;
+      const items = getVisibleChecklistItems((data as ParentChecklist).items || [], child.reports);
+      if (items.length === 0) {
+        setChecklistSummary(null);
+        return;
+      }
+
       setChecklistSummary({
         completed: items.filter(i => i.completed).length,
         total: items.length,
@@ -134,7 +160,13 @@ export default function ParentDashboard() {
     } else {
       setChecklistSummary(null);
     }
-  };
+  }, [getVisibleChecklistItems]);
+
+  useEffect(() => {
+    if (user && selectedChild) {
+      loadChecklistSummary(user.id, selectedChild);
+    }
+  }, [user, selectedChild, loadChecklistSummary]);
 
 
   const loadChildren = async (parentId: string) => {
@@ -551,7 +583,7 @@ export default function ParentDashboard() {
                   return (
                     <a
                       href="/parent/checklist"
-                      onClick={() => user && loadChecklistSummary(user.id, selectedChild.id)}
+                      onClick={() => user && loadChecklistSummary(user.id, selectedChild)}
                       className={`block rounded-xl p-5 mb-6 transition-all hover:shadow-md ${
                         !checklistSummary
                           ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white'

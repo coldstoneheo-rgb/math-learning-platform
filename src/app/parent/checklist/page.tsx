@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Student, Report, ActionablePrescriptionItem, ParentChecklist, ParentChecklistItem } from '@/types';
+import { getDisplayableDerivedGuidance } from '@/lib/teacher-verified-analysis';
+import type { User, Student, Report, ActionablePrescriptionItem, AnalysisData, ParentChecklist, ParentChecklistItem } from '@/types';
 import Link from 'next/link';
 
 interface StudentWithReports extends Student {
@@ -38,6 +39,32 @@ export default function ParentChecklistPage() {
 
   const weekStart = getWeekStart();
 
+  const getVisibleChecklistItems = useCallback((
+    items: ParentChecklistItem[],
+    reports: Report[]
+  ): ParentChecklistItem[] => {
+    return items.flatMap((item) => {
+      if (!item.source_report_id) return [item];
+
+      const sourceReport = reports.find((report) => report.id === item.source_report_id);
+      if (!sourceReport || sourceReport.report_type !== 'test') return [item];
+
+      const displayablePrescriptions = getDisplayableDerivedGuidance(
+        sourceReport.analysis_data as AnalysisData
+      ).actionablePrescription;
+
+      const currentPrescription = displayablePrescriptions.find((prescription) => prescription.title === item.title);
+      if (!currentPrescription) return [];
+
+      return [{
+        ...item,
+        title: currentPrescription.title,
+        description: `${currentPrescription.whatToDo} ${currentPrescription.howMuch ? `(${currentPrescription.howMuch})` : ''}`.trim(),
+        priority: currentPrescription.priority as 1 | 2 | 3,
+      }];
+    });
+  }, []);
+
   const loadOrCreateChecklist = useCallback(async (child: StudentWithReports, userId: string) => {
     const supabase = createClient();
 
@@ -51,7 +78,11 @@ export default function ParentChecklistPage() {
       .single();
 
     if (existing) {
-      setChecklist(existing as ParentChecklist);
+      const existingChecklist = existing as ParentChecklist;
+      setChecklist({
+        ...existingChecklist,
+        items: getVisibleChecklistItems(existingChecklist.items || [], child.reports),
+      });
       return;
     }
 
@@ -65,7 +96,9 @@ export default function ParentChecklistPage() {
 
     for (const report of recentReports) {
       const data = report.analysis_data as unknown as Record<string, unknown>;
-      const prescriptions = (data?.actionablePrescription ?? (data?.aiAnalysis as Record<string, unknown>)?.actionablePrescription) as ActionablePrescriptionItem[] | undefined;
+      const prescriptions = report.report_type === 'test'
+        ? getDisplayableDerivedGuidance(report.analysis_data as AnalysisData).actionablePrescription
+        : (data?.actionablePrescription ?? (data?.aiAnalysis as Record<string, unknown>)?.actionablePrescription) as ActionablePrescriptionItem[] | undefined;
 
       if (Array.isArray(prescriptions)) {
         for (const p of prescriptions.slice(0, 3)) {
@@ -127,7 +160,7 @@ export default function ParentChecklistPage() {
     if (created) {
       setChecklist(created as ParentChecklist);
     }
-  }, [weekStart]);
+  }, [weekStart, getVisibleChecklistItems]);
 
   useEffect(() => {
     const init = async () => {
