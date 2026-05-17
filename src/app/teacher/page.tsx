@@ -49,7 +49,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ students: 0, reports: 0, weeklyReports: 0 });
+  const [stats, setStats] = useState({ students: 0, reports: 0, weeklyReports: 0, needsAttentionReports: 0 });
   const [recentReports, setRecentReports] = useState<ReportWithStudent[]>([]);
   const [todayStudents, setTodayStudents] = useState<TodayStudentInfo[]>([]);
   const [todayDate, setTodayDate] = useState<Date>(new Date());
@@ -99,10 +99,19 @@ export default function AdminDashboard() {
       .select('*', { count: 'exact', head: true })
       .gte('created_at', weekStart.toISOString());
 
+    const { data: growthStatusReports } = await supabase
+      .from('reports')
+      .select('report_type, analysis_data');
+
+    const needsAttentionReports = (growthStatusReports || []).filter((report) =>
+      summarizeGrowthReadiness(report.analysis_data as AnalysisData | null, report.report_type).needsAttention
+    ).length;
+
     setStats({
       students: studentCount || 0,
       reports: reportCount || 0,
       weeklyReports: weeklyCount || 0,
+      needsAttentionReports,
     });
 
     // 최근 리포트 로드
@@ -247,7 +256,7 @@ export default function AdminDashboard() {
           <StatCard label="등록 학생" value={stats.students} unit="명" />
           <StatCard label="생성 리포트" value={stats.reports} unit="개" />
           <StatCard label="이번 주 분석" value={stats.weeklyReports} unit="건" />
-          <StatCard label="시스템 완성도" value={80} unit="%" description="수업 관리 시스템 추가" />
+          <StatCard label="보완 필요" value={stats.needsAttentionReports} unit="건" description="성장 분석 재확인" />
         </div>
 
         {/* 오늘 수업 섹션 */}
