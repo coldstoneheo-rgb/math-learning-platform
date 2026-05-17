@@ -14,6 +14,7 @@ import {
   getVerificationError,
   hasUsableVerifiedDerivedGuidance,
   markDerivedGuidanceRegenerationFailed,
+  selectLatestDisplayableGuidanceWithSection,
   summarizeGrowthReadiness,
   summarizeProcessingTrace,
   updateDownstreamTrace,
@@ -533,4 +534,49 @@ test('growth truth brief distinguishes failed downstream and legacy reports', ()
   const weeklyBrief = getGrowthTruthBrief(base, 'weekly');
   assert.equal(weeklyBrief.pastData, '성장 참고 데이터');
   assert.equal(weeklyBrief.futureVision, '비전 표시');
+});
+
+test('latest guidance selector stops at withheld current test reports', () => {
+  const base = createAnalysisData();
+  const corrected = buildVerificationDraft(base, 100);
+  corrected.totalScore = 78;
+  const excluded = buildTeacherVerifiedAnalysis(base, corrected);
+
+  const older = createAnalysisData();
+  older.growthPredictions = [
+    { timeframe: '1개월', predictedScore: 88, confidenceLevel: 0.8, assumptions: ['older guidance'] },
+  ];
+
+  const selected = selectLatestDisplayableGuidanceWithSection(
+    [
+      { report_type: 'test', analysis_data: excluded },
+      { report_type: 'test', analysis_data: older },
+    ],
+    guidance => guidance.growthPredictions.length > 0
+  );
+
+  assert.equal(selected.canShowDerivedGuidance, false);
+  assert.deepEqual(selected.growthPredictions, []);
+});
+
+test('latest guidance selector falls back past legacy reports missing a section', () => {
+  const newestLegacy = createAnalysisData();
+  newestLegacy.growthPredictions = [];
+
+  const older = createAnalysisData();
+  older.growthPredictions = [
+    { timeframe: '3개월', predictedScore: 91, confidenceLevel: 0.7, assumptions: ['older prediction'] },
+  ];
+
+  const selected = selectLatestDisplayableGuidanceWithSection(
+    [
+      { report_type: 'test', analysis_data: newestLegacy },
+      { report_type: 'level_test', analysis_data: older },
+      { report_type: 'weekly', analysis_data: older },
+    ],
+    guidance => guidance.growthPredictions.length > 0
+  );
+
+  assert.equal(selected.canShowDerivedGuidance, true);
+  assert.equal(selected.growthPredictions[0]?.predictedScore, 91);
 });

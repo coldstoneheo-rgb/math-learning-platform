@@ -1,6 +1,7 @@
 import type {
   ActionablePrescriptionItem,
   AnalysisData,
+  AnyAnalysisData,
   DetailedProblemAnalysis,
   GrowthPrediction,
   LearningHabit,
@@ -323,6 +324,32 @@ export function getDisplayableDerivedGuidance(
     futureVision: analysisData.macroAnalysis?.futureVision,
     weaknessFlow: analysisData.macroAnalysis?.weaknessFlow,
   };
+}
+
+export type GuidanceSelectableReport = {
+  report_type: string;
+  analysis_data?: AnalysisData | AnyAnalysisData | null;
+};
+
+export function selectLatestDisplayableGuidanceWithSection(
+  reports: GuidanceSelectableReport[] | undefined | null,
+  hasSection: (guidance: DisplayableDerivedGuidance) => boolean
+): DisplayableDerivedGuidance {
+  const testReports = (reports || []).filter(
+    (report) => report.report_type === 'test' || report.report_type === 'level_test'
+  );
+
+  for (const report of testReports) {
+    const analysisData = report.analysis_data as AnalysisData | undefined;
+    const displayableGuidance = getDisplayableDerivedGuidance(analysisData);
+
+    if (hasSection(displayableGuidance)) return displayableGuidance;
+    if (analysisData?.teacherVerified?.derivedGuidanceStatus === 'excluded_after_teacher_adjustment') {
+      return displayableGuidance;
+    }
+  }
+
+  return getDisplayableDerivedGuidance(undefined);
 }
 
 export function getVerifiedGuidanceDisplayStatus(analysisData?: AnalysisData | null): {
