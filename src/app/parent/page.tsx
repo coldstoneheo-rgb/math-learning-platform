@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getDisplayableDerivedGuidance } from '@/lib/teacher-verified-analysis';
+import {
+  getDashboardGrowthTruthSummary,
+  getDisplayableDerivedGuidance,
+  type DashboardGrowthTruthSummary,
+} from '@/lib/teacher-verified-analysis';
 import type { User, Student, Report, AnalysisData, WeeklyReportAnalysis, Notification, ParentChecklist, ParentChecklistItem } from '@/types';
 import { HabitTrendChart } from '@/components/report';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
@@ -29,6 +33,20 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 interface StudentWithReports extends Student {
   reports: Report[];
 }
+
+const GROWTH_TRUTH_TONE_CLASS: Record<DashboardGrowthTruthSummary['readiness']['tone'], string> = {
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  warning: 'border-amber-200 bg-amber-50 text-amber-900',
+  danger: 'border-red-200 bg-red-50 text-red-900',
+  neutral: 'border-slate-200 bg-slate-50 text-slate-900',
+};
+
+const GROWTH_TRUTH_BADGE_CLASS: Record<DashboardGrowthTruthSummary['readiness']['tone'], string> = {
+  success: 'bg-emerald-100 text-emerald-700',
+  warning: 'bg-amber-100 text-amber-700',
+  danger: 'bg-red-100 text-red-700',
+  neutral: 'bg-slate-100 text-slate-700',
+};
 
 export default function ParentDashboard() {
   const router = useRouter();
@@ -107,11 +125,15 @@ export default function ParentDashboard() {
     items: ParentChecklistItem[],
     reports: Report[]
   ): ParentChecklistItem[] => {
+    const growthTruthSummary = getDashboardGrowthTruthSummary(reports);
+
     return items.flatMap((item) => {
       if (!item.source_report_id) return [item];
 
       const sourceReport = reports.find((report) => report.id === item.source_report_id);
-      if (!sourceReport || sourceReport.report_type !== 'test') return [item];
+      if (!sourceReport || (sourceReport.report_type !== 'test' && sourceReport.report_type !== 'level_test')) return [item];
+
+      if (growthTruthSummary && !growthTruthSummary.canShowDerivedGuidance) return [];
 
       const displayablePrescriptions = getDisplayableDerivedGuidance(
         sourceReport.analysis_data as AnalysisData
@@ -190,6 +212,8 @@ export default function ParentDashboard() {
         .select('*')
         .eq('student_id', student.id)
         .order('test_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
     );
 
     const reportResults = await Promise.all(reportPromises);
@@ -243,6 +267,63 @@ export default function ParentDashboard() {
       self_analysis: 'bg-emerald-100 text-emerald-700',
     };
     return colors[type] || 'bg-gray-100 text-gray-700';
+  };
+
+  const renderGrowthTruthPanel = (summary: DashboardGrowthTruthSummary | null) => {
+    if (!summary) {
+      return (
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500">성장 판단</p>
+          <h3 className="mt-1 text-lg font-bold text-slate-900">아직 판단할 시험 데이터가 충분하지 않습니다.</h3>
+          <p className="mt-1 text-sm text-slate-600">
+            시험 분석 또는 레벨 테스트 리포트가 생성되면 근거, 현재 상태, 미래 비전을 한눈에 보여드립니다.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`mb-6 rounded-xl border p-5 shadow-sm ${GROWTH_TRUTH_TONE_CLASS[summary.readiness.tone]}`}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-semibold opacity-70">성장 판단</p>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${GROWTH_TRUTH_BADGE_CLASS[summary.readiness.tone]}`}>
+                {summary.readiness.label}
+              </span>
+            </div>
+            <h3 className="mt-2 text-lg font-bold">{summary.brief.compactText}</h3>
+            <p className="mt-2 text-sm leading-relaxed opacity-80">
+              {summary.canShowDerivedGuidance
+                ? '현재 대시보드의 성장 안내는 최신 시험 데이터를 기준으로 표시됩니다.'
+                : '점수와 문항 판정은 확인됐고, 확정값 기준 성장 처방과 미래 비전은 보완 중입니다.'}
+            </p>
+          </div>
+          {summary.reportId && (
+            <button
+              onClick={() => router.push(`/parent/reports/${summary.reportId}`)}
+              className="shrink-0 rounded-lg bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-white"
+            >
+              최신 근거 보기
+            </button>
+          )}
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg bg-white/60 p-3">
+            <p className="text-xs font-semibold opacity-60">근거 데이터</p>
+            <p className="mt-1 text-sm font-semibold">{summary.brief.pastData}</p>
+          </div>
+          <div className="rounded-lg bg-white/60 p-3">
+            <p className="text-xs font-semibold opacity-60">현재 분석</p>
+            <p className="mt-1 text-sm font-semibold">{summary.brief.currentAnalysis}</p>
+          </div>
+          <div className="rounded-lg bg-white/60 p-3">
+            <p className="text-xs font-semibold opacity-60">미래 비전</p>
+            <p className="mt-1 text-sm font-semibold">{summary.brief.futureVision}</p>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // 리포트 타입별 핵심 지표 추출
@@ -501,6 +582,8 @@ export default function ParentDashboard() {
 
             {selectedChild && (
               <>
+                {renderGrowthTruthPanel(getDashboardGrowthTruthSummary(selectedChild.reports))}
+
                 {/* 자녀 정보 카드 */}
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 mb-6 text-white">
                   <div className="flex justify-between items-start">

@@ -335,6 +335,70 @@ export type GuidanceSelectableReport = {
   analysis_data?: AnalysisData | AnyAnalysisData | null;
 };
 
+export type GrowthTruthDashboardReport = GuidanceSelectableReport & {
+  id?: number | string;
+  test_name?: string | null;
+  test_date?: string | null;
+  created_at?: string | null;
+};
+
+export type DashboardGrowthTruthSummary = {
+  reportId?: number | string;
+  reportType: string;
+  reportTitle: string;
+  reportDate?: string | null;
+  readiness: GrowthReadinessSummary;
+  brief: GrowthTruthBrief;
+  canShowDerivedGuidance: boolean;
+};
+
+const parseTimestamp = (rawDate?: string | null): number => {
+  if (!rawDate) return 0;
+
+  const parsed = Date.parse(rawDate);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getReportIdNumber = (report: GrowthTruthDashboardReport): number => {
+  const parsed = Number(report.id);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+export function getDashboardGrowthTruthSummary(
+  reports: GrowthTruthDashboardReport[] | undefined | null
+): DashboardGrowthTruthSummary | null {
+  const latest = (reports || [])
+    .filter((report) => report.report_type === 'test' || report.report_type === 'level_test')
+    .map((report, index) => ({ report, index }))
+    .sort((a, b) => {
+      const testDateDiff = parseTimestamp(b.report.test_date) - parseTimestamp(a.report.test_date);
+      if (testDateDiff !== 0) return testDateDiff;
+
+      const createdAtDiff = parseTimestamp(b.report.created_at) - parseTimestamp(a.report.created_at);
+      if (createdAtDiff !== 0) return createdAtDiff;
+
+      const idDiff = getReportIdNumber(b.report) - getReportIdNumber(a.report);
+      if (idDiff !== 0) return idDiff;
+
+      return a.index - b.index;
+    })[0]?.report;
+
+  if (!latest) return null;
+
+  const analysisData = latest.analysis_data as AnalysisData | undefined;
+  const displayable = getDisplayableDerivedGuidance(analysisData);
+
+  return {
+    reportId: latest.id,
+    reportType: latest.report_type,
+    reportTitle: latest.test_name || (latest.report_type === 'level_test' ? '레벨 테스트' : '시험 분석'),
+    reportDate: latest.test_date || latest.created_at,
+    readiness: summarizeGrowthReadiness(analysisData, latest.report_type),
+    brief: getGrowthTruthBrief(analysisData, latest.report_type),
+    canShowDerivedGuidance: displayable.canShowDerivedGuidance,
+  };
+}
+
 export function selectLatestDisplayableGuidanceWithSection(
   reports: GuidanceSelectableReport[] | undefined | null,
   hasSection: (guidance: DisplayableDerivedGuidance) => boolean

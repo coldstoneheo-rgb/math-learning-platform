@@ -6,8 +6,10 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader } from '@/components/report';
 import {
+  getDashboardGrowthTruthSummary,
   getDisplayableDerivedGuidance,
   selectLatestDisplayableGuidanceWithSection,
+  type DashboardGrowthTruthSummary,
 } from '@/lib/teacher-verified-analysis';
 import type {
   User, Student, Report, AnalysisData, ReportType,
@@ -34,6 +36,20 @@ const REPORT_TYPE_CONFIG: Record<ReportType, { name: string; color: string; bgCo
   annual: { name: '연간', color: 'text-red-600', bgColor: 'bg-red-100' },
   consolidated: { name: '종합', color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
   self_analysis: { name: '내 풀이 분석', color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
+};
+
+const STUDENT_GROWTH_TRUTH_TONE_CLASS: Record<DashboardGrowthTruthSummary['readiness']['tone'], string> = {
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  warning: 'border-amber-200 bg-amber-50 text-amber-900',
+  danger: 'border-red-200 bg-red-50 text-red-900',
+  neutral: 'border-slate-200 bg-white text-slate-900',
+};
+
+const STUDENT_GROWTH_TRUTH_BADGE_CLASS: Record<DashboardGrowthTruthSummary['readiness']['tone'], string> = {
+  success: 'bg-emerald-100 text-emerald-700',
+  warning: 'bg-amber-100 text-amber-700',
+  danger: 'bg-red-100 text-red-700',
+  neutral: 'bg-slate-100 text-slate-700',
 };
 
 export default function StudentDashboard() {
@@ -78,7 +94,10 @@ export default function StudentDashboard() {
 
     const [{ data: reports }, { data: studyPlans }] = await Promise.all([
       supabase.from('reports').select('*').eq('student_id', studentData.id)
-        .order('test_date', { ascending: false }).limit(20),
+        .order('test_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(20),
       supabase.from('study_plans').select('*, study_tasks (*)')
         .eq('student_id', studentData.id).in('status', ['active', 'draft'])
         .order('created_at', { ascending: false }).limit(5),
@@ -182,6 +201,67 @@ export default function StudentDashboard() {
     return `고${grade - 9}`;
   };
 
+  const renderGrowthTruthPanel = (summary: DashboardGrowthTruthSummary | null) => {
+    if (!summary) {
+      return (
+        <div className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500">내 성장 방향</p>
+          <h2 className="mt-1 text-lg font-bold text-slate-900">아직 성장 방향을 판단할 시험 데이터가 부족해요.</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            시험 분석이나 레벨 테스트 리포트가 생기면 지금 위치와 다음 학습 방향을 알려줄게요.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`mb-8 rounded-xl border p-5 shadow-sm ${STUDENT_GROWTH_TRUTH_TONE_CLASS[summary.readiness.tone]}`}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-semibold opacity-70">내 성장 방향</p>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STUDENT_GROWTH_TRUTH_BADGE_CLASS[summary.readiness.tone]}`}>
+                {summary.canShowDerivedGuidance ? '학습 방향 준비됨' : '학습 방향 보완 중'}
+              </span>
+            </div>
+            <h2 className="mt-2 text-lg font-bold">
+              {summary.canShowDerivedGuidance
+                ? '지금 볼 수 있는 성장 안내를 기준으로 공부해도 좋아요.'
+                : '점수와 문항 판정은 확인됐고, 공부 방향은 더 정확하게 보완 중이에요.'}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed opacity-80">
+              {summary.canShowDerivedGuidance
+                ? `${summary.reportTitle} 리포트를 바탕으로 현재 위치와 다음 목표를 보여주고 있어요.`
+                : '확정된 결과와 맞지 않을 수 있는 이전 공부 방법은 숨겨두었어요. 선생님 설명이나 다음 리포트에서 이어서 확인할 수 있어요.'}
+            </p>
+          </div>
+          {summary.reportId && (
+            <Link
+              href={`/student/reports/${summary.reportId}`}
+              className="shrink-0 rounded-lg bg-white/80 px-4 py-2 text-center text-sm font-semibold text-slate-800 transition-colors hover:bg-white"
+            >
+              리포트 보기
+            </Link>
+          )}
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg bg-white/60 p-3">
+            <p className="text-xs font-semibold opacity-60">근거</p>
+            <p className="mt-1 text-sm font-semibold">{summary.brief.pastData}</p>
+          </div>
+          <div className="rounded-lg bg-white/60 p-3">
+            <p className="text-xs font-semibold opacity-60">현재</p>
+            <p className="mt-1 text-sm font-semibold">{summary.brief.currentAnalysis}</p>
+          </div>
+          <div className="rounded-lg bg-white/60 p-3">
+            <p className="text-xs font-semibold opacity-60">다음 비전</p>
+            <p className="mt-1 text-sm font-semibold">{summary.brief.futureVision}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -204,6 +284,7 @@ export default function StudentDashboard() {
   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const growthPredictions = getGrowthPredictions();
   const topPrescriptions = getTopPrescriptions();
+  const growthTruthSummary = getDashboardGrowthTruthSummary(student.reports);
   const motivation = getMotivation();
 
   const latestSelfAnalysis = student?.reports?.find(r => r.report_type === 'self_analysis');
@@ -393,6 +474,8 @@ export default function StudentDashboard() {
             </ResponsiveContainer>
           </div>
         </div>
+
+        {renderGrowthTruthPanel(growthTruthSummary)}
 
         {/* ===== 성장 예측 ===== */}
         {growthPredictions.length > 0 && (
