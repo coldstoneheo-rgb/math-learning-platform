@@ -11,11 +11,14 @@ import { sendReportCreatedNotification } from '@/lib/notification-helper';
 import { indexReportEmbeddings } from '@/lib/embedding-helper';
 import {
   applyRegeneratedDerivedGuidance,
+  attachProcessingTrace,
+  buildInitialProcessingTrace,
   buildTeacherVerifiedAnalysis,
   buildVerificationDraft,
   getVerificationError,
   markDerivedGuidanceRegenerationFailed,
   toNumberOrZero,
+  updateDownstreamTrace,
   type VerificationDraft,
 } from '@/lib/teacher-verified-analysis';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
@@ -248,6 +251,9 @@ export default function NewReportPage() {
         }
       }
 
+      let processingTrace = buildInitialProcessingTrace(verifiedAnalysis);
+      verifiedAnalysis = attachProcessingTrace(verifiedAnalysis, processingTrace);
+
       const { data: insertedReport, error: insertError } = await supabase
         .from('reports')
         .insert({
@@ -273,8 +279,21 @@ export default function NewReportPage() {
           insertedReport.id,
           verifiedAnalysis
         );
-        if (!profileResult.success) {
+        if (profileResult.success) {
+          processingTrace = updateDownstreamTrace(
+            processingTrace,
+            'studentProfile',
+            'success',
+            '학생 취약점, 강점, 패턴 프로필에 확정 리포트를 반영했습니다.'
+          );
+        } else {
           console.warn('학생 프로필 업데이트 실패:', profileResult.error);
+          processingTrace = updateDownstreamTrace(
+            processingTrace,
+            'studentProfile',
+            'failed',
+            profileResult.error || '학생 프로필 업데이트에 실패했습니다.'
+          );
         }
 
         // [Anchor Loop] 메타프로필(5대 핵심 지표) 업데이트
@@ -293,23 +312,67 @@ export default function NewReportPage() {
           const metaResult = await metaResponse.json();
           if (metaResult.success) {
             console.log('[Anchor Loop] 메타프로필 업데이트 완료:', metaResult.message);
+            processingTrace = updateDownstreamTrace(
+              processingTrace,
+              'metaProfile',
+              'success',
+              metaResult.message || '메타프로필에 확정 리포트를 반영했습니다.'
+            );
           } else {
             console.warn('[Anchor Loop] 메타프로필 업데이트 실패:', metaResult.error);
+            processingTrace = updateDownstreamTrace(
+              processingTrace,
+              'metaProfile',
+              'failed',
+              metaResult.error || '메타프로필 업데이트에 실패했습니다.'
+            );
           }
         } catch (metaError) {
           console.warn('[Anchor Loop] 메타프로필 API 호출 실패:', metaError);
+          processingTrace = updateDownstreamTrace(
+            processingTrace,
+            'metaProfile',
+            'failed',
+            metaError instanceof Error ? metaError.message : '메타프로필 API 호출에 실패했습니다.'
+          );
         }
 
         // [Feedback Loop] 전략 추적 및 예측 데이터 등록
-        try {
-          const feedbackResult = await registerReportFeedbackData(
-            insertedReport.id,
-            selectedStudentId,
-            verifiedAnalysis
+        if (
+          verifiedAnalysis.actionablePrescription?.length ||
+          verifiedAnalysis.growthPredictions?.length
+        ) {
+          try {
+            const feedbackResult = await registerReportFeedbackData(
+              insertedReport.id,
+              selectedStudentId,
+              verifiedAnalysis
+            );
+            console.log('[Feedback Loop] 등록 결과:', feedbackResult);
+            processingTrace = updateDownstreamTrace(
+              processingTrace,
+              'feedbackLoop',
+              feedbackResult.success ? 'success' : 'failed',
+              feedbackResult.success
+                ? `전략 ${feedbackResult.strategiesRegistered || 0}개, 예측 ${feedbackResult.predictionsRegistered || 0}개를 등록했습니다.`
+                : feedbackResult.error || '피드백 루프 등록에 실패했습니다.'
+            );
+          } catch (feedbackError) {
+            console.warn('[Feedback Loop] 등록 실패:', feedbackError);
+            processingTrace = updateDownstreamTrace(
+              processingTrace,
+              'feedbackLoop',
+              'failed',
+              feedbackError instanceof Error ? feedbackError.message : '피드백 루프 등록에 실패했습니다.'
+            );
+          }
+        } else {
+          processingTrace = updateDownstreamTrace(
+            processingTrace,
+            'feedbackLoop',
+            'skipped',
+            '확정값 기준 처방 또는 성장 예측이 없어 피드백 루프 등록을 건너뛰었습니다.'
           );
-          console.log('[Feedback Loop] 등록 결과:', feedbackResult);
-        } catch (feedbackError) {
-          console.warn('[Feedback Loop] 등록 실패:', feedbackError);
         }
 
         // [Study Plan] AI 처방 → 학습 계획 자동 생성
@@ -323,12 +386,37 @@ export default function NewReportPage() {
             );
             if (planResult.success) {
               console.log('[Study Plan] 학습 계획 자동 생성 완료:', planResult.planId);
+              processingTrace = updateDownstreamTrace(
+                processingTrace,
+                'studyPlan',
+                'success',
+                planResult.planId ? `학습 계획 #${planResult.planId}을 생성했습니다.` : '학습 계획을 생성했습니다.'
+              );
             } else {
               console.warn('[Study Plan] 학습 계획 생성 실패:', planResult.error);
+              processingTrace = updateDownstreamTrace(
+                processingTrace,
+                'studyPlan',
+                'failed',
+                planResult.error || '학습 계획 생성에 실패했습니다.'
+              );
             }
           } catch (planError) {
             console.warn('[Study Plan] 학습 계획 생성 오류:', planError);
+            processingTrace = updateDownstreamTrace(
+              processingTrace,
+              'studyPlan',
+              'failed',
+              planError instanceof Error ? planError.message : '학습 계획 생성에 실패했습니다.'
+            );
           }
+        } else {
+          processingTrace = updateDownstreamTrace(
+            processingTrace,
+            'studyPlan',
+            'skipped',
+            '확정값 기준 처방이 없어 학습 계획 생성을 건너뛰었습니다.'
+          );
         }
 
         // [Parent Notification] 학부모 알림 발송
@@ -340,8 +428,30 @@ export default function NewReportPage() {
           console.log('[Notification] 학부모 알림 발송 완료');
         }
 
-        // [Embedding] RAG 기억 서랍 인덱싱 (fire-and-forget)
-        indexReportEmbeddings(insertedReport.id, selectedStudentId);
+        // [Embedding] RAG 기억 서랍 인덱싱
+        const embeddingResult = await indexReportEmbeddings(insertedReport.id, selectedStudentId);
+        processingTrace = updateDownstreamTrace(
+          processingTrace,
+          'embeddings',
+          embeddingResult.success
+            ? embeddingResult.skipped ? 'skipped' : 'success'
+            : 'failed',
+          embeddingResult.success
+            ? embeddingResult.skipped
+              ? '임베딩 인덱싱 조건이 충족되지 않아 건너뛰었습니다.'
+              : `${embeddingResult.indexedChunks || 0}개 기억 청크를 인덱싱했습니다.`
+            : 'RAG 기억 서랍 인덱싱에 실패했습니다.'
+        );
+
+        verifiedAnalysis = attachProcessingTrace(verifiedAnalysis, processingTrace);
+        const { error: traceUpdateError } = await supabase
+          .from('reports')
+          .update({ analysis_data: verifiedAnalysis })
+          .eq('id', insertedReport.id);
+
+        if (traceUpdateError) {
+          console.warn('[Processing Trace] 저장 후처리 추적 정보 업데이트 실패:', traceUpdateError);
+        }
       }
 
       addToast('리포트가 저장되었습니다.', 'success');

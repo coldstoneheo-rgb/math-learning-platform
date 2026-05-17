@@ -121,6 +121,8 @@ export async function registerReportFeedbackData(
     results.strategiesRegistered = strategyResult.count;
     if (!strategyResult.success && strategyResult.error) {
       console.warn('[Feedback Loop] 전략 등록 실패:', strategyResult.error);
+      results.success = false;
+      results.error = strategyResult.error;
     }
   }
 
@@ -135,6 +137,10 @@ export async function registerReportFeedbackData(
     results.predictionsRegistered = predictionResult.count;
     if (!predictionResult.success && predictionResult.error) {
       console.warn('[Feedback Loop] 예측 등록 실패:', predictionResult.error);
+      results.success = false;
+      results.error = results.error
+        ? `${results.error}; ${predictionResult.error}`
+        : predictionResult.error;
     }
   }
 

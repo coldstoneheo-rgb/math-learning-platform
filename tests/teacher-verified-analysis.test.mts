@@ -3,10 +3,13 @@ import assert from 'node:assert/strict';
 import {
   applyRegeneratedDerivedGuidance,
   assertCompleteVerifiedDerivedGuidance,
+  attachProcessingTrace,
+  buildInitialProcessingTrace,
   buildTeacherVerifiedAnalysis,
   buildVerificationDraft,
   getVerificationError,
   markDerivedGuidanceRegenerationFailed,
+  updateDownstreamTrace,
 } from '../src/lib/teacher-verified-analysis.js';
 import type { AnalysisData, VerifiedDerivedGuidance } from '../src/types/index.js';
 
@@ -227,4 +230,25 @@ test('verification validation rejects invalid score and ranking values', () => {
   draft.rank = 31;
   draft.totalStudents = 30;
   assert.equal(getVerificationError(draft), '석차는 전체 인원보다 클 수 없습니다.');
+});
+
+test('processing trace records teacher verified source of truth and downstream outcomes', () => {
+  const analysis = createAnalysisData();
+  const draft = buildVerificationDraft(analysis, 100);
+  draft.totalScore = 90;
+  const verified = buildTeacherVerifiedAnalysis(analysis, draft);
+  let trace = buildInitialProcessingTrace(verified);
+
+  assert.equal(trace.sourceOfTruth, 'teacher_verified');
+  assert.equal(trace.teacherVerification?.status, 'verified');
+  assert.equal(trace.teacherVerification?.derivedGuidanceStatus, 'excluded_after_teacher_adjustment');
+  assert.deepEqual(trace.teacherVerification?.adjustedFields, ['totalScore']);
+
+  trace = updateDownstreamTrace(trace, 'metaProfile', 'success', '메타프로필 반영 완료');
+  trace = updateDownstreamTrace(trace, 'studyPlan', 'skipped', '확정값 기준 처방 없음');
+  const traced = attachProcessingTrace(verified, trace);
+
+  assert.equal(traced.processingTrace?.downstream?.metaProfile?.status, 'success');
+  assert.equal(traced.processingTrace?.downstream?.studyPlan?.status, 'skipped');
+  assert.equal(traced.processingTrace?.sourceOfTruth, 'teacher_verified');
 });
