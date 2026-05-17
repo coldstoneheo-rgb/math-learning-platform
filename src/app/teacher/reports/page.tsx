@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Report, Student, ReportType } from '@/types';
+import { summarizeGrowthReadiness, type GrowthReadinessSummary } from '@/lib/teacher-verified-analysis';
+import type { User, Report, Student, ReportType, AnalysisData } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -28,6 +29,7 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<ReportWithStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilters, setSelectedFilters] = useState<Set<ReportType | 'all'>>(new Set(['all']));
+  const [showNeedsAttentionOnly, setShowNeedsAttentionOnly] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
   useEffect(() => {
@@ -103,11 +105,6 @@ export default function ReportsPage() {
     setSelectedFilters(newFilters);
   };
 
-  // 필터링된 리포트
-  const filteredReports = selectedFilters.has('all')
-    ? reports
-    : reports.filter(r => selectedFilters.has(r.report_type as ReportType));
-
   const handleDelete = async (report: ReportWithStudent) => {
     if (!confirm(`"${report.test_name}" 리포트를 삭제하시겠습니까?`)) return;
 
@@ -140,6 +137,29 @@ export default function ReportsPage() {
     };
     return labels[type] || type;
   };
+
+  const getGrowthReadiness = (report: ReportWithStudent): GrowthReadinessSummary => {
+    return summarizeGrowthReadiness(report.analysis_data as AnalysisData | null, report.report_type);
+  };
+
+  const getGrowthReadinessClass = (tone: GrowthReadinessSummary['tone']): string => {
+    switch (tone) {
+      case 'success':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'warning':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'danger':
+        return 'bg-red-50 text-red-700 border-red-200';
+      default:
+        return 'bg-slate-50 text-slate-600 border-slate-200';
+    }
+  };
+
+  // 필터링된 리포트
+  const filteredReports = (selectedFilters.has('all')
+    ? reports
+    : reports.filter(r => selectedFilters.has(r.report_type as ReportType)))
+    .filter(r => !showNeedsAttentionOnly || getGrowthReadiness(r).needsAttention);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -177,6 +197,16 @@ export default function ReportsPage() {
                 {type.label}
               </button>
             ))}
+            <button
+              onClick={() => setShowNeedsAttentionOnly((value) => !value)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                showNeedsAttentionOnly
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+              }`}
+            >
+              보완 필요
+            </button>
             <span className="ml-auto text-sm text-gray-500">
               총 {filteredReports.length}개
             </span>
@@ -199,53 +229,69 @@ export default function ReportsPage() {
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학생</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">제목</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">유형</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden lg:table-cell">성장 상태</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">작성일</th>
                   <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredReports.map((report) => (
-                  <tr key={report.id} className="hover:bg-gray-50">
-                    <td className="px-4 md:px-6 py-3 md:py-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {report.students?.name || '알 수 없음'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {report.students && getGradeLabel(report.students.grade)}
-                      </div>
-                    </td>
-                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-900 hidden sm:table-cell">
-                      <span className="line-clamp-1">{report.test_name || getReportTypeLabel(report.report_type)}</span>
-                    </td>
-                    <td className="px-4 md:px-6 py-3 md:py-4">
-                      <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${
-                        report.report_type === 'test' ? 'bg-blue-100 text-blue-700' :
-                        report.report_type === 'weekly' ? 'bg-green-100 text-green-700' :
-                        report.report_type === 'monthly' ? 'bg-purple-100 text-purple-700' :
-                        'bg-orange-100 text-orange-700'
-                      }`}>
-                        {getReportTypeLabel(report.report_type)}
-                      </span>
-                    </td>
-                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden md:table-cell whitespace-nowrap">
-                      {new Date(report.created_at).toLocaleDateString('ko-KR')}
-                    </td>
-                    <td className="px-4 md:px-6 py-3 md:py-4 text-right whitespace-nowrap">
-                      <a
-                        href={`/teacher/reports/${report.id}`}
-                        className="text-indigo-600 hover:text-indigo-800 text-sm mr-2 md:mr-3"
-                      >
-                        보기
-                      </a>
-                      <button
-                        onClick={() => handleDelete(report)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        삭제
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredReports.map((report) => {
+                  const growthReadiness = getGrowthReadiness(report);
+
+                  return (
+                    <tr key={report.id} className="hover:bg-gray-50">
+                      <td className="px-4 md:px-6 py-3 md:py-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {report.students?.name || '알 수 없음'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {report.students && getGradeLabel(report.students.grade)}
+                        </div>
+                      </td>
+                      <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-900 hidden sm:table-cell">
+                        <span className="line-clamp-1">{report.test_name || getReportTypeLabel(report.report_type)}</span>
+                        <span className={`mt-2 inline-flex lg:hidden px-2 py-1 text-xs rounded border ${getGrowthReadinessClass(growthReadiness.tone)}`}>
+                          {growthReadiness.label}
+                        </span>
+                      </td>
+                      <td className="px-4 md:px-6 py-3 md:py-4">
+                        <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${
+                          report.report_type === 'test' ? 'bg-blue-100 text-blue-700' :
+                          report.report_type === 'weekly' ? 'bg-green-100 text-green-700' :
+                          report.report_type === 'monthly' ? 'bg-purple-100 text-purple-700' :
+                          'bg-orange-100 text-orange-700'
+                        }`}>
+                          {getReportTypeLabel(report.report_type)}
+                        </span>
+                      </td>
+                      <td className="px-4 md:px-6 py-3 md:py-4 hidden lg:table-cell">
+                        <div className={`inline-flex px-2 py-1 text-xs rounded border ${getGrowthReadinessClass(growthReadiness.tone)}`}>
+                          {growthReadiness.label}
+                        </div>
+                        <p className="mt-1 max-w-xs text-xs text-gray-500 line-clamp-2">
+                          {growthReadiness.description}
+                        </p>
+                      </td>
+                      <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden md:table-cell whitespace-nowrap">
+                        {new Date(report.created_at).toLocaleDateString('ko-KR')}
+                      </td>
+                      <td className="px-4 md:px-6 py-3 md:py-4 text-right whitespace-nowrap">
+                        <a
+                          href={`/teacher/reports/${report.id}`}
+                          className="text-indigo-600 hover:text-indigo-800 text-sm mr-2 md:mr-3"
+                        >
+                          보기
+                        </a>
+                        <button
+                          onClick={() => handleDelete(report)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          삭제
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

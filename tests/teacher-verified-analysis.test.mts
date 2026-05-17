@@ -13,6 +13,7 @@ import {
   getVerificationError,
   hasUsableVerifiedDerivedGuidance,
   markDerivedGuidanceRegenerationFailed,
+  summarizeGrowthReadiness,
   summarizeProcessingTrace,
   updateDownstreamTrace,
 } from '../src/lib/teacher-verified-analysis.js';
@@ -430,4 +431,58 @@ test('processing trace summary distinguishes ready partial and failed states', (
 
   const failed = updateDownstreamTrace(partial, 'feedbackLoop', 'failed', 'api error');
   assert.equal(summarizeProcessingTrace(failed)?.label, '성장 데이터 보완 필요');
+});
+
+test('growth readiness summary prioritizes teacher verified guidance states', () => {
+  const base = createAnalysisData();
+  const draft = buildVerificationDraft(base, 100);
+  const retained = buildTeacherVerifiedAnalysis(base, draft);
+
+  assert.deepEqual(
+    {
+      label: summarizeGrowthReadiness(retained, 'test').label,
+      needsAttention: summarizeGrowthReadiness(retained, 'test').needsAttention,
+    },
+    {
+      label: 'AI 초안 확인 완료',
+      needsAttention: false,
+    }
+  );
+
+  const corrected = buildVerificationDraft(base, 100);
+  corrected.totalScore = 78;
+  const excluded = buildTeacherVerifiedAnalysis(base, corrected);
+  const excludedSummary = summarizeGrowthReadiness(excluded, 'test');
+  assert.equal(excludedSummary.label, '성장 처방 보류');
+  assert.equal(excludedSummary.tone, 'warning');
+  assert.equal(excludedSummary.needsAttention, true);
+
+  const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+  const regeneratedSummary = summarizeGrowthReadiness(regenerated, 'test');
+  assert.equal(regeneratedSummary.label, '교사 확정값 기반');
+  assert.equal(regeneratedSummary.needsAttention, false);
+});
+
+test('growth readiness summary flags downstream failures and keeps legacy reports neutral', () => {
+  const base = createAnalysisData();
+  const trace = updateDownstreamTrace(
+    buildInitialProcessingTrace(base),
+    'embeddings',
+    'failed',
+    'embedding error'
+  );
+  const failed = attachProcessingTrace(base, trace);
+  const failedSummary = summarizeGrowthReadiness(failed, 'test');
+  assert.equal(failedSummary.label, '성장 데이터 보완 필요');
+  assert.equal(failedSummary.tone, 'danger');
+  assert.equal(failedSummary.needsAttention, true);
+
+  const legacySummary = summarizeGrowthReadiness(base, 'test');
+  assert.equal(legacySummary.label, '기존 AI 분석');
+  assert.equal(legacySummary.tone, 'neutral');
+  assert.equal(legacySummary.needsAttention, false);
+
+  const weeklySummary = summarizeGrowthReadiness(base, 'weekly');
+  assert.equal(weeklySummary.label, '성장 흐름 참고');
+  assert.equal(weeklySummary.needsAttention, false);
 });
