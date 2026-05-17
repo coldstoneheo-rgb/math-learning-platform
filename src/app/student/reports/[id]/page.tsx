@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
+import { getDisplayableDerivedGuidance } from '@/lib/teacher-verified-analysis';
 import { exportReportToPdf } from '@/lib/pdf-export';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
@@ -145,6 +146,7 @@ export default function StudentReportDetailPage() {
   const reportType = report.report_type as ReportType;
   const isSelfAnalysis = reportType === 'self_analysis';
   const analysisData = isSelfAnalysis ? null : report.analysis_data as AnalysisData;
+  const displayableGuidance = getDisplayableDerivedGuidance(analysisData);
   const selfAnalysis = isSelfAnalysis ? report.analysis_data as SelfAnalysisReport : null;
   const config = REPORT_TYPE_CONFIG[reportType];
 
@@ -278,13 +280,13 @@ export default function StudentReportDetailPage() {
           )}
 
           {/* 개선 전략 */}
-          {analysisData?.actionablePrescription && analysisData.actionablePrescription.length > 0 && (
+          {displayableGuidance.actionablePrescription.length > 0 && (
             <div className="p-6 border-b">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <span>📝</span> 이렇게 공부해보세요!
               </h3>
               <div className="space-y-4">
-                {analysisData.actionablePrescription.slice(0, 3).map((item, idx) => (
+                {displayableGuidance.actionablePrescription.slice(0, 3).map((item, idx) => (
                   <div key={idx} className="border rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold ${
@@ -322,9 +324,9 @@ export default function StudentReportDetailPage() {
           )}
 
           {/* 미래 비전 */}
-          {analysisData?.macroAnalysis?.futureVision && (
+          {displayableGuidance.futureVision && (
             <VisionFooter
-              legacyVision={analysisData.macroAnalysis.futureVision}
+              legacyVision={displayableGuidance.futureVision}
               studentName={report.students?.name || '학생'}
             />
           )}
@@ -444,7 +446,7 @@ export default function StudentReportDetailPage() {
             <div className="text-4xl mb-4">🌟</div>
             <h3 className="text-xl font-bold mb-2">화이팅!</h3>
             <p className="text-indigo-100">
-              {selfAnalysis?.encouragement || analysisData?.macroAnalysis?.futureVision?.encouragement || '꾸준히 노력하면 분명 좋은 결과가 있을 거예요!'}
+              {selfAnalysis?.encouragement || displayableGuidance.futureVision?.encouragement || '꾸준히 노력하면 분명 좋은 결과가 있을 거예요!'}
             </p>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader } from '@/components/report';
+import { getDisplayableDerivedGuidance } from '@/lib/teacher-verified-analysis';
 import type {
   User, Student, Report, AnalysisData, ReportType,
   StudyPlan, StudyTask, GrowthPrediction, ActionablePrescriptionItem, SelfAnalysisReport
@@ -121,22 +122,39 @@ export default function StudentDashboard() {
     );
   };
 
-  // 최신 시험 분석 리포트에서 성장 예측 데이터 추출
-  const getGrowthPredictions = (): GrowthPrediction[] => {
-    const report = student?.reports?.find(r =>
-      (r.report_type === 'test' || r.report_type === 'level_test') &&
-      (r.analysis_data as AnalysisData)?.growthPredictions?.length
-    );
-    return (report?.analysis_data as AnalysisData)?.growthPredictions || [];
+  type DisplayableGuidance = ReturnType<typeof getDisplayableDerivedGuidance>;
+
+  const getLatestDisplayableGuidanceWithSection = (
+    hasSection: (guidance: DisplayableGuidance) => boolean
+  ): DisplayableGuidance => {
+    const reports = student?.reports?.filter(r => r.report_type === 'test' || r.report_type === 'level_test') || [];
+
+    for (const report of reports) {
+      const analysisData = report.analysis_data as AnalysisData | undefined;
+      const displayableGuidance = getDisplayableDerivedGuidance(analysisData);
+
+      if (hasSection(displayableGuidance)) return displayableGuidance;
+      if (analysisData?.teacherVerified?.derivedGuidanceStatus === 'excluded_after_teacher_adjustment') {
+        return displayableGuidance;
+      }
+    }
+
+    return getDisplayableDerivedGuidance(undefined);
   };
 
-  // 최신 리포트에서 실행 전략 추출 (우선순위 1~3)
+  // 최신 시험 분석 리포트에서 성장 예측 데이터 추출
+  const getGrowthPredictions = (): GrowthPrediction[] => {
+    return getLatestDisplayableGuidanceWithSection(
+      guidance => guidance.growthPredictions.length > 0
+    ).growthPredictions;
+  };
+
+  // 최신 시험 분석 리포트에서 실행 전략 추출 (우선순위 1~3)
   const getTopPrescriptions = (): ActionablePrescriptionItem[] => {
-    const report = student?.reports?.find(r =>
-      (r.report_type === 'test' || r.report_type === 'level_test') &&
-      (r.analysis_data as AnalysisData)?.actionablePrescription?.length
-    );
-    return ((report?.analysis_data as AnalysisData)?.actionablePrescription || [])
+    return getLatestDisplayableGuidanceWithSection(
+      guidance => guidance.actionablePrescription.length > 0
+    )
+      .actionablePrescription
       .slice(0, 3)
       .sort((a, b) => a.priority - b.priority);
   };
@@ -147,9 +165,9 @@ export default function StudentDashboard() {
     const recent = trend[trend.length - 1]?.score as number | undefined;
     const prev = trend[trend.length - 2]?.score as number | undefined;
     const { total, completed } = getActiveTasks();
-    const encouragement = student?.reports?.[0]
-      ? (student.reports[0].analysis_data as AnalysisData)?.macroAnalysis?.futureVision?.encouragement
-      : undefined;
+    const latestTestReport = student?.reports?.find(r => r.report_type === 'test' || r.report_type === 'level_test');
+    const encouragement = getDisplayableDerivedGuidance(latestTestReport?.analysis_data as AnalysisData | undefined)
+      .futureVision?.encouragement;
 
     if (total > 0 && completed === total) {
       return { emoji: '🎉', title: '오늘 계획 완료!', message: '모든 학습 계획을 완료했어요! 정말 대단합니다!' };
