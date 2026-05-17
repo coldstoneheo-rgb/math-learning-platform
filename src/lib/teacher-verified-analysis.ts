@@ -326,6 +326,10 @@ export function getDisplayableDerivedGuidance(
   };
 }
 
+export function canShowStudentDerivedNarrative(analysisData?: AnalysisData | null): boolean {
+  return hasUsableVerifiedDerivedGuidance(analysisData);
+}
+
 export type GuidanceSelectableReport = {
   report_type: string;
   analysis_data?: AnalysisData | AnyAnalysisData | null;
@@ -455,6 +459,60 @@ export function getParentGrowthTruthSnapshot(
     withheldSections: [],
     tone: 'neutral',
   };
+}
+
+export type StudentGrowthTruthNotice = {
+  label: string;
+  headline: string;
+  description: string;
+  guidanceState: 'available' | 'withheld' | 'legacy';
+  tone: 'success' | 'warning' | 'neutral';
+};
+
+export function getStudentGrowthTruthNotice(
+  analysisData?: AnalysisData | null,
+  reportType?: string | null
+): StudentGrowthTruthNotice | null {
+  if (!analysisData || (reportType !== 'test' && reportType !== 'level_test')) return null;
+
+  switch (analysisData.teacherVerified?.derivedGuidanceStatus) {
+    case 'excluded_after_teacher_adjustment':
+      return {
+        label: '선생님 확인 완료',
+        headline: '점수와 문항 판정은 선생님이 확인한 값이에요.',
+        description:
+          '이전 분석 초안의 공부 방법과 성장 예측은 지금의 확정값과 맞지 않을 수 있어 잠시 숨겨두었어요. 확정값을 기준으로 한 성장 방향은 선생님 설명이나 다음 리포트에서 이어서 확인할 수 있어요.',
+        guidanceState: 'withheld',
+        tone: 'warning',
+      };
+    case 'regenerated_from_teacher_verified':
+      return {
+        label: '확정값 기반 성장 안내',
+        headline: '선생님이 확인한 값을 기준으로 성장 방향을 다시 정리했어요.',
+        description:
+          '현재 보이는 공부 방법과 성장 예측은 확정된 점수와 문항 판정을 바탕으로 다시 만든 안내예요. 지금 리포트를 기준으로 다음 학습을 이어가면 됩니다.',
+        guidanceState: 'available',
+        tone: 'success',
+      };
+    case 'ai_draft_retained':
+      return {
+        label: '선생님 확인 리포트',
+        headline: '이 리포트는 선생님 확인을 거친 분석이에요.',
+        description:
+          '점수와 문항 판정에 큰 보정이 없어 현재 보이는 공부 방법과 성장 예측을 참고할 수 있어요. 중요한 결정은 선생님 설명과 함께 확인해 주세요.',
+        guidanceState: 'available',
+        tone: 'neutral',
+      };
+    default:
+      return {
+        label: '기존 성장 분석',
+        headline: '기존 분석 데이터를 기준으로 성장 방향을 보여줘요.',
+        description:
+          '이전 형식의 리포트라 선생님 확인 상태가 따로 표시되지는 않아요. 다음 시험 리포트부터는 확정값 기준으로 더 분명하게 성장 흐름을 확인할 수 있어요.',
+        guidanceState: 'legacy',
+        tone: 'neutral',
+      };
+  }
 }
 
 export function summarizeProcessingTrace(trace?: ReportProcessingTrace | null): {

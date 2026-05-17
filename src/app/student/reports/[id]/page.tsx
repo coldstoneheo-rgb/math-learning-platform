@@ -5,12 +5,16 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
-import { getDisplayableDerivedGuidance } from '@/lib/teacher-verified-analysis';
+import {
+  canShowStudentDerivedNarrative,
+  getDisplayableDerivedGuidance,
+  getStudentGrowthTruthNotice,
+} from '@/lib/teacher-verified-analysis';
 import { exportReportToPdf } from '@/lib/pdf-export';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
-import type { User, Report, Student, AnalysisData, ReportType, SelfAnalysisReport } from '@/types';
+import type { Report, Student, AnalysisData, ReportType, SelfAnalysisReport } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
@@ -28,12 +32,23 @@ const REPORT_TYPE_CONFIG: Record<ReportType, { name: string; color: string; bgCo
   self_analysis: { name: '내 풀이 분석', color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
 };
 
+const STUDENT_NOTICE_TONE_CLASS = {
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  warning: 'border-amber-200 bg-amber-50 text-amber-900',
+  neutral: 'border-slate-200 bg-slate-50 text-slate-900',
+} as const;
+
+const STUDENT_NOTICE_BADGE_CLASS = {
+  success: 'bg-emerald-100 text-emerald-700',
+  warning: 'bg-amber-100 text-amber-700',
+  neutral: 'bg-slate-100 text-slate-700',
+} as const;
+
 export default function StudentReportDetailPage() {
   const router = useRouter();
   const params = useParams();
   const reportId = params.id as string;
 
-  const [user, setUser] = useState<User | null>(null);
   const [report, setReport] = useState<ReportWithStudent | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -63,8 +78,6 @@ export default function StudentReportDetailPage() {
       return;
     }
 
-    setUser(userData);
-
     // 학생 정보 조회
     const { data: studentData } = await supabase
       .from('students')
@@ -93,12 +106,6 @@ export default function StudentReportDetailPage() {
 
     setReport(reportData);
     setLoading(false);
-  };
-
-  const getGradeLabel = (grade: number): string => {
-    if (grade <= 6) return `초${grade}`;
-    if (grade <= 9) return `중${grade - 6}`;
-    return `고${grade - 9}`;
   };
 
   const handleExportPdf = async () => {
@@ -147,6 +154,8 @@ export default function StudentReportDetailPage() {
   const isSelfAnalysis = reportType === 'self_analysis';
   const analysisData = isSelfAnalysis ? null : report.analysis_data as AnalysisData;
   const displayableGuidance = getDisplayableDerivedGuidance(analysisData);
+  const canShowMacroNarrative = canShowStudentDerivedNarrative(analysisData);
+  const growthTruthNotice = getStudentGrowthTruthNotice(analysisData, reportType);
   const selfAnalysis = isSelfAnalysis ? report.analysis_data as SelfAnalysisReport : null;
   const config = REPORT_TYPE_CONFIG[reportType];
 
@@ -217,8 +226,29 @@ export default function StudentReportDetailPage() {
             compact
           />
 
+          {growthTruthNotice && (
+            <div className="px-6 pb-6">
+              <div className={`rounded-lg border p-4 ${STUDENT_NOTICE_TONE_CLASS[growthTruthNotice.tone]}`}>
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STUDENT_NOTICE_BADGE_CLASS[growthTruthNotice.tone]}`}>
+                      {growthTruthNotice.label}
+                    </span>
+                    <h2 className="mt-3 text-base font-bold">{growthTruthNotice.headline}</h2>
+                    <p className="mt-2 text-sm leading-relaxed opacity-85">{growthTruthNotice.description}</p>
+                  </div>
+                  {growthTruthNotice.guidanceState === 'withheld' && (
+                    <span className="shrink-0 rounded-full bg-white/70 px-3 py-1 text-xs font-semibold">
+                      성장 안내 보완 중
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 분석 결과 요약 */}
-          {analysisData?.macroAnalysis && (
+          {analysisData?.macroAnalysis && canShowMacroNarrative && (
             <div className="p-6 border-b">
               {/* 핵심 메시지 */}
               {analysisData.macroAnalysis.analysisMessage && (
