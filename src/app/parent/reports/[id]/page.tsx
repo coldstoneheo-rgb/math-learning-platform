@@ -29,8 +29,8 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import {
+  getDisplayableDerivedGuidance,
   getVerifiedGuidanceDisplayStatus,
-  hasUsableVerifiedDerivedGuidance,
 } from '@/lib/teacher-verified-analysis';
 import type {
   User, Report, Student, AnalysisData,
@@ -154,13 +154,14 @@ export default function ParentReportDetailPage() {
   const annualAnalysis = reportType === 'annual' ? report.analysis_data as AnnualReportAnalysis : null;
   const selfAnalysis = reportType === 'self_analysis' ? report.analysis_data as SelfAnalysisReport : null;
   const verificationStatusInfo = getVerifiedGuidanceDisplayStatus(testAnalysis);
-  const canShowDerivedGuidance = hasUsableVerifiedDerivedGuidance(testAnalysis);
+  const displayableGuidance = getDisplayableDerivedGuidance(testAnalysis);
+  const canShowDerivedGuidance = displayableGuidance.canShowDerivedGuidance;
   const confidenceDataCount = [
     report.students?.meta_profile?.baseline?.assessmentDate,
     ...(report.students?.meta_profile?.errorSignature?.signaturePatterns || []),
     ...(report.students?.meta_profile?.legacySignals || []),
     ...(testAnalysis?.detailedAnalysis || []),
-    ...(canShowDerivedGuidance ? testAnalysis?.growthPredictions || [] : []),
+    ...displayableGuidance.growthPredictions,
   ].filter(Boolean).length;
   const evidenceSources = [
     {
@@ -369,11 +370,11 @@ export default function ParentReportDetailPage() {
             )}
 
             {/* 학습 처방 */}
-            {testAnalysis.actionablePrescription && testAnalysis.actionablePrescription.length > 0 && (
+            {displayableGuidance.actionablePrescription.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 학습 처방</h3>
                 <div className="space-y-4">
-                  {testAnalysis.actionablePrescription.map((item, index) => (
+                  {displayableGuidance.actionablePrescription.map((item, index) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center gap-3 mb-2">
                         <span className={`px-2 py-1 text-xs rounded font-medium ${
@@ -437,11 +438,11 @@ export default function ParentReportDetailPage() {
 
             {/* 학습 습관 & 위험 요인 */}
             <div className="grid md:grid-cols-2 gap-6 mb-6">
-              {testAnalysis.learningHabits && testAnalysis.learningHabits.length > 0 && (
+              {displayableGuidance.learningHabits.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">📚 학습 습관</h3>
                   <div className="space-y-2">
-                    {testAnalysis.learningHabits.map((habit, index) => (
+                    {displayableGuidance.learningHabits.map((habit, index) => (
                       <div key={index} className={`p-3 rounded-lg text-sm ${habit.type === 'good' ? 'bg-green-50' : 'bg-red-50'}`}>
                         <span className="mr-2">{habit.type === 'good' ? '✅' : '❌'}</span>
                         {habit.description}
@@ -450,11 +451,11 @@ export default function ParentReportDetailPage() {
                   </div>
                 </div>
               )}
-              {testAnalysis.riskFactors && testAnalysis.riskFactors.length > 0 && (
+              {displayableGuidance.riskFactors.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">⚠️ 주의 사항</h3>
                   <div className="space-y-2">
-                    {testAnalysis.riskFactors.map((risk, index) => (
+                    {displayableGuidance.riskFactors.map((risk, index) => (
                       <div key={index} className={`p-3 rounded-lg text-sm ${
                         risk.severity === 'high' ? 'bg-red-50' : risk.severity === 'medium' ? 'bg-yellow-50' : 'bg-blue-50'
                       }`}>
@@ -477,43 +478,43 @@ export default function ParentReportDetailPage() {
                 }
                 praiseExample={`"${report.students.name}아, 이번 시험에서 ${testAnalysis.macroAnalysis?.strengths?.split('.')[0] || '열심히 푼 점'}이 정말 대단해!"`}
                 observePoint={
-                  testAnalysis.riskFactors?.[0]?.factor ||
+                  displayableGuidance.riskFactors[0]?.factor ||
                   testAnalysis.macroAnalysis?.weaknesses?.split('.')[0] ||
                   '집중력 유지'
                 }
                 questionToAsk={`"오늘 수학 공부하면서 가장 어려웠던 건 뭐야?"`}
                 weekendActivity={
-                  testAnalysis.actionablePrescription?.[0]?.howTo ||
+                  displayableGuidance.actionablePrescription[0]?.howTo ||
                   '틀린 문제 함께 다시 풀어보기'
                 }
               />
             )}
 
             {/* 🌟 프리미엄: 성장 예측 차트 */}
-            {canShowDerivedGuidance && testAnalysis.growthPredictions && testAnalysis.growthPredictions.length > 0 && (
+            {displayableGuidance.growthPredictions.length > 0 && (
               <GrowthProjectionChart
                 historicalData={[
                   { date: report.test_date || '현재', score: report.total_score ?? 0 },
                 ]}
-                projectedData={testAnalysis.growthPredictions.map(p => ({
+                projectedData={displayableGuidance.growthPredictions.map(p => ({
                   date: p.timeframe,
                   score: p.predictedScore,
                   label: `${p.timeframe} 예상`,
                   isProjection: true,
                 }))}
-                targetScore={testAnalysis.growthPredictions[testAnalysis.growthPredictions.length - 1]?.predictedScore || 90}
+                targetScore={displayableGuidance.growthPredictions[displayableGuidance.growthPredictions.length - 1]?.predictedScore || 90}
                 studentName={report.students?.name}
               />
             )}
 
             {/* 미래 비전 */}
             {report.students && canShowDerivedGuidance && (
-              testAnalysis.macroAnalysis?.futureVision ||
-              (testAnalysis.growthPredictions && testAnalysis.growthPredictions.length > 0)
+              displayableGuidance.futureVision ||
+              displayableGuidance.growthPredictions.length > 0
             ) && (
               <VisionFooter
-                legacyVision={testAnalysis.macroAnalysis?.futureVision}
-                growthPredictions={testAnalysis.growthPredictions}
+                legacyVision={displayableGuidance.futureVision}
+                growthPredictions={displayableGuidance.growthPredictions}
                 studentName={report.students.name}
               />
             )}

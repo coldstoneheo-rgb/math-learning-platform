@@ -38,6 +38,7 @@ import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import { FEATURE_FLAGS, isFeatureEnabledForUser } from '@/lib/feature-flags';
 import {
+  getDisplayableDerivedGuidance,
   getVerifiedGuidanceDisplayStatus,
   summarizeProcessingTrace,
 } from '@/lib/teacher-verified-analysis';
@@ -267,12 +268,13 @@ export default function ReportDetailPage() {
     ? (report?.analysis_data as SelfAnalysisReport)
     : null;
 
+  const displayableGuidance = getDisplayableDerivedGuidance(analysis);
   const confidenceDataCount = [
     report?.students?.meta_profile?.baseline?.assessmentDate,
     ...(report?.students?.meta_profile?.errorSignature?.signaturePatterns || []),
     ...(report?.students?.meta_profile?.legacySignals || []),
     ...(analysis?.detailedAnalysis || []),
-    ...(analysis?.growthPredictions || []),
+    ...displayableGuidance.growthPredictions,
   ].filter(Boolean).length;
 
   const evidenceSources = [
@@ -311,7 +313,7 @@ export default function ReportDetailPage() {
     frequency: Math.max(20, Math.min(90, 70 - index * 10)),
     trend: 'stable' as const,
     details: '학생 메타프로필에 누적된 오류 서명입니다.',
-    resolution: analysis?.actionablePrescription?.[index]?.howTo,
+    resolution: displayableGuidance.actionablePrescription[index]?.howTo,
   }));
 
   if (loading) {
@@ -1197,11 +1199,11 @@ export default function ReportDetailPage() {
         )}
 
         {/* 개선 전략 */}
-        {analysis.actionablePrescription && analysis.actionablePrescription.length > 0 && (
+        {displayableGuidance.actionablePrescription.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 개선 전략</h3>
             <div className="space-y-4">
-              {analysis.actionablePrescription.map((item, index) => (
+              {displayableGuidance.actionablePrescription.map((item, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center gap-3 mb-2">
                     <span className={`px-2 py-1 text-xs rounded font-medium ${
@@ -1236,10 +1238,10 @@ export default function ReportDetailPage() {
         )}
 
         {/* 성장 궤적 그래프 */}
-        {(analysis.resultAnalysis?.gradeTrend || analysis.growthPredictions) && (
+        {(analysis.resultAnalysis?.gradeTrend || displayableGuidance.growthPredictions.length > 0) && (
           <GrowthTrajectoryChart
             scoreHistory={analysis.resultAnalysis?.gradeTrend}
-            predictions={analysis.growthPredictions}
+            predictions={displayableGuidance.growthPredictions}
             currentScore={report.total_score ?? undefined}
             targetScore={analysis.resultAnalysis?.gradeTrend && analysis.resultAnalysis.gradeTrend.length > 0
               ? Math.round(analysis.resultAnalysis.gradeTrend[analysis.resultAnalysis.gradeTrend.length - 1].score * 1.1)
@@ -1250,10 +1252,10 @@ export default function ReportDetailPage() {
         )}
 
         {/* 미래 비전 - VisionFooter 컴포넌트 사용 */}
-        {report.students && (analysis.macroAnalysis?.futureVision || analysis.growthPredictions) && (
+        {report.students && (displayableGuidance.futureVision || displayableGuidance.growthPredictions.length > 0) && (
           <VisionFooter
-            legacyVision={analysis.macroAnalysis?.futureVision}
-            growthPredictions={analysis.growthPredictions}
+            legacyVision={displayableGuidance.futureVision}
+            growthPredictions={displayableGuidance.growthPredictions}
             studentName={report.students.name}
           />
         )}
@@ -1328,11 +1330,11 @@ export default function ReportDetailPage() {
 
         {/* 학습 습관 & 위험 요인 */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {analysis.learningHabits && analysis.learningHabits.length > 0 && (
+          {displayableGuidance.learningHabits.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">📚 학습 습관</h3>
               <div className="space-y-2">
-                {analysis.learningHabits.map((habit, index) => (
+                {displayableGuidance.learningHabits.map((habit, index) => (
                   <div key={index} className={`p-3 rounded-lg text-sm ${
                     habit.type === 'good' ? 'bg-green-50' : 'bg-red-50'
                   }`}>
@@ -1345,11 +1347,11 @@ export default function ReportDetailPage() {
             </div>
           )}
 
-          {analysis.riskFactors && analysis.riskFactors.length > 0 && (
+          {displayableGuidance.riskFactors.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">⚠️ 위험 요인</h3>
               <div className="space-y-2">
-                {analysis.riskFactors.map((risk, index) => (
+                {displayableGuidance.riskFactors.map((risk, index) => (
                   <div key={index} className={`p-3 rounded-lg text-sm ${
                     risk.severity === 'high' ? 'bg-red-50' :
                     risk.severity === 'medium' ? 'bg-yellow-50' : 'bg-blue-50'
@@ -1383,7 +1385,7 @@ export default function ReportDetailPage() {
                 type: 'calculation_pattern',
                 title: '계산 및 실수 패턴',
                 summary: analysis.macroAnalysis.errorPattern || '계산 패턴을 분석 중입니다.',
-                status: analysis.riskFactors?.some(r => r.severity === 'high') ? 'critical' : 'warning',
+                status: displayableGuidance.riskFactors.some(r => r.severity === 'high') ? 'critical' : 'warning',
               },
               {
                 type: 'problem_interpretation',
@@ -1394,8 +1396,8 @@ export default function ReportDetailPage() {
               {
                 type: 'solving_habit',
                 title: '풀이 습관 관찰',
-                summary: analysis.learningHabits?.map(h => h.description).join(', ') || '풀이 습관을 분석 중입니다.',
-                status: analysis.learningHabits?.some(h => h.type === 'bad') ? 'warning' : 'good',
+                summary: displayableGuidance.learningHabits.map(h => h.description).join(', ') || '풀이 습관을 분석 중입니다.',
+                status: displayableGuidance.learningHabits.some(h => h.type === 'bad') ? 'warning' : 'good',
               },
             ]}
             studentName={report.students?.name}
@@ -1404,7 +1406,7 @@ export default function ReportDetailPage() {
         )}
 
         {/* 🌟 프리미엄: 학부모 행동 가이드 */}
-        {report.students && (
+        {report.students && displayableGuidance.canShowDerivedGuidance && (
           <HomeActionCard
             studentName={report.students.name}
             praisePoint={
@@ -1413,58 +1415,58 @@ export default function ReportDetailPage() {
             }
             praiseExample={`"${report.students.name}아, 이번 시험에서 ${analysis.macroAnalysis?.strengths?.split('.')[0] || '열심히 푼 점'}이 정말 대단해!"`}
             observePoint={
-              analysis.riskFactors?.[0]?.factor ||
+              displayableGuidance.riskFactors[0]?.factor ||
               analysis.macroAnalysis?.weaknesses?.split('.')[0] ||
               '집중력 유지'
             }
             questionToAsk={`"오늘 수학 공부하면서 가장 어려웠던 건 뭐야?"`}
             weekendActivity={
-              analysis.actionablePrescription?.[0]?.howTo ||
+              displayableGuidance.actionablePrescription[0]?.howTo ||
               '틀린 문제 함께 다시 풀어보기'
             }
           />
         )}
 
         {/* 🌟 프리미엄: 성장 예측 차트 */}
-        {analysis.growthPredictions && analysis.growthPredictions.length > 0 && (
+        {displayableGuidance.growthPredictions.length > 0 && (
           <GrowthProjectionChart
             historicalData={[
               { date: report.test_date || '현재', score: report.total_score ?? 0 },
             ]}
-            projectedData={analysis.growthPredictions.map(p => ({
+            projectedData={displayableGuidance.growthPredictions.map(p => ({
               date: p.timeframe,
               score: p.predictedScore,
               label: `${p.timeframe} 예상`,
               isProjection: true,
             }))}
-            targetScore={analysis.growthPredictions[analysis.growthPredictions.length - 1]?.predictedScore || 90}
+            targetScore={displayableGuidance.growthPredictions[displayableGuidance.growthPredictions.length - 1]?.predictedScore || 90}
             studentName={report.students?.name}
           />
         )}
 
         {/* 🌟 프리미엄: 취약점 극복 여정 맵 */}
-        {analysis.macroAnalysis?.weaknessFlow && (
+        {displayableGuidance.weaknessFlow && (
           <WeaknessJourneyMap
             journeyItems={[
               {
                 id: 'weakness-1',
-                concept: analysis.macroAnalysis.weaknessFlow.step1?.title || '취약 개념 발견',
+                concept: displayableGuidance.weaknessFlow.step1?.title || '취약 개념 발견',
                 status: 'discovered',
-                details: analysis.macroAnalysis.weaknessFlow.step1?.description,
+                details: displayableGuidance.weaknessFlow.step1?.description,
                 discoveredDate: report.test_date || report.created_at,
               },
               {
                 id: 'weakness-2',
-                concept: analysis.macroAnalysis.weaknessFlow.step2?.title || '훈련 진행 중',
+                concept: displayableGuidance.weaknessFlow.step2?.title || '훈련 진행 중',
                 status: 'training',
-                details: analysis.macroAnalysis.weaknessFlow.step2?.description,
+                details: displayableGuidance.weaknessFlow.step2?.description,
                 progress: 40,
               },
               {
                 id: 'weakness-3',
-                concept: analysis.macroAnalysis.weaknessFlow.step3?.title || '극복 목표',
+                concept: displayableGuidance.weaknessFlow.step3?.title || '극복 목표',
                 status: 'improving',
-                details: analysis.macroAnalysis.weaknessFlow.step3?.description,
+                details: displayableGuidance.weaknessFlow.step3?.description,
                 progress: 0,
               },
             ]}
@@ -1477,7 +1479,7 @@ export default function ReportDetailPage() {
         {report.students && (
           <VisionDistanceFooter
             currentScore={report.total_score ?? undefined}
-            targetScore={analysis.growthPredictions?.[0]?.predictedScore || 90}
+            targetScore={displayableGuidance.growthPredictions[0]?.predictedScore || 90}
             studentName={report.students.name}
             reportType="test"
           />

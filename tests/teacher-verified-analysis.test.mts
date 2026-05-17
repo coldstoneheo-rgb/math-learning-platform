@@ -6,6 +6,7 @@ import {
   attachProcessingTrace,
   buildInitialProcessingTrace,
   buildTeacherVerifiedAnalysis,
+  getDisplayableDerivedGuidance,
   getVerifiedGuidanceDisplayStatus,
   buildVerificationDraft,
   getVerificationError,
@@ -271,6 +272,70 @@ test('verified guidance display helpers gate excluded draft-derived guidance', (
   const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
   assert.equal(hasUsableVerifiedDerivedGuidance(regenerated), true);
   assert.equal(getVerifiedGuidanceDisplayStatus(regenerated)?.label, '교사 확정값 기반 분석');
+});
+
+test('displayable guidance hides stale derived sections after teacher corrections', () => {
+  const analysis = createAnalysisData();
+  const correctedDraft = buildVerificationDraft(analysis, 100);
+  correctedDraft.totalScore = 90;
+  const excluded = buildTeacherVerifiedAnalysis(analysis, correctedDraft);
+
+  excluded.actionablePrescription = createCompleteGuidance().actionablePrescription;
+  excluded.growthPredictions = createCompleteGuidance().growthPredictions;
+  excluded.learningHabits = createCompleteGuidance().learningHabits;
+  excluded.riskFactors = createCompleteGuidance().riskFactors;
+  excluded.swotAnalysis = createCompleteGuidance().swotAnalysis;
+  excluded.macroAnalysis.futureVision = {
+    threeMonths: 'AI 초안 기준 3개월 전망',
+    sixMonths: 'AI 초안 기준 6개월 전망',
+    longTerm: 'AI 초안 기준 장기 전망',
+    encouragement: '보정 후에는 숨겨야 하는 격려',
+  };
+  excluded.macroAnalysis.weaknessFlow = {
+    step1: { title: '숨겨야 하는 약점 발견', description: 'stale' },
+    step2: { title: '숨겨야 하는 훈련', description: 'stale' },
+    step3: { title: '숨겨야 하는 목표', description: 'stale' },
+  };
+
+  const displayable = getDisplayableDerivedGuidance(excluded);
+
+  assert.equal(displayable.canShowDerivedGuidance, false);
+  assert.deepEqual(displayable.actionablePrescription, []);
+  assert.deepEqual(displayable.growthPredictions, []);
+  assert.deepEqual(displayable.learningHabits, []);
+  assert.deepEqual(displayable.riskFactors, []);
+  assert.equal(displayable.swotAnalysis, undefined);
+  assert.equal(displayable.futureVision, undefined);
+  assert.equal(displayable.weaknessFlow, undefined);
+});
+
+test('displayable guidance keeps legacy AI draft reports compatible', () => {
+  const analysis = createAnalysisData();
+  analysis.learningHabits = createCompleteGuidance().learningHabits;
+  analysis.riskFactors = createCompleteGuidance().riskFactors;
+  analysis.swotAnalysis = createCompleteGuidance().swotAnalysis;
+  analysis.macroAnalysis.futureVision = {
+    threeMonths: '3개월 전망',
+    sixMonths: '6개월 전망',
+    longTerm: '장기 전망',
+    encouragement: '실천 격려',
+  };
+  analysis.macroAnalysis.weaknessFlow = {
+    step1: { title: '약점 발견', description: '도형' },
+    step2: { title: '훈련', description: '반복' },
+    step3: { title: '극복', description: '확인' },
+  };
+
+  const displayable = getDisplayableDerivedGuidance(analysis);
+
+  assert.equal(displayable.canShowDerivedGuidance, true);
+  assert.deepEqual(displayable.actionablePrescription, analysis.actionablePrescription);
+  assert.deepEqual(displayable.growthPredictions, analysis.growthPredictions);
+  assert.deepEqual(displayable.learningHabits, analysis.learningHabits);
+  assert.deepEqual(displayable.riskFactors, analysis.riskFactors);
+  assert.deepEqual(displayable.swotAnalysis, analysis.swotAnalysis);
+  assert.deepEqual(displayable.futureVision, analysis.macroAnalysis.futureVision);
+  assert.deepEqual(displayable.weaknessFlow, analysis.macroAnalysis.weaknessFlow);
 });
 
 test('processing trace summary distinguishes ready partial and failed states', () => {
