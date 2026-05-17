@@ -97,6 +97,7 @@ export const excludeDraftDerivedGuidance = (analysisData: AnalysisData): Analysi
     errorPattern: '',
     futureVision: undefined,
     weaknessFlow: undefined,
+    mathCapability: undefined,
   },
   actionablePrescription: [],
   growthPredictions: [],
@@ -297,6 +298,7 @@ export type DisplayableDerivedGuidance = {
   swotAnalysis?: SwotData;
   futureVision?: AnalysisData['macroAnalysis']['futureVision'];
   weaknessFlow?: AnalysisData['macroAnalysis']['weaknessFlow'];
+  mathCapability?: AnalysisData['macroAnalysis']['mathCapability'];
 };
 
 export function getDisplayableDerivedGuidance(
@@ -323,6 +325,7 @@ export function getDisplayableDerivedGuidance(
     swotAnalysis: analysisData.swotAnalysis,
     futureVision: analysisData.macroAnalysis?.futureVision,
     weaknessFlow: analysisData.macroAnalysis?.weaknessFlow,
+    mathCapability: analysisData.macroAnalysis?.mathCapability,
   };
 }
 

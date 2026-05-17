@@ -27,6 +27,11 @@ interface StudentWithDetails extends Student {
   study_plans: (StudyPlan & { study_tasks: StudyTask[] })[];
 }
 
+type CapabilityDataPoint = { subject: string; value: number };
+type CapabilityView =
+  | { status: 'available'; data: CapabilityDataPoint[] }
+  | { status: 'withheld'; data: null };
+
 const REPORT_TYPE_CONFIG: Record<ReportType, { name: string; color: string; bgColor: string }> = {
   level_test: { name: '레벨 테스트', color: 'text-purple-600', bgColor: 'bg-purple-100' },
   test: { name: '시험 분석', color: 'text-blue-600', bgColor: 'bg-blue-100' },
@@ -114,23 +119,29 @@ export default function StudentDashboard() {
       .map(r => ({ name: r.test_name?.slice(0, 8) || '시험', score: r.total_score, date: r.test_date }));
   };
 
-  const getCapabilityData = () => {
-    const latestReport = student?.reports?.find(r => {
-      const a = r.analysis_data as AnalysisData | null;
-      return a?.macroAnalysis?.mathCapability;
-    });
-    if (!latestReport) return [
-      { subject: '계산 속도', value: 0 }, { subject: '계산 정확도', value: 0 },
-      { subject: '응용력', value: 0 }, { subject: '논리력', value: 0 }, { subject: '불안 조절', value: 0 },
-    ];
-    const cap = (latestReport.analysis_data as AnalysisData).macroAnalysis?.mathCapability;
-    return [
-      { subject: '계산 속도', value: cap?.calculationSpeed || 0 },
-      { subject: '계산 정확도', value: cap?.calculationAccuracy || 0 },
-      { subject: '응용력', value: cap?.applicationAbility || 0 },
-      { subject: '논리력', value: cap?.logic || 0 },
-      { subject: '불안 조절', value: cap?.anxietyControl || 0 },
-    ];
+  const getCapabilityView = (): CapabilityView | null => {
+    const displayable = selectLatestDisplayableGuidanceWithSection(
+      student?.reports,
+      guidance => Boolean(guidance.mathCapability)
+    );
+
+    if (!displayable.canShowDerivedGuidance) {
+      return { status: 'withheld', data: null };
+    }
+
+    const cap = displayable.mathCapability;
+    if (!cap) return null;
+
+    return {
+      status: 'available',
+      data: [
+        { subject: '계산 속도', value: cap.calculationSpeed },
+        { subject: '계산 정확도', value: cap.calculationAccuracy },
+        { subject: '응용력', value: cap.applicationAbility },
+        { subject: '논리력', value: cap.logic },
+        { subject: '불안 조절', value: cap.anxietyControl },
+      ],
+    };
   };
 
   const getActiveTasks = () => {
@@ -279,7 +290,7 @@ export default function StudentDashboard() {
   }
 
   const scoreTrendData = getScoreTrendData();
-  const capabilityData = getCapabilityData();
+  const capabilityView = getCapabilityView();
   const { total: totalTasks, completed: completedTasks } = getActiveTasks();
   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const growthPredictions = getGrowthPredictions();
@@ -464,14 +475,28 @@ export default function StudentDashboard() {
 
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-bold text-gray-800 mb-4">수학 역량</h2>
-            <ResponsiveContainer width="100%" height={240}>
-              <RadarChart data={capabilityData}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} />
-                <Radar name="역량" dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.5} />
-              </RadarChart>
-            </ResponsiveContainer>
+            {capabilityView?.status === 'available' ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <RadarChart data={capabilityView.data}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} />
+                  <Radar name="역량" dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.5} />
+                </RadarChart>
+              </ResponsiveContainer>
+            ) : capabilityView?.status === 'withheld' ? (
+              <div className="h-[240px] flex flex-col items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-5 text-center">
+                <p className="text-sm font-semibold text-amber-900">교사 확정값 기반 역량 분석 준비 중</p>
+                <p className="mt-2 text-sm text-amber-800">
+                  선생님이 보정한 확정값과 맞지 않을 수 있는 이전 역량 지표는 잠시 숨겨두었어요.
+                </p>
+              </div>
+            ) : (
+              <div className="h-[240px] flex flex-col items-center justify-center text-gray-400 gap-2">
+                <span className="text-3xl">🧭</span>
+                <p className="text-sm">역량 분석 데이터가 생기면 여기에 표시됩니다</p>
+              </div>
+            )}
           </div>
         </div>
 
