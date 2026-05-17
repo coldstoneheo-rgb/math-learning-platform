@@ -30,6 +30,7 @@ import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import {
   getDisplayableDerivedGuidance,
+  getParentGrowthTruthSnapshot,
   getVerifiedGuidanceDisplayStatus,
 } from '@/lib/teacher-verified-analysis';
 import type {
@@ -155,6 +156,7 @@ export default function ParentReportDetailPage() {
   const selfAnalysis = reportType === 'self_analysis' ? report.analysis_data as SelfAnalysisReport : null;
   const verificationStatusInfo = getVerifiedGuidanceDisplayStatus(testAnalysis);
   const displayableGuidance = getDisplayableDerivedGuidance(testAnalysis);
+  const growthTruthSnapshot = getParentGrowthTruthSnapshot(testAnalysis);
   const canShowDerivedGuidance = displayableGuidance.canShowDerivedGuidance;
   const confidenceDataCount = [
     report.students?.meta_profile?.baseline?.assessmentDate,
@@ -271,6 +273,51 @@ export default function ParentReportDetailPage() {
           }`}>
             <p className="text-sm font-semibold">{verificationStatusInfo.label}</p>
             <p className="mt-1 text-sm leading-relaxed">{verificationStatusInfo.description}</p>
+          </div>
+        )}
+
+        {growthTruthSnapshot && (
+          <div className={`mb-6 rounded-xl border p-5 ${
+            growthTruthSnapshot.tone === 'success'
+              ? 'border-emerald-200 bg-emerald-50'
+              : growthTruthSnapshot.tone === 'warning'
+                ? 'border-amber-200 bg-amber-50'
+                : 'border-slate-200 bg-white'
+          }`}>
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">성장 판단 기준</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-950">{growthTruthSnapshot.headline}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-700">{growthTruthSnapshot.description}</p>
+              </div>
+              <span className={`w-fit shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+                growthTruthSnapshot.tone === 'success'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : growthTruthSnapshot.tone === 'warning'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-slate-100 text-slate-700'
+              }`}>
+                {growthTruthSnapshot.sourceLabel}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg bg-white/70 p-3">
+                <p className="text-xs font-semibold text-slate-600">현재 보여주는 성장 근거</p>
+                <p className="mt-1 text-sm text-slate-800">
+                  {growthTruthSnapshot.visibleSections.length > 0
+                    ? growthTruthSnapshot.visibleSections.join(', ')
+                    : '표시 가능한 성장 근거가 아직 충분하지 않습니다.'}
+                </p>
+              </div>
+              <div className="rounded-lg bg-white/70 p-3">
+                <p className="text-xs font-semibold text-slate-600">보류 중인 성장 안내</p>
+                <p className="mt-1 text-sm text-slate-800">
+                  {growthTruthSnapshot.withheldSections.length > 0
+                    ? growthTruthSnapshot.withheldSections.join(', ')
+                    : '보류 중인 성장 안내가 없습니다.'}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

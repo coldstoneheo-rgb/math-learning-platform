@@ -354,6 +354,82 @@ export function getVerifiedGuidanceDisplayStatus(analysisData?: AnalysisData | n
   }
 }
 
+export type ParentGrowthTruthSnapshot = {
+  headline: string;
+  description: string;
+  sourceLabel: string;
+  guidanceState: 'available' | 'withheld' | 'legacy';
+  visibleSections: string[];
+  withheldSections: string[];
+  tone: 'success' | 'warning' | 'neutral';
+};
+
+export function getParentGrowthTruthSnapshot(
+  analysisData?: AnalysisData | null
+): ParentGrowthTruthSnapshot | null {
+  if (!analysisData) return null;
+
+  const displayable = getDisplayableDerivedGuidance(analysisData);
+  const visibleSections = [
+    analysisData.detailedAnalysis?.length ? '문항별 분석' : null,
+    displayable.actionablePrescription.length ? '학습 처방' : null,
+    displayable.growthPredictions.length ? '성장 예측' : null,
+    displayable.futureVision ? '미래 비전' : null,
+    displayable.learningHabits.length ? '학습 습관' : null,
+    displayable.riskFactors.length ? '주의 요인' : null,
+  ].filter(Boolean) as string[];
+
+  if (analysisData.teacherVerified?.derivedGuidanceStatus === 'excluded_after_teacher_adjustment') {
+    return {
+      headline: '점수와 문항 판정은 교사 확정값입니다.',
+      description:
+        '선생님이 AI 초안의 채점 또는 문항 판정을 보정했기 때문에, 초안에서 만든 성장 처방과 예측은 표시하지 않습니다. 확정값 기준 처방은 후속 리포트나 교사 코멘트로 보완됩니다.',
+      sourceLabel: '교사 확정값',
+      guidanceState: 'withheld',
+      visibleSections: visibleSections.length ? visibleSections : ['확정 점수', '문항별 분석'],
+      withheldSections: ['학습 처방', '성장 예측', '미래 비전', '학습 습관', '주의 요인'],
+      tone: 'warning',
+    };
+  }
+
+  if (analysisData.teacherVerified?.derivedGuidanceStatus === 'regenerated_from_teacher_verified') {
+    return {
+      headline: '교사 확정값을 기준으로 성장 방향을 다시 계산했습니다.',
+      description:
+        '선생님이 확인한 채점과 문항 판정을 바탕으로 약점, 처방, 성장 비전을 다시 만들었습니다. 현재 리포트의 성장 안내는 확정 데이터 기준입니다.',
+      sourceLabel: '교사 확정값 기반 재분석',
+      guidanceState: 'available',
+      visibleSections,
+      withheldSections: [],
+      tone: 'success',
+    };
+  }
+
+  if (analysisData.teacherVerified?.derivedGuidanceStatus === 'ai_draft_retained') {
+    return {
+      headline: 'AI 초안을 선생님이 확인한 리포트입니다.',
+      description:
+        '채점과 문항 판정에 큰 보정 없이 공개된 리포트입니다. 성장 처방과 예측은 AI 초안을 바탕으로 하되, 선생님 확인을 거친 참고 자료로 읽어 주세요.',
+      sourceLabel: 'AI 초안, 교사 확인',
+      guidanceState: 'available',
+      visibleSections,
+      withheldSections: [],
+      tone: 'neutral',
+    };
+  }
+
+  return {
+    headline: '기존 분석 데이터를 기준으로 성장 방향을 보여줍니다.',
+    description:
+      '이 리포트는 교사 확정 메타데이터가 도입되기 전의 형식입니다. 표시된 성장 처방과 예측은 기존 AI 분석 결과로, 다음 리포트에서 교사 확인 데이터와 함께 더 정확히 보정됩니다.',
+    sourceLabel: '기존 AI 분석',
+    guidanceState: 'legacy',
+    visibleSections,
+    withheldSections: [],
+    tone: 'neutral',
+  };
+}
+
 export function summarizeProcessingTrace(trace?: ReportProcessingTrace | null): {
   label: string;
   description: string;
