@@ -1,8 +1,13 @@
 import type {
+  ActionablePrescriptionItem,
   AnalysisData,
   DetailedProblemAnalysis,
+  GrowthPrediction,
+  LearningHabit,
   ReportProcessingStatus,
   ReportProcessingTrace,
+  RiskFactor,
+  SwotData,
   TestResults,
   VerifiedDerivedGuidance,
 } from '@/types';
@@ -280,6 +285,44 @@ export function updateDownstreamTrace(
 
 export function hasUsableVerifiedDerivedGuidance(analysisData?: AnalysisData | null): boolean {
   return analysisData?.teacherVerified?.derivedGuidanceStatus !== 'excluded_after_teacher_adjustment';
+}
+
+export type DisplayableDerivedGuidance = {
+  canShowDerivedGuidance: boolean;
+  actionablePrescription: ActionablePrescriptionItem[];
+  growthPredictions: GrowthPrediction[];
+  learningHabits: LearningHabit[];
+  riskFactors: RiskFactor[];
+  swotAnalysis?: SwotData;
+  futureVision?: AnalysisData['macroAnalysis']['futureVision'];
+  weaknessFlow?: AnalysisData['macroAnalysis']['weaknessFlow'];
+};
+
+export function getDisplayableDerivedGuidance(
+  analysisData?: AnalysisData | null
+): DisplayableDerivedGuidance {
+  const canShowDerivedGuidance = hasUsableVerifiedDerivedGuidance(analysisData);
+
+  if (!analysisData || !canShowDerivedGuidance) {
+    return {
+      canShowDerivedGuidance,
+      actionablePrescription: [],
+      growthPredictions: [],
+      learningHabits: [],
+      riskFactors: [],
+    };
+  }
+
+  return {
+    canShowDerivedGuidance,
+    actionablePrescription: analysisData.actionablePrescription || [],
+    growthPredictions: analysisData.growthPredictions || [],
+    learningHabits: analysisData.learningHabits || [],
+    riskFactors: analysisData.riskFactors || [],
+    swotAnalysis: analysisData.swotAnalysis,
+    futureVision: analysisData.macroAnalysis?.futureVision,
+    weaknessFlow: analysisData.macroAnalysis?.weaknessFlow,
+  };
 }
 
 export function getVerifiedGuidanceDisplayStatus(analysisData?: AnalysisData | null): {
