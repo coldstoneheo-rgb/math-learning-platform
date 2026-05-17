@@ -7,6 +7,7 @@ import {
   buildInitialProcessingTrace,
   buildTeacherVerifiedAnalysis,
   getDisplayableDerivedGuidance,
+  getParentGrowthTruthSnapshot,
   getVerifiedGuidanceDisplayStatus,
   buildVerificationDraft,
   getVerificationError,
@@ -336,6 +337,81 @@ test('displayable guidance keeps legacy AI draft reports compatible', () => {
   assert.deepEqual(displayable.swotAnalysis, analysis.swotAnalysis);
   assert.deepEqual(displayable.futureVision, analysis.macroAnalysis.futureVision);
   assert.deepEqual(displayable.weaknessFlow, analysis.macroAnalysis.weaknessFlow);
+});
+
+test('parent growth truth snapshot explains retained AI draft guidance', () => {
+  const analysis = createAnalysisData();
+  const retained = buildTeacherVerifiedAnalysis(analysis, buildVerificationDraft(analysis, 100));
+
+  const snapshot = getParentGrowthTruthSnapshot(retained);
+
+  assert.equal(snapshot?.guidanceState, 'available');
+  assert.equal(snapshot?.sourceLabel, 'AI 초안, 교사 확인');
+  assert.equal(snapshot?.tone, 'neutral');
+  assert.ok(snapshot?.visibleSections.includes('학습 처방'));
+  assert.ok(snapshot?.visibleSections.includes('성장 예측'));
+  assert.deepEqual(snapshot?.withheldSections, []);
+});
+
+test('parent growth truth snapshot makes excluded guidance visibly withheld', () => {
+  const analysis = createAnalysisData();
+  const correctedDraft = buildVerificationDraft(analysis, 100);
+  correctedDraft.totalScore = 90;
+  const excluded = buildTeacherVerifiedAnalysis(analysis, correctedDraft);
+
+  excluded.actionablePrescription = createCompleteGuidance().actionablePrescription;
+  excluded.growthPredictions = createCompleteGuidance().growthPredictions;
+  excluded.macroAnalysis.futureVision = {
+    threeMonths: '숨겨야 하는 전망',
+    sixMonths: '숨겨야 하는 전망',
+    longTerm: '숨겨야 하는 전망',
+    encouragement: '숨겨야 하는 격려',
+  };
+
+  const snapshot = getParentGrowthTruthSnapshot(excluded);
+
+  assert.equal(snapshot?.guidanceState, 'withheld');
+  assert.equal(snapshot?.sourceLabel, '교사 확정값');
+  assert.equal(snapshot?.tone, 'warning');
+  assert.ok(snapshot?.headline.includes('교사 확정값'));
+  assert.ok(snapshot?.description.includes('초안에서 만든 성장 처방과 예측은 표시하지 않습니다'));
+  assert.ok(snapshot?.visibleSections.includes('문항별 분석'));
+  assert.equal(snapshot?.visibleSections.includes('학습 처방'), false);
+  assert.equal(snapshot?.visibleSections.includes('성장 예측'), false);
+  assert.equal(snapshot?.visibleSections.includes('미래 비전'), false);
+  assert.ok(snapshot?.withheldSections.includes('학습 처방'));
+  assert.ok(snapshot?.withheldSections.includes('성장 예측'));
+  assert.ok(snapshot?.withheldSections.includes('미래 비전'));
+});
+
+test('parent growth truth snapshot explains regenerated teacher verified guidance', () => {
+  const analysis = createAnalysisData();
+  const correctedDraft = buildVerificationDraft(analysis, 100);
+  correctedDraft.totalScore = 90;
+  const excluded = buildTeacherVerifiedAnalysis(analysis, correctedDraft);
+  const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+
+  const snapshot = getParentGrowthTruthSnapshot(regenerated);
+
+  assert.equal(snapshot?.guidanceState, 'available');
+  assert.equal(snapshot?.sourceLabel, '교사 확정값 기반 재분석');
+  assert.equal(snapshot?.tone, 'success');
+  assert.ok(snapshot?.visibleSections.includes('학습 처방'));
+  assert.ok(snapshot?.visibleSections.includes('성장 예측'));
+  assert.deepEqual(snapshot?.withheldSections, []);
+});
+
+test('parent growth truth snapshot keeps legacy reports readable', () => {
+  const analysis = createAnalysisData();
+
+  const snapshot = getParentGrowthTruthSnapshot(analysis);
+
+  assert.equal(snapshot?.guidanceState, 'legacy');
+  assert.equal(snapshot?.sourceLabel, '기존 AI 분석');
+  assert.equal(snapshot?.tone, 'neutral');
+  assert.ok(snapshot?.description.includes('교사 확정 메타데이터가 도입되기 전'));
+  assert.ok(snapshot?.visibleSections.includes('학습 처방'));
+  assert.deepEqual(snapshot?.withheldSections, []);
 });
 
 test('processing trace summary distinguishes ready partial and failed states', () => {
