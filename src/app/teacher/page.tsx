@@ -32,6 +32,19 @@ interface TodayStudentInfo {
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
+const getGrowthReadinessClass = (tone: GrowthReadinessSummary['tone']): string => {
+  switch (tone) {
+    case 'success':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    case 'warning':
+      return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'danger':
+      return 'bg-red-50 text-red-700 border-red-200';
+    default:
+      return 'bg-slate-50 text-slate-600 border-slate-200';
+  }
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -198,19 +211,6 @@ export default function AdminDashboard() {
       day: 'numeric',
       weekday: 'short',
     });
-  };
-
-  const getGrowthReadinessClass = (tone: GrowthReadinessSummary['tone']): string => {
-    switch (tone) {
-      case 'success':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'warning':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'danger':
-        return 'bg-red-50 text-red-700 border-red-200';
-      default:
-        return 'bg-slate-50 text-slate-600 border-slate-200';
-    }
   };
 
   if (loading) {
@@ -481,6 +481,12 @@ function TodayStudentCard({
 
   const completedAssignments = pendingAssignments.filter(a => a.status === 'completed').length;
   const overdueAssignments = pendingAssignments.filter(a => a.status === 'overdue').length;
+  const growthReadiness = recentReport
+    ? summarizeGrowthReadiness(recentReport.analysis_data as AnalysisData | null, recentReport.report_type)
+    : null;
+  const growthBrief = recentReport
+    ? getGrowthTruthBrief(recentReport.analysis_data as AnalysisData | null, recentReport.report_type)
+    : null;
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
@@ -506,19 +512,37 @@ function TodayStudentCard({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        {/* 진도 정보 */}
+        {/* 최근 리포트 */}
         <div className="bg-gray-50 rounded-lg p-2">
-          <div className="text-xs text-gray-500 mb-1">📊 최근 점수</div>
-          <div className="font-medium text-gray-900">
-            {recentReport?.total_score ? (
-              <>
-                {recentReport.total_score}
-                <span className="text-gray-400">/{recentReport.max_score}</span>
-              </>
-            ) : (
+          <div className="text-xs text-gray-500 mb-1">📊 최근 리포트</div>
+          {recentReport ? (
+            <a href={`/teacher/reports/${recentReport.id}`} className="block">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {recentReport.total_score ? (
+                  <span className="font-medium text-gray-900">
+                    {recentReport.total_score}
+                    <span className="text-gray-400">/{recentReport.max_score}</span>
+                  </span>
+                ) : (
+                  <span className="font-medium text-gray-900">리포트 확인</span>
+                )}
+                {growthReadiness && (
+                  <span className={`rounded border px-1.5 py-0.5 text-[11px] ${getGrowthReadinessClass(growthReadiness.tone)}`}>
+                    {growthReadiness.label}
+                  </span>
+                )}
+              </div>
+              {growthBrief && (
+                <p className="mt-1 truncate text-[11px] font-normal text-gray-500">
+                  {growthBrief.compactText}
+                </p>
+              )}
+            </a>
+          ) : (
+            <div className="font-medium text-gray-900">
               <span className="text-gray-400">-</span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* 이전 수업 키워드 */}
