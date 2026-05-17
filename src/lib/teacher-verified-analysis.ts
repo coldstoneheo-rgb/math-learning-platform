@@ -468,3 +468,81 @@ export function summarizeProcessingTrace(trace?: ReportProcessingTrace | null): 
     tone: 'neutral',
   };
 }
+
+export type GrowthReadinessSummary = {
+  label: string;
+  description: string;
+  tone: 'success' | 'warning' | 'danger' | 'neutral';
+  needsAttention: boolean;
+};
+
+export function summarizeGrowthReadiness(
+  analysisData?: AnalysisData | null,
+  reportType?: string | null
+): GrowthReadinessSummary {
+  const traceSummary = summarizeProcessingTrace(analysisData?.processingTrace);
+
+  if (traceSummary?.tone === 'danger') {
+    return {
+      ...traceSummary,
+      needsAttention: true,
+    };
+  }
+
+  if (analysisData?.teacherVerified?.derivedGuidanceStatus === 'excluded_after_teacher_adjustment') {
+    return {
+      label: '성장 처방 보류',
+      description: '점수와 문항 판정은 교사 확정값입니다. 확정값 기반 약점, 처방, 성장 예측은 아직 보완이 필요합니다.',
+      tone: 'warning',
+      needsAttention: true,
+    };
+  }
+
+  if (traceSummary?.tone === 'warning') {
+    return {
+      ...traceSummary,
+      needsAttention: true,
+    };
+  }
+
+  if (analysisData?.teacherVerified?.derivedGuidanceStatus === 'regenerated_from_teacher_verified') {
+    return {
+      label: '교사 확정값 기반',
+      description: '교사 확정 채점과 문항 판정을 기준으로 성장 안내를 다시 생성했습니다.',
+      tone: 'success',
+      needsAttention: false,
+    };
+  }
+
+  if (analysisData?.teacherVerified?.derivedGuidanceStatus === 'ai_draft_retained') {
+    return {
+      label: 'AI 초안 확인 완료',
+      description: 'AI 초안 성장 안내를 교사가 확인한 뒤 공개한 리포트입니다.',
+      tone: 'neutral',
+      needsAttention: false,
+    };
+  }
+
+  if (traceSummary?.tone === 'success') {
+    return {
+      ...traceSummary,
+      needsAttention: false,
+    };
+  }
+
+  if (reportType === 'test' || reportType === 'level_test') {
+    return {
+      label: '기존 AI 분석',
+      description: '교사 확정 메타데이터 도입 전 리포트입니다. 다음 리포트에서 확정값 기준으로 더 정확히 보정됩니다.',
+      tone: 'neutral',
+      needsAttention: false,
+    };
+  }
+
+  return {
+    label: '성장 흐름 참고',
+    description: '이 리포트는 장기 성장 흐름을 보조하는 참고 데이터입니다.',
+    tone: 'neutral',
+    needsAttention: false,
+  };
+}
