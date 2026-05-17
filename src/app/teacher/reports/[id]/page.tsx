@@ -37,7 +37,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import { FEATURE_FLAGS, isFeatureEnabledForUser } from '@/lib/feature-flags';
-import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport } from '@/types';
+import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport, ReportProcessingStatus } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
@@ -67,6 +67,19 @@ function getTeacherVerificationStatusInfo(status?: VerifiedGuidanceStatus) {
       };
     default:
       return null;
+  }
+}
+
+function getProcessingStatusInfo(status?: ReportProcessingStatus) {
+  switch (status) {
+    case 'success':
+      return { label: '반영 완료', className: 'bg-emerald-100 text-emerald-800' };
+    case 'failed':
+      return { label: '반영 실패', className: 'bg-red-100 text-red-800' };
+    case 'skipped':
+      return { label: '건너뜀', className: 'bg-gray-100 text-gray-700' };
+    default:
+      return { label: '기록 없음', className: 'bg-gray-100 text-gray-500' };
   }
 }
 
@@ -239,6 +252,16 @@ export default function ReportDetailPage() {
   const verificationStatusInfo = getTeacherVerificationStatusInfo(
     analysis?.teacherVerified?.derivedGuidanceStatus
   );
+  const processingTrace = analysis?.processingTrace;
+  const downstreamTraceRows = processingTrace?.downstream
+    ? [
+        { key: 'studentProfile', label: '학생 프로필', trace: processingTrace.downstream.studentProfile },
+        { key: 'metaProfile', label: '메타프로필', trace: processingTrace.downstream.metaProfile },
+        { key: 'feedbackLoop', label: '피드백 루프', trace: processingTrace.downstream.feedbackLoop },
+        { key: 'studyPlan', label: '학습 계획', trace: processingTrace.downstream.studyPlan },
+        { key: 'embeddings', label: 'RAG 기억 서랍', trace: processingTrace.downstream.embeddings },
+      ]
+    : [];
 
   const selfAnalysis = report?.report_type === 'self_analysis'
     ? (report?.analysis_data as SelfAnalysisReport)
@@ -421,6 +444,75 @@ export default function ReportDetailPage() {
                 교사 확인 {analysis.teacherVerified.adjustedFields.length}개 항목
               </div>
             </div>
+          </div>
+        )}
+
+        {processingTrace && (
+          <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">성장 데이터 반영 상태</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  이 리포트가 저장된 뒤 학생의 장기 성장 데이터에 어떻게 연결되었는지 기록합니다.
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  저장 시각: {new Date(processingTrace.savedAt).toLocaleString('ko-KR')}
+                </p>
+              </div>
+              <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+                processingTrace.sourceOfTruth === 'teacher_verified'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-amber-100 text-amber-800'
+              }`}>
+                기준 데이터: {processingTrace.sourceOfTruth === 'teacher_verified' ? '교사 확정값' : 'AI 초안'}
+              </span>
+            </div>
+
+            {processingTrace.teacherVerification && (
+              <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                  <span className="font-medium">
+                    교사 확정: {processingTrace.teacherVerification.status === 'verified' ? '완료' : '대상 아님'}
+                  </span>
+                  {processingTrace.teacherVerification.derivedGuidanceStatus && (
+                    <span className="text-xs text-slate-500">
+                      파생 분석: {processingTrace.teacherVerification.derivedGuidanceStatus}
+                    </span>
+                  )}
+                </div>
+                {processingTrace.teacherVerification.adjustedFields.length > 0 && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    보정 필드: {processingTrace.teacherVerification.adjustedFields.join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {downstreamTraceRows.length > 0 && (
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {downstreamTraceRows.map((row) => {
+                  const statusInfo = getProcessingStatusInfo(row.trace?.status);
+                  return (
+                    <div key={row.key} className="rounded-lg border border-slate-100 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium text-slate-900">{row.label}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusInfo.className}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                      {row.trace?.message && (
+                        <p className="mt-2 text-xs leading-relaxed text-slate-500">{row.trace.message}</p>
+                      )}
+                      {row.trace?.updatedAt && (
+                        <p className="mt-2 text-[11px] text-slate-400">
+                          {new Date(row.trace.updatedAt).toLocaleString('ko-KR')}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

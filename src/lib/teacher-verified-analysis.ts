@@ -1,6 +1,8 @@
 import type {
   AnalysisData,
   DetailedProblemAnalysis,
+  ReportProcessingStatus,
+  ReportProcessingTrace,
   TestResults,
   VerifiedDerivedGuidance,
 } from '@/types';
@@ -221,4 +223,57 @@ export function assertCompleteVerifiedDerivedGuidance(
   }
 
   return value;
+}
+
+export type DownstreamTraceKey = NonNullable<ReportProcessingTrace['downstream']> extends infer Downstream
+  ? keyof Downstream
+  : never;
+
+export function buildInitialProcessingTrace(analysisData: AnalysisData): ReportProcessingTrace {
+  return {
+    savedAt: new Date().toISOString(),
+    sourceOfTruth: analysisData.verificationStatus === 'teacher_verified'
+      ? 'teacher_verified'
+      : 'ai_draft',
+    teacherVerification: analysisData.teacherVerified
+      ? {
+          status: 'verified',
+          adjustedFields: [...analysisData.teacherVerified.adjustedFields],
+          derivedGuidanceStatus: analysisData.teacherVerified.derivedGuidanceStatus,
+        }
+      : {
+          status: 'not_required',
+          adjustedFields: [],
+        },
+    downstream: {},
+  };
+}
+
+export function attachProcessingTrace(
+  analysisData: AnalysisData,
+  trace: ReportProcessingTrace
+): AnalysisData {
+  return {
+    ...analysisData,
+    processingTrace: trace,
+  };
+}
+
+export function updateDownstreamTrace(
+  trace: ReportProcessingTrace,
+  key: DownstreamTraceKey,
+  status: ReportProcessingStatus,
+  message?: string
+): ReportProcessingTrace {
+  return {
+    ...trace,
+    downstream: {
+      ...trace.downstream,
+      [key]: {
+        status,
+        message,
+        updatedAt: new Date().toISOString(),
+      },
+    },
+  };
 }

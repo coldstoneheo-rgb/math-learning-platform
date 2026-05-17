@@ -279,6 +279,32 @@ export interface TestAnalysisData {
     derivedGuidanceRegeneratedAt?: string;
     derivedGuidanceError?: string;
   };
+  processingTrace?: ReportProcessingTrace;
+}
+
+export type ReportProcessingStatus = 'success' | 'failed' | 'skipped';
+
+export interface ReportProcessingStepTrace {
+  status: ReportProcessingStatus;
+  message?: string;
+  updatedAt: string;
+}
+
+export interface ReportProcessingTrace {
+  savedAt: string;
+  sourceOfTruth: 'teacher_verified' | 'ai_draft';
+  teacherVerification?: {
+    status: 'not_required' | 'verified';
+    adjustedFields: string[];
+    derivedGuidanceStatus?: NonNullable<TestAnalysisData['teacherVerified']>['derivedGuidanceStatus'];
+  };
+  downstream?: {
+    studentProfile?: ReportProcessingStepTrace;
+    metaProfile?: ReportProcessingStepTrace;
+    feedbackLoop?: ReportProcessingStepTrace;
+    studyPlan?: ReportProcessingStepTrace;
+    embeddings?: ReportProcessingStepTrace;
+  };
 }
 
 /**
