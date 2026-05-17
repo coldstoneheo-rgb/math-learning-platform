@@ -6,9 +6,11 @@ import {
   attachProcessingTrace,
   buildInitialProcessingTrace,
   buildTeacherVerifiedAnalysis,
+  canShowStudentDerivedNarrative,
   getDisplayableDerivedGuidance,
   getGrowthTruthBrief,
   getParentGrowthTruthSnapshot,
+  getStudentGrowthTruthNotice,
   getVerifiedGuidanceDisplayStatus,
   buildVerificationDraft,
   getVerificationError,
@@ -313,6 +315,25 @@ test('displayable guidance hides stale derived sections after teacher correction
   assert.equal(displayable.weaknessFlow, undefined);
 });
 
+test('student derived narrative is hidden after teacher corrections', () => {
+  const analysis = createAnalysisData();
+  const correctedDraft = buildVerificationDraft(analysis, 100);
+  correctedDraft.totalScore = 90;
+  const excluded = buildTeacherVerifiedAnalysis(analysis, correctedDraft);
+
+  excluded.macroAnalysis.analysisMessage = '보정 후 학생에게 보이면 안 되는 이전 분석 메시지';
+  excluded.macroAnalysis.strengths = '보정 후 숨겨야 하는 강점 서술';
+  excluded.macroAnalysis.weaknesses = '보정 후 숨겨야 하는 약점 서술';
+
+  const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+  const retained = buildTeacherVerifiedAnalysis(analysis, buildVerificationDraft(analysis, 100));
+
+  assert.equal(canShowStudentDerivedNarrative(excluded), false);
+  assert.equal(canShowStudentDerivedNarrative(regenerated), true);
+  assert.equal(canShowStudentDerivedNarrative(retained), true);
+  assert.equal(canShowStudentDerivedNarrative(analysis), true);
+});
+
 test('displayable guidance keeps legacy AI draft reports compatible', () => {
   const analysis = createAnalysisData();
   analysis.learningHabits = createCompleteGuidance().learningHabits;
@@ -415,6 +436,48 @@ test('parent growth truth snapshot keeps legacy reports readable', () => {
   assert.ok(snapshot?.description.includes('교사 확정 메타데이터가 도입되기 전'));
   assert.ok(snapshot?.visibleSections.includes('학습 처방'));
   assert.deepEqual(snapshot?.withheldSections, []);
+});
+
+test('student growth truth notice uses softer wording for withheld guidance', () => {
+  const analysis = createAnalysisData();
+  const correctedDraft = buildVerificationDraft(analysis, 100);
+  correctedDraft.totalScore = 90;
+  const excluded = buildTeacherVerifiedAnalysis(analysis, correctedDraft);
+
+  const notice = getStudentGrowthTruthNotice(excluded, 'test');
+
+  assert.equal(notice?.guidanceState, 'withheld');
+  assert.equal(notice?.tone, 'warning');
+  assert.equal(notice?.label, '선생님 확인 완료');
+  assert.ok(notice?.headline.includes('선생님이 확인한 값'));
+  assert.ok(notice?.description.includes('이전 분석 초안'));
+  assert.equal(notice?.description.includes('AI 초안'), false);
+});
+
+test('student growth truth notice distinguishes regenerated retained and legacy states', () => {
+  const base = createAnalysisData();
+  const corrected = buildVerificationDraft(base, 100);
+  corrected.totalScore = 78;
+  const excluded = buildTeacherVerifiedAnalysis(base, corrected);
+  const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+  const retained = buildTeacherVerifiedAnalysis(base, buildVerificationDraft(base, 100));
+
+  const regeneratedNotice = getStudentGrowthTruthNotice(regenerated, 'test');
+  assert.equal(regeneratedNotice?.guidanceState, 'available');
+  assert.equal(regeneratedNotice?.tone, 'success');
+  assert.ok(regeneratedNotice?.headline.includes('성장 방향을 다시 정리'));
+
+  const retainedNotice = getStudentGrowthTruthNotice(retained, 'level_test');
+  assert.equal(retainedNotice?.guidanceState, 'available');
+  assert.equal(retainedNotice?.tone, 'neutral');
+  assert.ok(retainedNotice?.headline.includes('선생님 확인'));
+
+  const legacyNotice = getStudentGrowthTruthNotice(base, 'test');
+  assert.equal(legacyNotice?.guidanceState, 'legacy');
+  assert.equal(legacyNotice?.tone, 'neutral');
+
+  assert.equal(getStudentGrowthTruthNotice(base, 'weekly'), null);
+  assert.equal(getStudentGrowthTruthNotice(null, 'test'), null);
 });
 
 test('processing trace summary distinguishes ready partial and failed states', () => {
