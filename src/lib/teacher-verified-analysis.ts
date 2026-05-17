@@ -546,3 +546,53 @@ export function summarizeGrowthReadiness(
     needsAttention: false,
   };
 }
+
+export type GrowthTruthBrief = {
+  pastData: string;
+  currentAnalysis: string;
+  futureVision: string;
+  compactText: string;
+};
+
+export function getGrowthTruthBrief(
+  analysisData?: AnalysisData | null,
+  reportType?: string | null
+): GrowthTruthBrief {
+  const readiness = summarizeGrowthReadiness(analysisData, reportType);
+  const displayable = getDisplayableDerivedGuidance(analysisData);
+
+  const pastData = (() => {
+    switch (analysisData?.teacherVerified?.derivedGuidanceStatus) {
+      case 'regenerated_from_teacher_verified':
+        return '교사 확정값';
+      case 'excluded_after_teacher_adjustment':
+        return '교사 확정값';
+      case 'ai_draft_retained':
+        return 'AI 초안 확인';
+      default:
+        return reportType === 'test' || reportType === 'level_test'
+          ? '기존 AI 분석'
+          : '성장 참고 데이터';
+    }
+  })();
+
+  const currentAnalysis = (() => {
+    if (readiness.tone === 'danger') return '반영 실패';
+    if (readiness.needsAttention) return '보완 필요';
+    if (readiness.tone === 'success') return '분석 가능';
+    return readiness.label;
+  })();
+
+  const futureVision = (() => {
+    if (!displayable.canShowDerivedGuidance) return '비전 보류';
+    if (displayable.futureVision || displayable.growthPredictions.length > 0) return '비전 표시';
+    return readiness.needsAttention ? '교사 보완 필요' : '비전 자료 부족';
+  })();
+
+  return {
+    pastData,
+    currentAnalysis,
+    futureVision,
+    compactText: `근거: ${pastData} · 현재: ${currentAnalysis} · 비전: ${futureVision}`,
+  };
+}
