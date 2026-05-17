@@ -3,7 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getDisplayableDerivedGuidance } from '@/lib/teacher-verified-analysis';
+import {
+  getDashboardGrowthTruthSummary,
+  getDisplayableDerivedGuidance,
+} from '@/lib/teacher-verified-analysis';
 import type { User, Student, Report, ActionablePrescriptionItem, AnalysisData, ParentChecklist, ParentChecklistItem } from '@/types';
 import Link from 'next/link';
 
@@ -43,11 +46,15 @@ export default function ParentChecklistPage() {
     items: ParentChecklistItem[],
     reports: Report[]
   ): ParentChecklistItem[] => {
+    const growthTruthSummary = getDashboardGrowthTruthSummary(reports);
+
     return items.flatMap((item) => {
       if (!item.source_report_id) return [item];
 
       const sourceReport = reports.find((report) => report.id === item.source_report_id);
-      if (!sourceReport || sourceReport.report_type !== 'test') return [item];
+      if (!sourceReport || (sourceReport.report_type !== 'test' && sourceReport.report_type !== 'level_test')) return [item];
+
+      if (growthTruthSummary && !growthTruthSummary.canShowDerivedGuidance) return [];
 
       const displayablePrescriptions = getDisplayableDerivedGuidance(
         sourceReport.analysis_data as AnalysisData
@@ -90,6 +97,7 @@ export default function ParentChecklistPage() {
     const recentReports = child.reports
       .filter(r => ['test', 'weekly', 'monthly'].includes(r.report_type))
       .slice(0, 3);
+    const growthTruthSummary = getDashboardGrowthTruthSummary(child.reports);
 
     const items: ParentChecklistItem[] = [];
     let order = 1;
@@ -97,7 +105,9 @@ export default function ParentChecklistPage() {
     for (const report of recentReports) {
       const data = report.analysis_data as unknown as Record<string, unknown>;
       const prescriptions = report.report_type === 'test'
-        ? getDisplayableDerivedGuidance(report.analysis_data as AnalysisData).actionablePrescription
+        ? growthTruthSummary?.canShowDerivedGuidance
+          ? getDisplayableDerivedGuidance(report.analysis_data as AnalysisData).actionablePrescription
+          : []
         : (data?.actionablePrescription ?? (data?.aiAnalysis as Record<string, unknown>)?.actionablePrescription) as ActionablePrescriptionItem[] | undefined;
 
       if (Array.isArray(prescriptions)) {
@@ -180,7 +190,11 @@ export default function ParentChecklistPage() {
         .eq('parent_id', authUser.id);
 
       const reportPromises = (students || []).map(s =>
-        supabase.from('reports').select('*').eq('student_id', s.id).order('created_at', { ascending: false }).limit(10)
+        supabase.from('reports').select('*').eq('student_id', s.id)
+          .order('test_date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(10)
       );
       const reportResults = await Promise.all(reportPromises);
 
