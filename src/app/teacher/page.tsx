@@ -99,13 +99,28 @@ export default function AdminDashboard() {
       .select('*', { count: 'exact', head: true })
       .gte('created_at', weekStart.toISOString());
 
-    const { data: growthStatusReports } = await supabase
-      .from('reports')
-      .select('report_type, analysis_data');
+    let needsAttentionReports = 0;
+    let from = 0;
+    const pageSize = 1000;
 
-    const needsAttentionReports = (growthStatusReports || []).filter((report) =>
-      summarizeGrowthReadiness(report.analysis_data as AnalysisData | null, report.report_type).needsAttention
-    ).length;
+    while (true) {
+      const { data: growthStatusReports, error: growthStatusError } = await supabase
+        .from('reports')
+        .select('report_type, analysis_data')
+        .range(from, from + pageSize - 1);
+
+      if (growthStatusError) {
+        console.error('성장 분석 보완 필요 건수 조회 오류:', growthStatusError);
+        break;
+      }
+
+      needsAttentionReports += (growthStatusReports || []).filter((report) =>
+        summarizeGrowthReadiness(report.analysis_data as AnalysisData | null, report.report_type).needsAttention
+      ).length;
+
+      if (!growthStatusReports || growthStatusReports.length < pageSize) break;
+      from += pageSize;
+    }
 
     setStats({
       students: studentCount || 0,
