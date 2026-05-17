@@ -185,6 +185,7 @@ export default function EmbeddingsAdminPage() {
   const totalIndexed = stats.reduce((s, r) => s + r.indexedReports, 0);
   const totalReports = stats.reduce((s, r) => s + r.totalReports, 0);
   const totalFailed = stats.reduce((s, r) => s + r.failedReports, 0);
+  const hasIndexedMemories = totalIndexed > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -222,15 +223,31 @@ export default function EmbeddingsAdminPage() {
           </div>
         </div>
 
-        {totalReports > 0 && totalIndexed === 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <div className="font-semibold">RAG 기억 서랍이 아직 실제 분석에 활용되지 않습니다.</div>
-            <p className="mt-1">
-              저장된 리포트는 있지만 인덱싱된 기억이 없어 검색과 AI 프롬프트 주입 결과가 비어 있습니다.
+        <div className={`rounded-lg border p-4 text-sm ${
+          hasIndexedMemories
+            ? 'border-indigo-200 bg-indigo-50 text-indigo-900'
+            : totalReports > 0
+              ? 'border-amber-200 bg-amber-50 text-amber-900'
+              : 'border-slate-200 bg-white text-slate-700'
+        }`}>
+          <div className="font-semibold">
+            {hasIndexedMemories
+              ? 'RAG 기억 서랍은 분석 컨텍스트에 주입될 준비가 되어 있습니다.'
+              : totalReports > 0
+                ? '인덱싱된 기억이 없어 현재 검색과 프롬프트 주입 결과가 비어 있습니다.'
+                : '저장된 리포트가 생기면 RAG 기억 서랍을 준비할 수 있습니다.'}
+          </div>
+          <p className="mt-1 leading-relaxed">
+            시험 분석처럼 학생 ID와 검색 쿼리가 있는 분석 경로에서는 유사한 과거 기억을 찾고,
+            검색 결과가 있으면 AI 프롬프트의 과거 기억 서랍 섹션에 참고 자료로 넣습니다.
+            현재 시험 이미지와 교사 확정값이 우선이며, RAG는 반복 패턴과 성장 맥락을 보강하는 참고 근거입니다.
+          </p>
+          {!hasIndexedMemories && totalReports > 0 && (
+            <p className="mt-2">
               전체 Backfill 또는 학생별 Backfill을 먼저 실행한 뒤 검색 테스트로 프롬프트 주입 여부를 확인하세요.
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* 전체 Backfill */}
         <div className="bg-white rounded-xl shadow-sm p-5">
@@ -378,11 +395,25 @@ export default function EmbeddingsAdminPage() {
 
           {queryDiagnostics && (
             <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-900">
-              <div className="font-semibold">분석 프롬프트 주입 검증</div>
-              <div className="mt-1">
-                RAG 기억 {queryDiagnostics.memoryCount}건,
-                프롬프트 주입 {queryDiagnostics.ragPromptInjected ? '확인됨' : '미확인'}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="font-semibold">분석 프롬프트 주입 검증</div>
+                <span className={`rounded-full px-2 py-0.5 font-semibold ${
+                  queryDiagnostics.ragPromptInjected
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {queryDiagnostics.ragPromptInjected ? '주입 확인' : '주입 미확인'}
+                </span>
               </div>
+              <p className="mt-1 leading-relaxed">
+                검색된 RAG 기억 {queryDiagnostics.memoryCount}건
+                {queryDiagnostics.ragPromptInjected
+                  ? '이 분석 컨텍스트 미리보기의 과거 기억 서랍 섹션에 포함되었습니다.'
+                  : '입니다. 검색 결과가 없거나 미리보기 컨텍스트에 포함할 기억이 없어 과거 기억 서랍 섹션이 생성되지 않았습니다.'}
+              </p>
+              <p className="mt-1 leading-relaxed text-indigo-800">
+                실제 분석에서도 RAG는 현재 시험 증거를 대체하지 않고, 과거 반복 패턴과 성장 흐름을 판단하는 보조 기억으로만 사용됩니다.
+              </p>
               {queryDiagnostics.contextPromptExcerpt && (
                 <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-white p-2 text-[11px] text-gray-700">
                   {queryDiagnostics.contextPromptExcerpt}
