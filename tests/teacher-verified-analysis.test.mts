@@ -6,9 +6,12 @@ import {
   attachProcessingTrace,
   buildInitialProcessingTrace,
   buildTeacherVerifiedAnalysis,
+  getVerifiedGuidanceDisplayStatus,
   buildVerificationDraft,
   getVerificationError,
+  hasUsableVerifiedDerivedGuidance,
   markDerivedGuidanceRegenerationFailed,
+  summarizeProcessingTrace,
   updateDownstreamTrace,
 } from '../src/lib/teacher-verified-analysis.js';
 import type { AnalysisData, VerifiedDerivedGuidance } from '../src/types/index.js';
@@ -251,4 +254,39 @@ test('processing trace records teacher verified source of truth and downstream o
   assert.equal(traced.processingTrace?.downstream?.metaProfile?.status, 'success');
   assert.equal(traced.processingTrace?.downstream?.studyPlan?.status, 'skipped');
   assert.equal(traced.processingTrace?.sourceOfTruth, 'teacher_verified');
+});
+
+test('verified guidance display helpers gate excluded draft-derived guidance', () => {
+  const analysis = createAnalysisData();
+  const unchanged = buildTeacherVerifiedAnalysis(analysis, buildVerificationDraft(analysis, 100));
+  assert.equal(hasUsableVerifiedDerivedGuidance(unchanged), true);
+  assert.equal(getVerifiedGuidanceDisplayStatus(unchanged)?.label, 'AI 초안 기반, 교사 확인 완료');
+
+  const correctedDraft = buildVerificationDraft(analysis, 100);
+  correctedDraft.totalScore = 90;
+  const excluded = buildTeacherVerifiedAnalysis(analysis, correctedDraft);
+  assert.equal(hasUsableVerifiedDerivedGuidance(excluded), false);
+  assert.equal(getVerifiedGuidanceDisplayStatus(excluded)?.tone, 'warning');
+
+  const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+  assert.equal(hasUsableVerifiedDerivedGuidance(regenerated), true);
+  assert.equal(getVerifiedGuidanceDisplayStatus(regenerated)?.label, '교사 확정값 기반 분석');
+});
+
+test('processing trace summary distinguishes ready partial and failed states', () => {
+  const base = buildInitialProcessingTrace(createAnalysisData());
+
+  const ready = updateDownstreamTrace(
+    updateDownstreamTrace(base, 'metaProfile', 'success', 'ok'),
+    'embeddings',
+    'success',
+    'ok'
+  );
+  assert.equal(summarizeProcessingTrace(ready)?.label, '성장 데이터 반영 완료');
+
+  const partial = updateDownstreamTrace(ready, 'studyPlan', 'skipped', 'no prescription');
+  assert.equal(summarizeProcessingTrace(partial)?.tone, 'warning');
+
+  const failed = updateDownstreamTrace(partial, 'feedbackLoop', 'failed', 'api error');
+  assert.equal(summarizeProcessingTrace(failed)?.label, '성장 데이터 보완 필요');
 });

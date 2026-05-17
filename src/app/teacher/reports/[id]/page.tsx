@@ -37,37 +37,14 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import { FEATURE_FLAGS, isFeatureEnabledForUser } from '@/lib/feature-flags';
+import {
+  getVerifiedGuidanceDisplayStatus,
+  summarizeProcessingTrace,
+} from '@/lib/teacher-verified-analysis';
 import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport, ReportProcessingStatus } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
-}
-
-type VerifiedGuidanceStatus = NonNullable<AnalysisData['teacherVerified']>['derivedGuidanceStatus'];
-
-function getTeacherVerificationStatusInfo(status?: VerifiedGuidanceStatus) {
-  switch (status) {
-    case 'regenerated_from_teacher_verified':
-      return {
-        label: '교사 확정값 기반 분석',
-        description: '교사가 확인한 채점과 문항 판정을 기준으로 약점, 처방, 성장 비전을 다시 생성했습니다.',
-        className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-      };
-    case 'excluded_after_teacher_adjustment':
-      return {
-        label: '교사 확정 완료, 파생 처방 제외',
-        description: '점수와 문항 판정은 교사가 확정한 값으로 저장되었습니다. 확정값 기반 처방 재생성은 실패하여 AI 초안 처방을 성장 데이터에서 제외했습니다.',
-        className: 'border-amber-200 bg-amber-50 text-amber-800',
-      };
-    case 'ai_draft_retained':
-      return {
-        label: 'AI 초안 기반, 교사 확인 완료',
-        description: '교사 보정이 없어 AI 분석 초안을 교사가 확인한 최종 리포트로 저장했습니다.',
-        className: 'border-indigo-200 bg-indigo-50 text-indigo-800',
-      };
-    default:
-      return null;
-  }
 }
 
 function getProcessingStatusInfo(status?: ReportProcessingStatus) {
@@ -80,6 +57,30 @@ function getProcessingStatusInfo(status?: ReportProcessingStatus) {
       return { label: '건너뜀', className: 'bg-gray-100 text-gray-700' };
     default:
       return { label: '기록 없음', className: 'bg-gray-100 text-gray-500' };
+  }
+}
+
+function getGuidanceToneClass(tone?: 'success' | 'warning' | 'neutral') {
+  switch (tone) {
+    case 'success':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    case 'warning':
+      return 'border-amber-200 bg-amber-50 text-amber-800';
+    default:
+      return 'border-indigo-200 bg-indigo-50 text-indigo-800';
+  }
+}
+
+function getReadinessToneClass(tone?: 'success' | 'warning' | 'danger' | 'neutral') {
+  switch (tone) {
+    case 'success':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    case 'warning':
+      return 'border-amber-200 bg-amber-50 text-amber-800';
+    case 'danger':
+      return 'border-red-200 bg-red-50 text-red-800';
+    default:
+      return 'border-slate-200 bg-slate-50 text-slate-700';
   }
 }
 
@@ -249,10 +250,9 @@ export default function ReportDetailPage() {
   const notificationsEnabled = user
     ? isFeatureEnabledForUser(FEATURE_FLAGS.PARENT_NOTIFICATIONS, user.id, 'teacher')
     : false;
-  const verificationStatusInfo = getTeacherVerificationStatusInfo(
-    analysis?.teacherVerified?.derivedGuidanceStatus
-  );
+  const verificationStatusInfo = getVerifiedGuidanceDisplayStatus(analysis);
   const processingTrace = analysis?.processingTrace;
+  const processingReadiness = summarizeProcessingTrace(processingTrace);
   const downstreamTraceRows = processingTrace?.downstream
     ? [
         { key: 'studentProfile', label: '학생 프로필', trace: processingTrace.downstream.studentProfile },
@@ -424,7 +424,7 @@ export default function ReportDetailPage() {
         </div>
 
         {analysis?.teacherVerified && verificationStatusInfo && (
-          <div className={`mb-6 rounded-xl border p-4 ${verificationStatusInfo.className}`}>
+          <div className={`mb-6 rounded-xl border p-4 ${getGuidanceToneClass(verificationStatusInfo.tone)}`}>
             <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="text-sm font-semibold">{verificationStatusInfo.label}</p>
@@ -468,6 +468,13 @@ export default function ReportDetailPage() {
               </span>
             </div>
 
+            {processingReadiness && (
+              <div className={`mt-4 rounded-lg border p-3 ${getReadinessToneClass(processingReadiness.tone)}`}>
+                <p className="text-sm font-semibold">{processingReadiness.label}</p>
+                <p className="mt-1 text-xs leading-relaxed">{processingReadiness.description}</p>
+              </div>
+            )}
+
             {processingTrace.teacherVerification && (
               <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
                 <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
@@ -476,7 +483,7 @@ export default function ReportDetailPage() {
                   </span>
                   {processingTrace.teacherVerification.derivedGuidanceStatus && (
                     <span className="text-xs text-slate-500">
-                      파생 분석: {processingTrace.teacherVerification.derivedGuidanceStatus}
+                      파생 분석: {getVerifiedGuidanceDisplayStatus(analysis)?.label || '기록 없음'}
                     </span>
                   )}
                 </div>

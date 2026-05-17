@@ -28,6 +28,10 @@ import {
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
+import {
+  getVerifiedGuidanceDisplayStatus,
+  hasUsableVerifiedDerivedGuidance,
+} from '@/lib/teacher-verified-analysis';
 import type {
   User, Report, Student, AnalysisData,
   LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis,
@@ -36,26 +40,6 @@ import type {
 
 interface ReportWithStudent extends Report {
   students: Student;
-}
-
-type VerifiedGuidanceStatus = NonNullable<AnalysisData['teacherVerified']>['derivedGuidanceStatus'];
-
-function getParentVerificationStatusInfo(status?: VerifiedGuidanceStatus) {
-  if (!status) return null;
-
-  if (status === 'excluded_after_teacher_adjustment') {
-    return {
-      label: '교사 확인 완료',
-      description: '점수와 문항 판정은 선생님이 확인한 값입니다. 이번 리포트는 확정된 채점 결과를 중심으로 확인해 주세요.',
-    };
-  }
-
-  return {
-    label: '교사 확인 완료',
-    description: status === 'regenerated_from_teacher_verified'
-      ? '선생님이 확인한 채점 결과를 기준으로 분석과 학습 방향을 정리했습니다.'
-      : '선생님이 AI 분석 결과를 확인한 뒤 최종 리포트로 공개했습니다.',
-  };
 }
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
@@ -169,15 +153,14 @@ export default function ParentReportDetailPage() {
   const semiAnnualAnalysis = reportType === 'semi_annual' ? report.analysis_data as SemiAnnualReportAnalysis : null;
   const annualAnalysis = reportType === 'annual' ? report.analysis_data as AnnualReportAnalysis : null;
   const selfAnalysis = reportType === 'self_analysis' ? report.analysis_data as SelfAnalysisReport : null;
-  const verificationStatusInfo = getParentVerificationStatusInfo(
-    testAnalysis?.teacherVerified?.derivedGuidanceStatus
-  );
+  const verificationStatusInfo = getVerifiedGuidanceDisplayStatus(testAnalysis);
+  const canShowDerivedGuidance = hasUsableVerifiedDerivedGuidance(testAnalysis);
   const confidenceDataCount = [
     report.students?.meta_profile?.baseline?.assessmentDate,
     ...(report.students?.meta_profile?.errorSignature?.signaturePatterns || []),
     ...(report.students?.meta_profile?.legacySignals || []),
     ...(testAnalysis?.detailedAnalysis || []),
-    ...(testAnalysis?.growthPredictions || []),
+    ...(canShowDerivedGuidance ? testAnalysis?.growthPredictions || [] : []),
   ].filter(Boolean).length;
   const evidenceSources = [
     {
@@ -280,7 +263,11 @@ export default function ParentReportDetailPage() {
         </div>
 
         {testAnalysis?.teacherVerified && verificationStatusInfo && (
-          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+          <div className={`mb-6 rounded-xl border p-4 ${
+            verificationStatusInfo.tone === 'warning'
+              ? 'border-amber-200 bg-amber-50 text-amber-800'
+              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          }`}>
             <p className="text-sm font-semibold">{verificationStatusInfo.label}</p>
             <p className="mt-1 text-sm leading-relaxed">{verificationStatusInfo.description}</p>
           </div>
@@ -481,7 +468,7 @@ export default function ParentReportDetailPage() {
             </div>
 
             {/* 🌟 프리미엄: 학부모 행동 가이드 */}
-            {report.students && (
+            {report.students && canShowDerivedGuidance && (
               <HomeActionCard
                 studentName={report.students.name}
                 praisePoint={
@@ -503,7 +490,7 @@ export default function ParentReportDetailPage() {
             )}
 
             {/* 🌟 프리미엄: 성장 예측 차트 */}
-            {testAnalysis.growthPredictions && testAnalysis.growthPredictions.length > 0 && (
+            {canShowDerivedGuidance && testAnalysis.growthPredictions && testAnalysis.growthPredictions.length > 0 && (
               <GrowthProjectionChart
                 historicalData={[
                   { date: report.test_date || '현재', score: report.total_score ?? 0 },
@@ -520,7 +507,10 @@ export default function ParentReportDetailPage() {
             )}
 
             {/* 미래 비전 */}
-            {report.students && (testAnalysis.macroAnalysis?.futureVision || testAnalysis.growthPredictions) && (
+            {report.students && canShowDerivedGuidance && (
+              testAnalysis.macroAnalysis?.futureVision ||
+              (testAnalysis.growthPredictions && testAnalysis.growthPredictions.length > 0)
+            ) && (
               <VisionFooter
                 legacyVision={testAnalysis.macroAnalysis?.futureVision}
                 growthPredictions={testAnalysis.growthPredictions}
