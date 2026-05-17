@@ -269,6 +269,9 @@ export default function ReportDetailPage() {
     : null;
 
   const displayableGuidance = getDisplayableDerivedGuidance(analysis);
+  const canShowDerivedGuidance = displayableGuidance.canShowDerivedGuidance;
+  const mathCapability = displayableGuidance.mathCapability;
+  const isDerivedGuidanceWithheld = Boolean(analysis) && !canShowDerivedGuidance;
   const confidenceDataCount = [
     report?.students?.meta_profile?.baseline?.assessmentDate,
     ...(report?.students?.meta_profile?.errorSignature?.signaturePatterns || []),
@@ -396,7 +399,7 @@ export default function ReportDetailPage() {
             studentName={report.students?.name || '학생'}
             reportDate={report.test_date || report.created_at}
             headline={
-              analysis?.macroAnalysis?.oneLineSummary ||
+              (canShowDerivedGuidance ? analysis?.macroAnalysis?.oneLineSummary : undefined) ||
               levelTestAnalysis?.initialBaseline?.overallLevel ||
               monthlyAnalysis?.monthlyGrowthSummary?.headline ||
               semiAnnualAnalysis?.growthSummaryBanner?.headline ||
@@ -404,7 +407,7 @@ export default function ReportDetailPage() {
               '이번 리포트의 핵심 분석 결과입니다.'
             }
             subheadline={
-              analysis?.macroAnalysis?.analysisMessage ||
+              (canShowDerivedGuidance ? analysis?.macroAnalysis?.analysisMessage : undefined) ||
               levelTestAnalysis?.parentBriefing ||
               monthlyAnalysis?.monthlyGrowthSummary?.keyAchievement ||
               undefined
@@ -824,16 +827,27 @@ export default function ReportDetailPage() {
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 종합 분석</h3>
 
-          {analysis.macroAnalysis?.oneLineSummary && (
+          {canShowDerivedGuidance && analysis.macroAnalysis?.oneLineSummary && (
             <div className="mb-4 p-4 bg-indigo-50 rounded-lg">
               <p className="text-indigo-800 font-medium">{analysis.macroAnalysis.oneLineSummary}</p>
             </div>
           )}
 
-          <p className="text-gray-700 leading-relaxed mb-4">
-            {analysis.macroAnalysis?.summary}
-          </p>
+          {canShowDerivedGuidance ? (
+            <p className="text-gray-700 leading-relaxed mb-4">
+              {analysis.macroAnalysis?.summary}
+            </p>
+          ) : (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-semibold">교사 확정값 기준 성장 분석 보완 필요</p>
+              <p className="mt-1 leading-relaxed">
+                점수 또는 문항 판정 보정으로 AI 초안의 강점, 약점, 오류 패턴 서술을 최종 성장 분석에서 제외했습니다.
+                확정값 기반 분석을 재생성하거나 후속 리포트에서 보완하세요.
+              </p>
+            </div>
+          )}
 
+          {canShowDerivedGuidance && (
           <div className="grid md:grid-cols-2 gap-4">
             {analysis.macroAnalysis?.strengths && (
               <div className="p-4 bg-green-50 rounded-lg">
@@ -848,8 +862,9 @@ export default function ReportDetailPage() {
               </div>
             )}
           </div>
+          )}
 
-          {analysis.macroAnalysis?.errorPattern && (
+          {canShowDerivedGuidance && analysis.macroAnalysis?.errorPattern && (
             <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
               <h4 className="font-medium text-yellow-800 mb-2">🔍 오류 패턴</h4>
               <p className="text-yellow-700 text-sm">{analysis.macroAnalysis.errorPattern}</p>
@@ -858,7 +873,7 @@ export default function ReportDetailPage() {
         </div>
 
         {/* 수학 역량 (5축) */}
-        {analysis.macroAnalysis?.mathCapability && (
+        {mathCapability && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 수학 역량</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
@@ -869,7 +884,7 @@ export default function ReportDetailPage() {
                 { key: 'logic', label: '논리력' },
                 { key: 'anxietyControl', label: '불안 통제' },
               ].map(({ key, label }) => {
-                const value = analysis.macroAnalysis?.mathCapability?.[key as keyof typeof analysis.macroAnalysis.mathCapability] || 0;
+                const value = mathCapability[key as keyof typeof mathCapability] || 0;
                 return (
                   <div key={key} className="text-center">
                     <div className="text-2xl font-bold text-indigo-600">{value}</div>
@@ -883,6 +898,19 @@ export default function ReportDetailPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {isDerivedGuidanceWithheld && !mathCapability && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">📈 수학 역량</h3>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-semibold">교사 확정값 기반 역량 분석 준비 중</p>
+              <p className="mt-1 leading-relaxed">
+                점수 또는 문항 판정 보정으로 AI 초안의 수학 역량 지표를 최종 리포트에서 제외했습니다.
+                확정값 기준 역량은 재생성된 분석이나 후속 리포트에서 다시 확인하세요.
+              </p>
             </div>
           </div>
         )}
@@ -1366,7 +1394,7 @@ export default function ReportDetailPage() {
         </div>
 
         {/* 🌟 프리미엄: 5관점 심층 분석 */}
-        {analysis.macroAnalysis && (
+        {canShowDerivedGuidance && analysis.macroAnalysis && (
           <FivePerspectiveAnalysis
             perspectives={[
               {
@@ -1406,7 +1434,7 @@ export default function ReportDetailPage() {
         )}
 
         {/* 🌟 프리미엄: 학부모 행동 가이드 */}
-        {report.students && displayableGuidance.canShowDerivedGuidance && (
+        {report.students && canShowDerivedGuidance && (
           <HomeActionCard
             studentName={report.students.name}
             praisePoint={
@@ -1476,7 +1504,7 @@ export default function ReportDetailPage() {
         )}
 
         {/* 목표까지의 거리 (Vision Distance) */}
-        {report.students && (
+        {report.students && canShowDerivedGuidance && (
           <VisionDistanceFooter
             currentScore={report.total_score ?? undefined}
             targetScore={displayableGuidance.growthPredictions[0]?.predictedScore || 90}

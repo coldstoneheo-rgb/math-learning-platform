@@ -158,6 +158,8 @@ export default function ParentReportDetailPage() {
   const displayableGuidance = getDisplayableDerivedGuidance(testAnalysis);
   const growthTruthSnapshot = getParentGrowthTruthSnapshot(testAnalysis);
   const canShowDerivedGuidance = displayableGuidance.canShowDerivedGuidance;
+  const mathCapability = displayableGuidance.mathCapability;
+  const isMathCapabilityWithheld = Boolean(testAnalysis) && !canShowDerivedGuidance;
   const confidenceDataCount = [
     report.students?.meta_profile?.baseline?.assessmentDate,
     ...(report.students?.meta_profile?.errorSignature?.signaturePatterns || []),
@@ -237,7 +239,7 @@ export default function ParentReportDetailPage() {
             studentName={report.students?.name || '학생'}
             reportDate={report.test_date || report.created_at}
             headline={
-              testAnalysis?.macroAnalysis?.oneLineSummary ||
+              (canShowDerivedGuidance ? testAnalysis?.macroAnalysis?.oneLineSummary : undefined) ||
               levelTestAnalysis?.initialBaseline?.overallLevel ||
               monthlyAnalysis?.monthlyGrowthSummary?.headline ||
               semiAnnualAnalysis?.growthSummaryBanner?.headline ||
@@ -245,7 +247,7 @@ export default function ParentReportDetailPage() {
               '이번 리포트의 핵심 분석 결과입니다.'
             }
             subheadline={
-              testAnalysis?.macroAnalysis?.analysisMessage ||
+              (canShowDerivedGuidance ? testAnalysis?.macroAnalysis?.analysisMessage : undefined) ||
               levelTestAnalysis?.parentBriefing ||
               monthlyAnalysis?.monthlyGrowthSummary?.keyAchievement ||
               undefined
@@ -361,12 +363,23 @@ export default function ParentReportDetailPage() {
             {/* 종합 분석 */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 종합 분석</h3>
-              {testAnalysis.macroAnalysis?.oneLineSummary && (
+              {canShowDerivedGuidance && testAnalysis.macroAnalysis?.oneLineSummary && (
                 <div className="mb-4 p-4 bg-indigo-50 rounded-lg">
                   <p className="text-indigo-800 font-medium">{testAnalysis.macroAnalysis.oneLineSummary}</p>
                 </div>
               )}
-              <p className="text-gray-700 leading-relaxed mb-4">{testAnalysis.macroAnalysis?.summary}</p>
+              {canShowDerivedGuidance ? (
+                <p className="text-gray-700 leading-relaxed mb-4">{testAnalysis.macroAnalysis?.summary}</p>
+              ) : (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  <p className="font-semibold">교사 확정값 기준 성장 분석 준비 중</p>
+                  <p className="mt-1 leading-relaxed">
+                    선생님이 점수 또는 문항 판정을 보정했기 때문에, 이전 AI 초안의 강점, 보완점, 오류 패턴 서술은 표시하지 않습니다.
+                    확정값 기준 분석은 재분석 또는 다음 리포트에서 확인할 수 있습니다.
+                  </p>
+                </div>
+              )}
+              {canShowDerivedGuidance && (
               <div className="grid md:grid-cols-2 gap-4">
                 {testAnalysis.macroAnalysis?.strengths && (
                   <div className="p-4 bg-green-50 rounded-lg">
@@ -381,7 +394,8 @@ export default function ParentReportDetailPage() {
                   </div>
                 )}
               </div>
-              {testAnalysis.macroAnalysis?.errorPattern && (
+              )}
+              {canShowDerivedGuidance && testAnalysis.macroAnalysis?.errorPattern && (
                 <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
                   <h4 className="font-medium text-yellow-800 mb-2">🔍 주요 오류 패턴</h4>
                   <p className="text-yellow-700 text-sm">{testAnalysis.macroAnalysis.errorPattern}</p>
@@ -390,7 +404,7 @@ export default function ParentReportDetailPage() {
             </div>
 
             {/* 수학 역량 */}
-            {testAnalysis.macroAnalysis?.mathCapability && (
+            {mathCapability && (
               <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 수학 역량</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
@@ -401,7 +415,7 @@ export default function ParentReportDetailPage() {
                     { key: 'logic', label: '논리력' },
                     { key: 'anxietyControl', label: '불안 통제' },
                   ].map(({ key, label }) => {
-                    const value = testAnalysis.macroAnalysis?.mathCapability?.[key as keyof typeof testAnalysis.macroAnalysis.mathCapability] || 0;
+                    const value = mathCapability[key as keyof typeof mathCapability] || 0;
                     return (
                       <div key={key} className="text-center">
                         <div className="text-2xl font-bold text-indigo-600">{value}</div>
@@ -412,6 +426,19 @@ export default function ParentReportDetailPage() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {isMathCapabilityWithheld && !mathCapability && (
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">📈 수학 역량</h3>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  <p className="font-semibold">교사 확정값 기반 역량 분석 준비 중</p>
+                  <p className="mt-1 leading-relaxed">
+                    선생님이 점수 또는 문항 판정을 보정했기 때문에, 이전 AI 초안의 수학 역량 지표는 표시하지 않습니다.
+                    확정값 기준 역량은 재분석 또는 다음 리포트에서 확인할 수 있습니다.
+                  </p>
                 </div>
               </div>
             )}
