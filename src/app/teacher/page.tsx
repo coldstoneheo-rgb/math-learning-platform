@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import type { User, Report, Student, Schedule, ClassSession, Assignment, StudentWeakness } from '@/types';
+import {
+  getGrowthTruthBrief,
+  summarizeGrowthReadiness,
+  type GrowthReadinessSummary,
+} from '@/lib/teacher-verified-analysis';
+import type { User, Report, Student, Schedule, ClassSession, Assignment, StudentWeakness, AnalysisData } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 
@@ -195,6 +200,19 @@ export default function AdminDashboard() {
     });
   };
 
+  const getGrowthReadinessClass = (tone: GrowthReadinessSummary['tone']): string => {
+    switch (tone) {
+      case 'success':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'warning':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'danger':
+        return 'bg-red-50 text-red-700 border-red-200';
+      default:
+        return 'bg-slate-50 text-slate-600 border-slate-200';
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -360,37 +378,56 @@ export default function AdminDashboard() {
             </p>
           ) : (
             <div className="divide-y">
-              {recentReports.map((report) => (
-                <a
-                  key={report.id}
-                  href={`/teacher/reports/${report.id}`}
-                  className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-2 px-2 rounded transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm">
-                      {report.report_type === 'test' ? '📝' : report.report_type === 'weekly' ? '📅' : report.report_type === 'monthly' ? '📆' : '📊'}
-                    </span>
-                    <div>
-                      <span className="font-medium text-gray-900">{report.students?.name}</span>
-                      <span className="text-gray-500 mx-2">
-                        {report.report_type === 'test' ? '시험 분석 완료' :
-                         report.report_type === 'weekly' ? '주간 리포트 생성' :
-                         report.report_type === 'monthly' ? '월간 리포트 생성' : '통합 분석 완료'}
+              {recentReports.map((report) => {
+                const growthReadiness = summarizeGrowthReadiness(
+                  report.analysis_data as AnalysisData | null,
+                  report.report_type
+                );
+                const growthBrief = getGrowthTruthBrief(
+                  report.analysis_data as AnalysisData | null,
+                  report.report_type
+                );
+
+                return (
+                  <a
+                    key={report.id}
+                    href={`/teacher/reports/${report.id}`}
+                    className="flex flex-col gap-3 py-3 hover:bg-gray-50 -mx-2 px-2 rounded transition-colors md:flex-row md:items-center md:justify-between"
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="w-8 h-8 shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-sm">
+                        {report.report_type === 'test' ? '📝' : report.report_type === 'weekly' ? '📅' : report.report_type === 'monthly' ? '📆' : '📊'}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-gray-900">{report.students?.name}</span>
+                          <span className="text-gray-500">
+                            {report.report_type === 'test' ? '시험 분석 완료' :
+                            report.report_type === 'weekly' ? '주간 리포트 생성' :
+                            report.report_type === 'monthly' ? '월간 리포트 생성' : '통합 분석 완료'}
+                          </span>
+                        </div>
+                        <p className="mt-1 max-w-xl truncate text-xs text-gray-500">
+                          {growthBrief.compactText}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 md:gap-3">
+                      <span className={`px-2 py-1 text-xs rounded border ${getGrowthReadinessClass(growthReadiness.tone)}`}>
+                        {growthReadiness.label}
+                      </span>
+                      {report.report_type === 'test' && report.total_score && (
+                        <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-sm font-medium">
+                          {report.total_score}점
+                        </span>
+                      )}
+                      <span className="text-sm text-gray-500">
+                        {new Date(report.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {report.report_type === 'test' && report.total_score && (
-                      <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-sm font-medium">
-                        {report.total_score}점
-                      </span>
-                    )}
-                    <span className="text-sm text-gray-500">
-                      {new Date(report.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
-                </a>
-              ))}
+                  </a>
+                );
+              })}
             </div>
           )}
         </div>
