@@ -7,6 +7,7 @@ import {
   buildInitialProcessingTrace,
   buildTeacherVerifiedAnalysis,
   getDisplayableDerivedGuidance,
+  getGrowthTruthBrief,
   getParentGrowthTruthSnapshot,
   getVerifiedGuidanceDisplayStatus,
   buildVerificationDraft,
@@ -485,4 +486,51 @@ test('growth readiness summary flags downstream failures and keeps legacy report
   const weeklySummary = summarizeGrowthReadiness(base, 'weekly');
   assert.equal(weeklySummary.label, '성장 흐름 참고');
   assert.equal(weeklySummary.needsAttention, false);
+});
+
+test('growth truth brief explains past current and future vision states', () => {
+  const base = createAnalysisData();
+  const corrected = buildVerificationDraft(base, 100);
+  corrected.totalScore = 78;
+  const excluded = buildTeacherVerifiedAnalysis(base, corrected);
+
+  const excludedBrief = getGrowthTruthBrief(excluded, 'test');
+  assert.equal(excludedBrief.pastData, '교사 확정값');
+  assert.equal(excludedBrief.currentAnalysis, '보완 필요');
+  assert.equal(excludedBrief.futureVision, '비전 보류');
+  assert.ok(excludedBrief.compactText.includes('근거: 교사 확정값'));
+
+  const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+  const regeneratedBrief = getGrowthTruthBrief(regenerated, 'test');
+  assert.equal(regeneratedBrief.pastData, '교사 확정값');
+  assert.equal(regeneratedBrief.currentAnalysis, '분석 가능');
+  assert.equal(regeneratedBrief.futureVision, '비전 표시');
+
+  const retained = buildTeacherVerifiedAnalysis(base, buildVerificationDraft(base, 100));
+  const retainedBrief = getGrowthTruthBrief(retained, 'test');
+  assert.equal(retainedBrief.pastData, 'AI 초안 확인');
+  assert.equal(retainedBrief.futureVision, '비전 표시');
+});
+
+test('growth truth brief distinguishes failed downstream and legacy reports', () => {
+  const base = createAnalysisData();
+  const failedTrace = updateDownstreamTrace(
+    buildInitialProcessingTrace(base),
+    'metaProfile',
+    'failed',
+    'meta profile update failed'
+  );
+  const failed = attachProcessingTrace(base, failedTrace);
+  const failedBrief = getGrowthTruthBrief(failed, 'test');
+  assert.equal(failedBrief.currentAnalysis, '반영 실패');
+  assert.equal(failedBrief.futureVision, '비전 표시');
+
+  const legacyBrief = getGrowthTruthBrief(base, 'test');
+  assert.equal(legacyBrief.pastData, '기존 AI 분석');
+  assert.equal(legacyBrief.currentAnalysis, '기존 AI 분석');
+  assert.equal(legacyBrief.futureVision, '비전 표시');
+
+  const weeklyBrief = getGrowthTruthBrief(base, 'weekly');
+  assert.equal(weeklyBrief.pastData, '성장 참고 데이터');
+  assert.equal(weeklyBrief.futureVision, '비전 표시');
 });

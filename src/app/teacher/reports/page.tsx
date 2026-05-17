@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { summarizeGrowthReadiness, type GrowthReadinessSummary } from '@/lib/teacher-verified-analysis';
+import {
+  getGrowthTruthBrief,
+  summarizeGrowthReadiness,
+  type GrowthReadinessSummary,
+  type GrowthTruthBrief,
+} from '@/lib/teacher-verified-analysis';
 import type { User, Report, Student, ReportType, AnalysisData } from '@/types';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
@@ -142,6 +147,10 @@ export default function ReportsPage() {
     return summarizeGrowthReadiness(report.analysis_data as AnalysisData | null, report.report_type);
   };
 
+  const getGrowthBrief = (report: ReportWithStudent): GrowthTruthBrief => {
+    return getGrowthTruthBrief(report.analysis_data as AnalysisData | null, report.report_type);
+  };
+
   const getGrowthReadinessClass = (tone: GrowthReadinessSummary['tone']): string => {
     switch (tone) {
       case 'success':
@@ -237,6 +246,7 @@ export default function ReportsPage() {
               <tbody className="divide-y divide-gray-200">
                 {filteredReports.map((report) => {
                   const growthReadiness = getGrowthReadiness(report);
+                  const growthBrief = getGrowthBrief(report);
 
                   return (
                     <tr key={report.id} className="hover:bg-gray-50">
@@ -253,6 +263,9 @@ export default function ReportsPage() {
                         <span className={`mt-2 inline-flex lg:hidden px-2 py-1 text-xs rounded border ${getGrowthReadinessClass(growthReadiness.tone)}`}>
                           {growthReadiness.label}
                         </span>
+                        <p className="mt-1 text-xs text-gray-500 line-clamp-1 lg:hidden">
+                          {growthBrief.compactText}
+                        </p>
                       </td>
                       <td className="px-4 md:px-6 py-3 md:py-4">
                         <span className={`px-2 py-1 text-xs rounded whitespace-nowrap ${
@@ -269,7 +282,7 @@ export default function ReportsPage() {
                           {growthReadiness.label}
                         </div>
                         <p className="mt-1 max-w-xs text-xs text-gray-500 line-clamp-2">
-                          {growthReadiness.description}
+                          {growthBrief.compactText}
                         </p>
                       </td>
                       <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden md:table-cell whitespace-nowrap">
