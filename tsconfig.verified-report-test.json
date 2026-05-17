@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "noEmit": false,
+    "noEmitOnError": true,
+    "outDir": ".tmp/verified-report-test",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": [
+    "src/lib/teacher-verified-analysis.ts",
+    "src/types/**/*.ts",
+    "tests/teacher-verified-analysis.test.mts"
+  ]
+}

@@ -7,9 +7,10 @@ import {
   buildVerificationDraft,
   getVerificationError,
   markDerivedGuidanceRegenerationFailed,
-} from '../src/lib/teacher-verified-analysis.ts';
+} from '../src/lib/teacher-verified-analysis.js';
+import type { AnalysisData, VerifiedDerivedGuidance } from '../src/types/index.js';
 
-function createAnalysisData() {
+function createAnalysisData(): AnalysisData {
   return {
     testInfo: {
       testName: '2학기 기말고사',
@@ -55,7 +56,7 @@ function createAnalysisData() {
         keyConcept: '다각형의 외각',
         isCorrect: 'X',
         errorType: '개념 오류',
-        solutionStrategy: '취약점 집중',
+        solutionStrategy: '차선 풀이',
         analysis: '외각의 합을 혼동함',
       },
     ],
@@ -89,7 +90,7 @@ function createAnalysisData() {
   };
 }
 
-function createCompleteGuidance() {
+function createCompleteGuidance(): VerifiedDerivedGuidance {
   return {
     macroAnalysis: {
       summary: '교사 확정값 기반 요약',

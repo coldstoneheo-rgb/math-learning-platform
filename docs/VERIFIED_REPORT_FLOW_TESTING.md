@@ -6,7 +6,7 @@ AI test analysis is a draft. Teacher-verified values are the source of truth for
 
 ## Regression Coverage
 
-`npm run test:verified-report` covers the teacher-verified test report flow without calling Gemini or writing to Supabase:
+`npm run test:verified-report` compiles the focused TypeScript test target with the repo's TypeScript toolchain, then runs it with Node. It covers the teacher-verified test report flow without calling Gemini or writing to Supabase:
 
 - unchanged teacher verification keeps AI draft guidance but records teacher confirmation
 - grading corrections exclude draft-derived guidance from downstream growth data
