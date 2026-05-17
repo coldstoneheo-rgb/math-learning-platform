@@ -277,3 +277,75 @@ export function updateDownstreamTrace(
     },
   };
 }
+
+export function hasUsableVerifiedDerivedGuidance(analysisData?: AnalysisData | null): boolean {
+  return analysisData?.teacherVerified?.derivedGuidanceStatus !== 'excluded_after_teacher_adjustment';
+}
+
+export function getVerifiedGuidanceDisplayStatus(analysisData?: AnalysisData | null): {
+  label: string;
+  description: string;
+  tone: 'success' | 'warning' | 'neutral';
+} | null {
+  switch (analysisData?.teacherVerified?.derivedGuidanceStatus) {
+    case 'regenerated_from_teacher_verified':
+      return {
+        label: '교사 확정값 기반 분석',
+        description: '선생님이 확인한 채점과 문항 판정을 기준으로 약점, 처방, 성장 비전을 다시 생성했습니다.',
+        tone: 'success',
+      };
+    case 'excluded_after_teacher_adjustment':
+      return {
+        label: '교사 확정 완료, 성장 처방 보류',
+        description: '점수와 문항 판정은 선생님이 확인한 값입니다. 확정값 기반 성장 처방은 아직 사용할 수 없어 AI 초안 처방을 표시하지 않습니다.',
+        tone: 'warning',
+      };
+    case 'ai_draft_retained':
+      return {
+        label: 'AI 초안 기반, 교사 확인 완료',
+        description: '선생님이 AI 분석 초안을 확인한 뒤 최종 리포트로 공개했습니다.',
+        tone: 'neutral',
+      };
+    default:
+      return null;
+  }
+}
+
+export function summarizeProcessingTrace(trace?: ReportProcessingTrace | null): {
+  label: string;
+  description: string;
+  tone: 'success' | 'warning' | 'danger' | 'neutral';
+} | null {
+  if (!trace) return null;
+
+  const downstream = Object.values(trace.downstream || {});
+  if (downstream.some((step) => step?.status === 'failed')) {
+    return {
+      label: '성장 데이터 보완 필요',
+      description: '리포트는 저장됐지만 일부 성장 데이터 반영 단계가 실패했습니다. 아래 항목을 확인해 주세요.',
+      tone: 'danger',
+    };
+  }
+
+  if (downstream.some((step) => step?.status === 'skipped')) {
+    return {
+      label: '성장 데이터 일부 보류',
+      description: '확정값은 저장됐고 가능한 항목은 반영됐습니다. 일부 후속 단계는 조건이 맞지 않아 건너뛰었습니다.',
+      tone: 'warning',
+    };
+  }
+
+  if (downstream.length > 0 && downstream.every((step) => step?.status === 'success')) {
+    return {
+      label: '성장 데이터 반영 완료',
+      description: '이 리포트의 확정 데이터가 주요 장기 성장 데이터 흐름에 반영되었습니다.',
+      tone: 'success',
+    };
+  }
+
+  return {
+    label: '성장 데이터 반영 기록 대기',
+    description: '저장 기록은 있으나 후속 반영 결과가 아직 충분히 남아 있지 않습니다.',
+    tone: 'neutral',
+  };
+}
