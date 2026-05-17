@@ -7,6 +7,7 @@ import {
   buildInitialProcessingTrace,
   buildTeacherVerifiedAnalysis,
   canShowStudentDerivedNarrative,
+  getDashboardGrowthTruthSummary,
   getDisplayableDerivedGuidance,
   getGrowthTruthBrief,
   getParentGrowthTruthSnapshot,
@@ -642,4 +643,82 @@ test('latest guidance selector falls back past legacy reports missing a section'
 
   assert.equal(selected.canShowDerivedGuidance, true);
   assert.equal(selected.growthPredictions[0]?.predictedScore, 91);
+});
+
+test('dashboard growth truth summary uses latest relevant report and keeps withheld vision stopped', () => {
+  const base = createAnalysisData();
+  const corrected = buildVerificationDraft(base, 100);
+  corrected.totalScore = 78;
+  const excluded = buildTeacherVerifiedAnalysis(base, corrected);
+
+  const older = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+
+  const summary = getDashboardGrowthTruthSummary([
+    { id: 1, report_type: 'test', test_name: '오래된 중간고사', test_date: '2026-04-01', analysis_data: older },
+    { id: 2, report_type: 'test', test_name: '최신 기말고사', test_date: '2026-05-01', analysis_data: excluded },
+  ]);
+
+  assert.equal(summary?.reportId, 2);
+  assert.equal(summary?.readiness.label, '성장 처방 보류');
+  assert.equal(summary?.brief.futureVision, '비전 보류');
+  assert.equal(summary?.canShowDerivedGuidance, false);
+});
+
+test('dashboard growth truth summary breaks same-day ties by created time and id', () => {
+  const base = createAnalysisData();
+  const corrected = buildVerificationDraft(base, 100);
+  corrected.totalScore = 78;
+  const excluded = buildTeacherVerifiedAnalysis(base, corrected);
+  const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+
+  const byCreatedAt = getDashboardGrowthTruthSummary([
+    {
+      id: 5,
+      report_type: 'test',
+      test_date: '2026-05-01',
+      created_at: '2026-05-01T09:00:00Z',
+      analysis_data: regenerated,
+    },
+    {
+      id: 4,
+      report_type: 'test',
+      test_date: '2026-05-01',
+      created_at: '2026-05-01T11:00:00Z',
+      analysis_data: excluded,
+    },
+  ]);
+  assert.equal(byCreatedAt?.reportId, 4);
+  assert.equal(byCreatedAt?.brief.futureVision, '비전 보류');
+
+  const byId = getDashboardGrowthTruthSummary([
+    { id: 5, report_type: 'test', test_date: '2026-05-01', analysis_data: regenerated },
+    { id: 6, report_type: 'test', test_date: '2026-05-01', analysis_data: excluded },
+  ]);
+  assert.equal(byId?.reportId, 6);
+  assert.equal(byId?.canShowDerivedGuidance, false);
+});
+
+test('dashboard growth truth summary reports regenerated legacy and empty states', () => {
+  const base = createAnalysisData();
+  const corrected = buildVerificationDraft(base, 100);
+  corrected.totalScore = 78;
+  const excluded = buildTeacherVerifiedAnalysis(base, corrected);
+  const regenerated = applyRegeneratedDerivedGuidance(excluded, createCompleteGuidance());
+
+  const regeneratedSummary = getDashboardGrowthTruthSummary([
+    { id: 1, report_type: 'test', test_name: '확정 리포트', test_date: '2026-05-01', analysis_data: regenerated },
+  ]);
+  assert.equal(regeneratedSummary?.readiness.label, '교사 확정값 기반');
+  assert.equal(regeneratedSummary?.brief.futureVision, '비전 표시');
+  assert.equal(regeneratedSummary?.canShowDerivedGuidance, true);
+
+  const legacySummary = getDashboardGrowthTruthSummary([
+    { id: 2, report_type: 'test', test_name: '기존 리포트', created_at: '2026-04-01T00:00:00Z', analysis_data: base },
+  ]);
+  assert.equal(legacySummary?.readiness.label, '기존 AI 분석');
+  assert.equal(legacySummary?.brief.pastData, '기존 AI 분석');
+  assert.equal(legacySummary?.canShowDerivedGuidance, true);
+
+  assert.equal(getDashboardGrowthTruthSummary([{ id: 3, report_type: 'weekly', analysis_data: base }]), null);
+  assert.equal(getDashboardGrowthTruthSummary([]), null);
 });
