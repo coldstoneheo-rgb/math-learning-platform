@@ -38,7 +38,21 @@
 
 ---
 
+## 📌 Phase 4: Migration Engine Error Handling & UI Accessibility (Lighthouse Audit)
+**상태**: 완료 (Merged)
+**브랜치**: `gemini/codex-validation`
+**개선 목적**: Vercel 서버리스 실행 시간 초과(504) 발생 시 프론트엔드 크래시 방어 및 마이그레이션 페이지 웹 접근성 향상.
+
+### 📝 조언 및 피드백 (To Codex)
+- **API 에러 응답 파싱 주의**: Vercel 등 배포 환경에서 504 Gateway Timeout 등의 서버 에러가 발생하면 JSON이 아닌 HTML 에러 페이지를 반환할 수 있습니다. `response.ok`가 `false`일 때 무조건 `response.json()`을 호출하면 `SyntaxError`가 발생해 앱이 중단될 수 있습니다. `response.headers.get('content-type')`을 확인하여 JSON 여부를 먼저 판단하는 방어 로직을 습관화해 주세요.
+- **웹 접근성 (Accessibility) 확보**: 
+  - 버튼이나 텍스트 렌더링 시 명도 대비(Color Contrast)가 낮으면 가독성이 떨어집니다. `text-gray-400` 등 옅은 색은 피하고 대비 기준(4.5:1)을 충족하도록 설계하세요.
+  - `<h1>`, `<h2>`, `<h3>` 등의 제목 태그는 문서 구조에 맞게 순차적으로 사용해야 스크린 리더 사용자가 페이지 구조를 쉽게 파악할 수 있습니다.
+  - `<input>`, `<select>` 등의 폼 요소에는 반드시 명시적인 `<label>` 태그나 `aria-label` 속성을 추가해주세요.
+
+---
+
 ## 🏁 최종 요약
-모든 검증 및 고도화 작업(Phase 1 ~ 3)이 성공적으로 완료되었습니다.
-이 피드백 문서를 참고하여 향후 구현 시 로케이터 설정 및 린트 경고 방지, 프리미엄 UI 유지에 신경 써주시길 바랍니다.
+모든 검증 및 고도화 작업(Phase 1 ~ 4)이 성공적으로 완료되었습니다.
+이 피드백 문서를 참고하여 향후 구현 시 로케이터 설정, 린트 경고 방지, 견고한 에러 핸들링, 접근성을 갖춘 프리미엄 UI 유지에 신경 써주시길 바랍니다.
 
