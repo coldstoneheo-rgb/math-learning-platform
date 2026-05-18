@@ -55,7 +55,6 @@ export async function generateStudyPlanFromPrescription(
     return { success: false, error: 'No prescriptions provided' };
   }
 
-  const supabase = createClient();
   const { start, end } = getStudyPeriodDates();
   const planTitle = testName
     ? `[AI 처방] ${testName} 학습 계획`

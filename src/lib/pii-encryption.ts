@@ -19,7 +19,6 @@ import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypt
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const TAG_LENGTH = 16;
 const ENCODING = 'base64url' as BufferEncoding;
 
 function getEncryptionKey(): Buffer | null {
@@ -45,8 +44,6 @@ interface PlainField {
   value: string;
   encrypted: false;
 }
-
-type PIIField = EncryptedField | PlainField;
 
 /**
  * 문자열 암호화
