@@ -299,7 +299,7 @@ export default function MigrationPage() {
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
-          <h3 className="font-bold text-blue-800">타임머신 학습 엔진 안내</h3>
+          <h2 className="font-bold text-blue-800 text-lg">타임머신 학습 엔진 안내</h2>
           <p className="text-blue-700 text-sm mt-1">
             과거의 시험지, PDF 리포트, 일일 문제풀이 이미지 등을 업로드하면 AI가 순차적으로 과거의 성장 궤적을 학습하여
             현재 학생의 메타프로필(Meta-Profile)을 업데이트합니다. 이 과정은 리포트를 렌더링하지 않고 핵심 시그널만 DB에 누적 압축 보관합니다.
@@ -313,7 +313,7 @@ export default function MigrationPage() {
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'ai-ingest'
                 ? 'bg-white text-indigo-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-600 hover:text-gray-800'
             }`}
           >
             🤖 AI 인제스천 (이미지/PDF)
@@ -323,7 +323,7 @@ export default function MigrationPage() {
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'csv-import'
                 ? 'bg-white text-indigo-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-600 hover:text-gray-800'
             }`}
           >
             📊 CSV 일괄 업로드 (점수 데이터)
@@ -335,7 +335,7 @@ export default function MigrationPage() {
           <div className="space-y-6">
             {/* 안내 */}
             <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
-              <h3 className="font-bold text-amber-800">CSV 일괄 업로드 안내</h3>
+              <h2 className="font-bold text-amber-800 text-lg">CSV 일괄 업로드 안내</h2>
               <p className="text-amber-700 text-sm mt-1">
                 과거 시험 점수, 석차 등 정량 데이터를 CSV로 일괄 등록합니다.
                 등록된 데이터는 <strong>연간 성장 그래프</strong>에 즉시 반영됩니다. AI 분석 없이 빠르게 과거 성적 궤적을 복원할 수 있습니다.
@@ -376,7 +376,7 @@ export default function MigrationPage() {
                   <button
                     onClick={() => csvInputRef.current?.click()}
                     disabled={csvImporting}
-                    className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-indigo-500 hover:text-indigo-600 transition-colors disabled:opacity-50 flex flex-col items-center gap-2"
+                    className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-500 hover:text-indigo-700 transition-colors disabled:opacity-50 flex flex-col items-center gap-2"
                   >
                     <span className="text-2xl">📄</span>
                     <span className="text-sm">
@@ -486,6 +486,7 @@ export default function MigrationPage() {
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-bold mb-4">1. 대상 학생 선택</h2>
               <select
+                aria-label="대상 학생 선택"
                 value={selectedStudent}
                 onChange={(e) => setSelectedStudent(e.target.value)}
                 disabled={isProcessing}
@@ -504,6 +505,7 @@ export default function MigrationPage() {
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">기본 지정 날짜 (과거)</label>
                   <input
+                    aria-label="기본 지정 날짜 (과거)"
                     type="date"
                     value={batchDate}
                     onChange={(e) => setBatchDate(e.target.value)}
@@ -514,6 +516,7 @@ export default function MigrationPage() {
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">데이터 소스 유형</label>
                   <select
+                    aria-label="데이터 소스 유형"
                     value={batchType}
                     onChange={(e) => setBatchType(e.target.value)}
                     disabled={isProcessing}
@@ -600,7 +603,7 @@ export default function MigrationPage() {
               {/* 파일 목록 */}
               <div className="flex-1 overflow-y-auto space-y-3 min-h-[400px]">
                 {tasks.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-gray-400">
+                  <div className="h-full flex items-center justify-center text-gray-500">
                     추가된 파일이 없습니다. 좌측 패널에서 파일을 추가해주세요.
                   </div>
                 ) : (
@@ -629,12 +632,14 @@ export default function MigrationPage() {
                           {task.status === 'pending' && (
                             <div className="flex gap-2 mt-2">
                               <input 
+                                aria-label="개별 문서 날짜 설정"
                                 type="date" 
                                 value={task.documentDate}
                                 onChange={(e) => updateTaskField(task.id, 'documentDate', e.target.value)}
                                 className="text-xs px-2 py-1 border rounded"
                               />
                               <select 
+                                aria-label="개별 문서 유형 설정"
                                 value={task.documentType}
                                 onChange={(e) => updateTaskField(task.id, 'documentType', e.target.value)}
                                 className="text-xs px-2 py-1 border rounded bg-white"
