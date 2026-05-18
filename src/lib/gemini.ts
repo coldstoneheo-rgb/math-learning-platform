@@ -304,12 +304,12 @@ export function buildContextPrompt(context?: AnalysisContextData): string {
 - 메타인지 수준: ${mp.metaCognitionLevel.overallScore}/100 (${mp.metaCognitionLevel.developmentStage})
 
 ### 오류 서명 (Error Signature)
-${mp.errorSignature.signaturePatterns.length > 0
+${mp.errorSignature?.signaturePatterns && mp.errorSignature.signaturePatterns.length > 0
       ? mp.errorSignature.signaturePatterns.map((p, i) => `${i + 1}. ${p}`).join('\n')
       : '- 아직 식별된 고유 패턴 없음'}
 
 ### 영역별 취약도
-${mp.errorSignature.domainVulnerability.length > 0
+${mp.errorSignature?.domainVulnerability && mp.errorSignature.domainVulnerability.length > 0
       ? mp.errorSignature.domainVulnerability.map(d => `- ${d.domain}: ${d.vulnerabilityScore}/100`).join('\n')
       : '- 데이터 부족'}
 
