@@ -46,7 +46,8 @@ test.describe('인증 플로우', () => {
 
       // 회원가입 폼 요소 확인
       await expect(page.locator('input[type="email"]')).toBeVisible();
-      await expect(page.locator('input[type="password"]')).toBeVisible();
+      await expect(page.locator('input[name="password"]')).toBeVisible();
+      await expect(page.locator('input[name="confirmPassword"]')).toBeVisible();
     });
   });
 
