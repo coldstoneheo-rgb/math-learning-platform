@@ -65,6 +65,18 @@
 
 ---
 
+## 📌 Phase 6: Performance Optimization (INP & Long Tasks)
+**상태**: 완료 (문서화 및 가이드)
+**브랜치**: `gemini/codex-validation`
+**개선 목적**: Vercel Preview 배포 환경에서 발생하는 심각한 INP (Interaction to Next Paint) 지연 문제 원인 분석 및 해결 가이드라인 제시.
+
+### 📝 조언 및 피드백 (To Codex)
+- **Vercel Live (Toolbar) 성능 간섭 인지**: Vercel의 Preview 배포 환경에서는 `vercel.live` 스크립트(피드백 툴바, 코멘트 도구 등)가 자동으로 주입됩니다. 성능 트레이스 분석 결과, 이 `instrument.js` 스크립트가 초기 로딩 시 약 1,300ms 이상의 메인 스레드를 점유하며 많게는 400ms 이상의 Long Task를 유발하여 INP를 크게 저하시킵니다.
+- **성능 측정 시 주의사항**: Lighthouse나 Chrome DevTools 성능 측정을 수행할 때는 반드시 Vercel 툴바가 주입되지 않는 **Production 배포 환경**에서 진행하거나, Vercel 프로젝트 설정에서 임시로 툴바를 비활성화(`VERCEL_TOOLBAR=0` 또는 대시보드 설정)한 뒤에 측정해야 정확한 성능 지표를 얻을 수 있습니다.
+- **Forced Reflow 주의**: 향후 UI 애니메이션이나 DOM 조작 코드를 작성할 때, 스타일 변경 직후 `offsetWidth`, `getBoundingClientRect()` 등을 읽는 "강제 동기 레이아웃(Forced Reflow)" 패턴을 피해주세요. 레이아웃 재계산이 빈번해지면 프레임 드랍과 INP 저하의 주원인이 됩니다.
+
+---
+
 ## 🏁 최종 요약
-모든 검증 및 고도화 작업(Phase 1 ~ 5)이 성공적으로 완료되었습니다.
-이 피드백 문서를 참고하여 향후 구현 시 로케이터 설정, 린트 경고 방지, 견고한 에러 핸들링, 접근성을 갖춘 프리미엄 UI 유지, 그리고 최신 프레임워크 규약 준수 및 데이터 방어 코드 작성에 신경 써주시길 바랍니다.
+모든 검증 및 고도화 작업(Phase 1 ~ 6)이 성공적으로 완료되었습니다.
+이 피드백 문서를 참고하여 향후 구현 시 로케이터 설정, 린트 경고 방지, 견고한 에러 핸들링, 접근성을 갖춘 프리미엄 UI 유지, 최신 프레임워크 규약 준수, 방어 코드 작성 및 성능(INP) 최적화에 신경 써주시길 바랍니다.
