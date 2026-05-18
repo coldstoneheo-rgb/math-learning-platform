@@ -268,13 +268,33 @@ export default function ParentReportDetailPage() {
         </div>
 
         {testAnalysis?.teacherVerified && verificationStatusInfo && (
-          <div className={`mb-6 rounded-xl border p-4 ${
+          <div className={`mb-6 relative overflow-hidden rounded-2xl border p-5 shadow-sm transition-all ${
             verificationStatusInfo.tone === 'warning'
-              ? 'border-amber-200 bg-amber-50 text-amber-800'
-              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              ? 'border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50/30'
+              : 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50/30'
           }`}>
-            <p className="text-sm font-semibold">{verificationStatusInfo.label}</p>
-            <p className="mt-1 text-sm leading-relaxed">{verificationStatusInfo.description}</p>
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full blur-2xl opacity-50 pointer-events-none mix-blend-multiply ${
+              verificationStatusInfo.tone === 'warning' ? 'bg-amber-300' : 'bg-emerald-300'
+            }" />
+            <div className="relative z-10 flex items-start gap-3">
+              <div className={`shrink-0 mt-1 flex items-center justify-center w-8 h-8 rounded-full ${
+                verificationStatusInfo.tone === 'warning' ? 'bg-amber-200 text-amber-700' : 'bg-emerald-200 text-emerald-700'
+              }`}>
+                {verificationStatusInfo.tone === 'warning' ? '⚠️' : '✨'}
+              </div>
+              <div>
+                <p className={`text-sm font-bold ${
+                  verificationStatusInfo.tone === 'warning' ? 'text-amber-900' : 'text-emerald-900'
+                }`}>
+                  {verificationStatusInfo.label}
+                </p>
+                <p className={`mt-1 text-sm leading-relaxed ${
+                  verificationStatusInfo.tone === 'warning' ? 'text-amber-800' : 'text-emerald-800'
+                }`}>
+                  {verificationStatusInfo.description}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

@@ -227,19 +227,39 @@ export default function StudentReportDetailPage() {
           />
 
           {growthTruthNotice && (
-            <div className="px-6 pb-6">
-              <div className={`rounded-lg border p-4 ${STUDENT_NOTICE_TONE_CLASS[growthTruthNotice.tone]}`}>
-                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STUDENT_NOTICE_BADGE_CLASS[growthTruthNotice.tone]}`}>
-                      {growthTruthNotice.label}
-                    </span>
-                    <h2 className="mt-3 text-base font-bold">{growthTruthNotice.headline}</h2>
-                    <p className="mt-2 text-sm leading-relaxed opacity-85">{growthTruthNotice.description}</p>
+            <div className="px-6 pb-6 mt-4">
+              <div className={`relative overflow-hidden rounded-2xl border p-5 shadow-sm transition-all ${
+                growthTruthNotice.tone === 'warning'
+                  ? 'border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50/30'
+                  : growthTruthNotice.tone === 'success'
+                  ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50/30'
+                  : 'border-slate-300 bg-gradient-to-br from-slate-50 to-gray-50/30'
+              }`}>
+                <div className={`absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full blur-2xl opacity-50 pointer-events-none mix-blend-multiply ${
+                  growthTruthNotice.tone === 'warning' ? 'bg-amber-300' : growthTruthNotice.tone === 'success' ? 'bg-emerald-300' : 'bg-slate-300'
+                }`} />
+                <div className="relative z-10 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`shrink-0 mt-1 flex items-center justify-center w-8 h-8 rounded-full shadow-sm ${
+                      growthTruthNotice.tone === 'warning' ? 'bg-amber-200 text-amber-700' : growthTruthNotice.tone === 'success' ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {growthTruthNotice.tone === 'warning' ? '⚠️' : growthTruthNotice.tone === 'success' ? '✨' : 'ℹ️'}
+                    </div>
+                    <div>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold shadow-sm ${STUDENT_NOTICE_BADGE_CLASS[growthTruthNotice.tone]}`}>
+                        {growthTruthNotice.label}
+                      </span>
+                      <h2 className={`mt-3 text-base font-bold ${
+                        growthTruthNotice.tone === 'warning' ? 'text-amber-900' : growthTruthNotice.tone === 'success' ? 'text-emerald-900' : 'text-slate-900'
+                      }`}>{growthTruthNotice.headline}</h2>
+                      <p className={`mt-2 text-sm leading-relaxed ${
+                        growthTruthNotice.tone === 'warning' ? 'text-amber-800' : growthTruthNotice.tone === 'success' ? 'text-emerald-800' : 'text-slate-800'
+                      }`}>{growthTruthNotice.description}</p>
+                    </div>
                   </div>
                   {growthTruthNotice.guidanceState === 'withheld' && (
-                    <span className="shrink-0 rounded-full bg-white/70 px-3 py-1 text-xs font-semibold">
-                      성장 안내 보완 중
+                    <span className="shrink-0 rounded-full bg-white/80 px-4 py-1.5 text-xs font-bold shadow-sm text-slate-700 border border-slate-200 animate-pulse">
+                      선생님 확인 중 ⏳
                     </span>
                   )}
                 </div>

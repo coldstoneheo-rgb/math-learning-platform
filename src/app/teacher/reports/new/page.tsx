@@ -801,19 +801,27 @@ export default function NewReportPage() {
 
             {/* 교사 확정 */}
             {verificationDraft && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl shadow-sm p-6">
-                <div className="flex items-start justify-between gap-4 mb-5">
-                  <div>
-                    <h3 className="text-lg font-semibold text-amber-950">교사 확인 및 최종값 확정</h3>
-                    <p className="text-sm text-amber-800 mt-1">
-                      AI 분석은 초안입니다. 점수, 석차, 배점별 정답 수, 문항별 정오는 교사가 확인한 값만 최종 리포트와 성장 데이터에 저장됩니다.
-                    </p>
-                  </div>
-                  <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${
-                    isTeacherVerified ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'
+              <div className={`relative rounded-2xl shadow-lg p-6 sm:p-8 mb-8 transition-all duration-300 border-2 ${
+                isTeacherVerified 
+                  ? 'bg-emerald-50/50 border-emerald-400' 
+                  : 'bg-white border-amber-400 ring-4 ring-amber-100'
+              }`}>
+                {/* Status Badge */}
+                <div className="absolute -top-4 left-6 flex gap-2">
+                  <span className={`px-4 py-1.5 rounded-full text-sm font-bold shadow-md flex items-center gap-2 transition-all ${
+                    isTeacherVerified 
+                      ? 'bg-emerald-500 text-white' 
+                      : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white animate-pulse'
                   }`}>
-                    {isTeacherVerified ? '확정 완료' : '확정 필요'}
+                    {isTeacherVerified ? '✨ 최종 확정 완료' : '⚠️ 교사 확인 필요'}
                   </span>
+                </div>
+                
+                <div className="mt-2 mb-6">
+                  <h3 className="text-xl font-bold text-gray-900">최종 데이터 검수</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    AI가 분석한 초안입니다. 실제 채점 결과와 일치하도록 점수, 석차, 문항별 정오를 확인해주세요. (교사가 수정한 값만 최종 리포트에 반영됩니다)
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-4 gap-4">
@@ -945,9 +953,13 @@ export default function NewReportPage() {
                     setIsTeacherVerified(true);
                     setError('');
                   }}
-                  className="mt-5 w-full py-3 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-700 transition-colors"
+                  className={`mt-6 w-full py-4 text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg ${
+                    isTeacherVerified
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
+                  }`}
                 >
-                  최종값 확인 완료
+                  {isTeacherVerified ? '✅ 검수 완료 (저장 가능)' : '최종값 검수 완료하기'}
                 </button>
               </div>
             )}
@@ -1089,9 +1101,15 @@ export default function NewReportPage() {
                 <button
                   onClick={handleSaveReport}
                   disabled={saving || !isTeacherVerified}
-                  className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className={`flex-1 py-3 text-white font-bold rounded-xl transition-all shadow-md ${
+                    saving 
+                      ? 'bg-indigo-400 cursor-not-allowed' 
+                      : !isTeacherVerified 
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500' 
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg transform hover:-translate-y-0.5'
+                  }`}
                 >
-                  {saving ? '저장 중...' : isTeacherVerified ? '💾 확정 리포트 저장' : '교사 확인 후 저장 가능'}
+                  {saving ? '저장 중...' : isTeacherVerified ? '💾 확정 리포트 발송' : '교사 검수를 완료해주세요'}
                 </button>
               </div>
               {saving && saveStatusMessage && (
