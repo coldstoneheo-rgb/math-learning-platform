@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // 데모 페이지는 인증 없이 바로 통과 (Supabase 클라이언트 생성 전에 체크)
   if (request.nextUrl.pathname.startsWith('/demo')) {
     return NextResponse.next({ request });
