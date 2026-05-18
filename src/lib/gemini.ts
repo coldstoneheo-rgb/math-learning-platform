@@ -323,8 +323,21 @@ ${mp.legacySignals && mp.legacySignals.length > 0
   if (context.recentReports && context.recentReports.length > 0) {
     sections.push(`
 ## 최근 리포트 요약 (최근 ${context.recentReports.length}개)
-${context.recentReports.map((r, i) => `
-const ANALYSIS_SCHEMA = {es.slice(0, 5).map((s, i) =>
+${context.recentReports.map((r, i) =>
+      `${i + 1}. [${r.type}] ${r.date} - ${r.title}\n   - 주요 메시지: ${r.summary}\n   - 핵심 성취: ${r.keyAchievements?.join(', ') || '없음'}\n   - 보완 필요: ${r.weaknesses?.join(', ') || '없음'}`
+    ).join('\n')}`);
+  }
+
+  // 3. 성장 루프 시스템 피드백
+  if (context.systemFeedback) {
+    const sf = context.systemFeedback;
+    const feedbackParts = [];
+
+    // 효과적인 전략
+    if (sf.effectiveStrategies && sf.effectiveStrategies.length > 0) {
+      const es = sf.effectiveStrategies;
+      feedbackParts.push(`### 가장 효과적이었던 전략 (유지 권장)
+${es.slice(0, 5).map((s, i) =>
         `${i + 1}. **${s.type}**: ${s.title}
    - 평균 개선율: ${s.avgImprovement}%, 성공률: ${s.successRate}%
    - 적용 횟수: ${s.usageCount}회${s.concept ? `, 관련 개념: ${s.concept}` : ''}`
