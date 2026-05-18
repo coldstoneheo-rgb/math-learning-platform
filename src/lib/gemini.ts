@@ -324,13 +324,13 @@ ${mp.legacySignals && mp.legacySignals.length > 0
     sections.push(`
 ## 최근 리포트 요약 (최근 ${context.recentReports.length}개)
 ${context.recentReports.map((r, i) =>
-      `${i + 1}. [${r.type}] ${r.date} - ${r.title}\n   - 주요 메시지: ${r.summary}\n   - 핵심 성취: ${r.keyAchievements?.join(', ') || '없음'}\n   - 보완 필요: ${r.weaknesses?.join(', ') || '없음'}`
+      `${i + 1}. [${r.reportType}] ${r.reportDate}\n   - 주요 메시지: ${r.summary}\n   - 핵심 성취: ${r.keyFindings?.join(', ') || '없음'}\n   - 미해결 과제: ${r.unresolvedIssues?.join(', ') || '없음'}`
     ).join('\n')}`);
   }
 
   // 3. 성장 루프 시스템 피드백
-  if (context.systemFeedback) {
-    const sf = context.systemFeedback;
+  if (context.strategyFeedback) {
+    const sf = context.strategyFeedback;
     const feedbackParts = [];
 
     // 효과적인 전략
