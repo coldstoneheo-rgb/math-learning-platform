@@ -160,7 +160,7 @@ function ConfidenceBadge({
         <div className="mt-4 pt-3 border-t border-slate-200/30">
           <div className="flex items-center gap-2 mb-1.5">
             <BarChart3 className={`w-3.5 h-3.5 ${config.textColor} opacity-60`} />
-            <span className={`text-xs ${config.textColor} opacity-70`}>신뢰도 수준</span>
+            <span className={`text-xs ${config.textColor}`}>신뢰도 수준</span>
           </div>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((i) => (

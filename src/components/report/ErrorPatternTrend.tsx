@@ -85,12 +85,12 @@ const ERROR_TYPE_COLORS: Record<ErrorType, string> = {
 // 추이 아이콘
 function TrendIcon({ trend }: { trend: TrendType }) {
   if (trend === 'increasing') {
-    return <span className="text-red-500">↑ 증가</span>;
+    return <span className="text-red-600">↑ 증가</span>;
   }
   if (trend === 'decreasing') {
-    return <span className="text-green-500">↓ 감소</span>;
+    return <span className="text-green-700">↓ 감소</span>;
   }
-  return <span className="text-gray-500">→ 유지</span>;
+  return <span className="text-gray-600">→ 유지</span>;
 }
 
 // 취약도 색상 결정

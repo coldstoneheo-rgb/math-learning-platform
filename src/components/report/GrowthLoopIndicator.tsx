@@ -342,7 +342,7 @@ export function BaselineReferenceCard({
     >
       <div className="flex items-center gap-2 mb-4">
         <MapPin className="w-5 h-5 text-indigo-600" />
-        <h4 className="font-semibold text-slate-800">Baseline 대비 현재 위치</h4>
+        <h3 className="font-semibold text-slate-800">Baseline 대비 현재 위치</h3>
       </div>
 
       <div className="grid grid-cols-3 gap-4 text-center">
@@ -451,7 +451,7 @@ export function VisionDistanceFooter({
     >
       <div className="flex items-center gap-2 mb-5">
         <Flag className="w-5 h-5 text-emerald-600" />
-        <h4 className="font-semibold text-slate-800">목표까지의 거리</h4>
+        <h3 className="font-semibold text-slate-800">목표까지의 거리</h3>
       </div>
 
       <div className="mb-5">

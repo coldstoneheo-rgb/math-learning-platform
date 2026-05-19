@@ -97,21 +97,21 @@ const PERSPECTIVE_CONFIG: Record<PerspectiveType, {
 
 const STATUS_CONFIG = {
   good: {
-    color: 'text-emerald-600',
+    color: 'text-emerald-700',
     bg: 'bg-emerald-50',
     border: 'border-emerald-200',
     icon: CheckCircle2,
     label: '양호',
   },
   warning: {
-    color: 'text-amber-600',
+    color: 'text-amber-700',
     bg: 'bg-amber-50',
     border: 'border-amber-200',
     icon: AlertTriangle,
     label: '주의',
   },
   critical: {
-    color: 'text-rose-600',
+    color: 'text-rose-700',
     bg: 'bg-rose-50',
     border: 'border-rose-200',
     icon: AlertTriangle,
@@ -191,7 +191,7 @@ function PerspectiveCard({
               </span>
             )}
             {perspective.trend === 'declining' && (
-              <span className="text-rose-600 flex items-center gap-1">
+              <span className="text-rose-700 flex items-center gap-1">
                 <TrendingDown className="w-3 h-3" />
                 이전 대비 악화
               </span>
@@ -277,17 +277,17 @@ function FivePerspectiveAnalysis({
         {/* Summary Stats */}
         <div className="flex items-center gap-2">
           {criticalCount > 0 && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-600 border border-rose-200">
+            <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
               집중 필요 {criticalCount}
             </span>
           )}
           {warningCount > 0 && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200">
+            <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
               주의 {warningCount}
             </span>
           )}
           {goodCount > 0 && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
+            <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
               양호 {goodCount}
             </span>
           )}
@@ -351,12 +351,12 @@ function FivePerspectiveAnalysis({
           <p>
             {criticalCount > 0 ? (
               <>
-                <strong className="text-rose-600">집중 필요</strong> 영역이 {criticalCount}개 발견되었습니다.
+                <strong className="text-rose-700">집중 필요</strong> 영역이 {criticalCount}개 발견되었습니다.
                 해당 영역에 대한 맞춤 훈련을 권장합니다.
               </>
             ) : warningCount > 0 ? (
               <>
-                대부분 양호하나 <strong className="text-amber-600">주의</strong> 영역이 {warningCount}개 있습니다.
+                대부분 양호하나 <strong className="text-amber-700">주의</strong> 영역이 {warningCount}개 있습니다.
                 지속적인 모니터링이 필요합니다.
               </>
             ) : (

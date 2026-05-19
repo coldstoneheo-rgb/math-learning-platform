@@ -338,9 +338,9 @@ function IndicatorCard({
 
   const getValueColor = (val: number): string => {
     if (isCount) return 'text-gray-700';
-    if (val >= 70) return 'text-green-600';
-    if (val >= 50) return 'text-yellow-600';
-    return 'text-red-600';
+    if (val >= 70) return 'text-green-700';
+    if (val >= 50) return 'text-amber-700';
+    return 'text-red-700';
   };
 
   const getValueLabel = (val: number): string => {
@@ -368,7 +368,7 @@ function IndicatorCard({
         </div>
       </div>
       <p className={`text-sm font-medium ${colors.text}`}>{label}</p>
-      <p className="text-xs text-gray-500 mt-1">{description}</p>
+      <p className="text-xs text-gray-600 mt-1">{description}</p>
       {!isCount && (
         <div className="mt-2 h-1.5 bg-white/50 rounded-full overflow-hidden">
           <div
