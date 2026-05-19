@@ -53,7 +53,7 @@ function getLearningTypeLabel(type: string): string {
     'slow-but-deep': '깊은 이해형',
     'steady-grower': '꾸준한 성장형',
   };
-  return labels[type] || type;
+  return labels[type] || (type.includes('_') ? '복합 성장형' : type);
 }
 
 // 피로 패턴 한글 설명
@@ -62,8 +62,9 @@ function getFatiguePatternLabel(pattern: string): string {
     'consistent': '일정 유지형',
     'early-fatigue': '초반 집중형',
     'late-fatigue': '후반 피로형',
+    'improved_mental_resilience_and_bold_skipping_strategy_but_time_pressure_due_to_calculation_delays_remains': '개선된 회복력 (시간 압박)',
   };
-  return labels[pattern] || pattern;
+  return labels[pattern] || (pattern.includes('_') ? '복합 피로 패턴' : pattern);
 }
 
 // 발달 단계 한글 설명
@@ -74,7 +75,7 @@ function getDevelopmentStageLabel(stage: string): string {
     'proficient': '숙달 단계',
     'advanced': '고급 단계',
   };
-  return labels[stage] || stage;
+  return labels[stage] || (stage.includes('_') ? '분석 중' : stage);
 }
 
 function MetaHeader({
