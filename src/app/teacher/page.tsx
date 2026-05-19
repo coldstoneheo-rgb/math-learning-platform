@@ -293,7 +293,7 @@ export default function AdminDashboard() {
         <h2 className="text-2xl font-bold text-gray-900 mb-6">대시보드</h2>
 
         {/* 통계 카드 */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
           <StatCard label="등록 학생" value={stats.students} unit="명" />
           <StatCard label="생성 리포트" value={stats.reports} unit="개" />
           <StatCard label="이번 주 분석" value={stats.weeklyReports} unit="건" />
@@ -302,17 +302,18 @@ export default function AdminDashboard() {
 
         {/* 오늘 수업 섹션 */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-gray-900">📚 오늘 수업</h3>
-              <span className="text-sm text-gray-500">{formatDate(todayDate)}</span>
-              <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+            <h3 className="text-lg font-semibold text-gray-900">📚 오늘 수업</h3>
+            <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-xl self-start md:self-auto border border-gray-100">
+              <span className="text-sm font-medium text-gray-600">{formatDate(todayDate)}</span>
+              <span className="w-px h-3 bg-gray-300"></span>
+              <span className="text-sm font-bold text-indigo-600">
                 {todayStudents.length}명
               </span>
+              <Link href="/teacher/schedules" className="text-sm text-indigo-600 hover:text-indigo-700 font-semibold ml-2 flex items-center gap-1 bg-white px-2 py-1 rounded shadow-sm">
+                일정 관리 <span>→</span>
+              </Link>
             </div>
-            <Link href="/teacher/schedules" className="text-sm text-indigo-600 hover:text-indigo-700">
-              일정 관리 →
-            </Link>
           </div>
 
           {todayStudents.length === 0 ? (
@@ -338,7 +339,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* 퀵 액션 카드 */}
-        <div className="grid md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-10">
           <DashboardCard
             title="학생 관리"
             description="추가, 수정, 삭제"
@@ -363,8 +364,6 @@ export default function AdminDashboard() {
             icon="👨‍👩‍👧"
             href="/teacher/parents"
           />
-        </div>
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
           <DashboardCard
             title="리포트 생성"
             description="주간/월간/시험"
@@ -391,12 +390,12 @@ export default function AdminDashboard() {
           />
         </div>
 
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
+        <div className="mb-10">
+          <div className="flex flex-col gap-1.5 mb-4">
             <h3 className="text-lg font-semibold text-gray-900">데이터 고도화</h3>
             <p className="text-sm text-gray-500">과거 데이터와 AI 기억을 성장 분석에 연결합니다.</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
             <DashboardCard
               title="과거 데이터 가져오기"
               description="이미지/PDF/CSV 복원"
@@ -509,11 +508,11 @@ function DashboardCard({ title, description, icon, href }: {
   return (
     <a
       href={href}
-      className="block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow border border-gray-100 dashboard-card"
+      className="block bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all duration-300 border border-gray-100 dashboard-card active:scale-[0.98] group"
     >
-      <div className="text-2xl mb-2">{icon}</div>
+      <div className="text-2xl mb-2 transform transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1 origin-left">{icon}</div>
       <h3 className="font-semibold text-gray-900 mb-1">{title}</h3>
-      <p className="text-gray-500 text-xs">{description}</p>
+      <p className="text-gray-500 text-[11px] leading-tight md:text-xs">{description}</p>
     </a>
   );
 }
