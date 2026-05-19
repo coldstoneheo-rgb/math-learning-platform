@@ -75,11 +75,11 @@ interface ErrorPatternTrendProps {
 
 // 오류 유형별 색상
 const ERROR_TYPE_COLORS: Record<ErrorType, string> = {
-  '개념 오류': '#ef4444', // red
-  '절차 오류': '#f97316', // orange
-  '계산 오류': '#eab308', // yellow
-  '문제 오독': '#8b5cf6', // purple
-  '기타/부주의': '#6b7280', // gray
+  '개념 오류': '#dc2626', // red-600
+  '절차 오류': '#ea580c', // orange-600
+  '계산 오류': '#ca8a04', // yellow-600
+  '문제 오독': '#7c3aed', // violet-600
+  '기타/부주의': '#4b5563', // gray-600
 };
 
 // 추이 아이콘
@@ -207,10 +207,10 @@ function ErrorPatternTrend({
       {primaryErrorTypes.length > 0 && (
         <div className="mb-6">
           <h4 className="text-sm font-medium text-gray-700 mb-3">오류 유형 분포</h4>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             {/* 파이 차트 */}
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-48 w-full md:w-1/2 mx-auto max-w-[250px] md:max-w-none">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <PieChart>
                   <Pie
                     data={pieData}
@@ -218,13 +218,13 @@ function ErrorPatternTrend({
                     cy="50%"
                     innerRadius={40}
                     outerRadius={70}
-                    paddingAngle={2}
+                    paddingAngle={3}
                     dataKey="value"
-                    label={({ name, value }) => `${value}%`}
+                    label={({ value }) => `${value}%`}
                     labelLine={false}
                   >
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="#fff" strokeWidth={2} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -233,7 +233,7 @@ function ErrorPatternTrend({
             </div>
 
             {/* 오류 유형 리스트 */}
-            <div className="space-y-2">
+            <div className="space-y-2 w-full md:w-1/2">
               {primaryErrorTypes.map((item, index) => (
                 <motion.div
                   key={index}
@@ -241,12 +241,12 @@ function ErrorPatternTrend({
                   variants={itemVariants}
                   initial="hidden"
                   animate="visible"
-                  className="flex items-center justify-between p-2 rounded-lg"
-                  style={{ backgroundColor: `${ERROR_TYPE_COLORS[item.type]}10` }}
+                  className="flex items-center justify-between p-2.5 rounded-lg"
+                  style={{ backgroundColor: `${ERROR_TYPE_COLORS[item.type]}12` }}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: ERROR_TYPE_COLORS[item.type] }}
                     />
                     <span className="text-sm font-medium text-gray-700">{item.type}</span>

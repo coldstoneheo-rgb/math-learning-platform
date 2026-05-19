@@ -57,6 +57,22 @@ interface FormatAITextProps {
   asBullets?: boolean;
 }
 
+/** 텍스트 내 키워드 하이라이트 (따옴표/괄호 안 텍스트를 강조) */
+function highlightKeywords(text: string): React.ReactNode[] {
+  // 「」, '', "", ** 안의 텍스트를 bold로, 콜론(:) 앞 라벨을 medium으로
+  const parts = text.split(/(「[^」]+」|'[^']+'|"[^"]+"|\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (/^[「'"\*\*]/.test(part) && /[」'"\*\*]$/.test(part)) {
+      const inner = part.replace(/^[「'"\*\*]+|[」'"\*\*]+$/g, '');
+      return <span key={i} className="font-semibold text-gray-900">{inner}</span>;
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+}
+
+/** 번호 패턴 감지 (1), 2), ①, - 등) */
+const NUMBERED_PATTERN = /^(?:\d+[).\]]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*|[-·•]\s+)/;
+
 /**
  * AI 생성 텍스트를 가독성 높게 렌더링하는 컴포넌트.
  *
@@ -71,28 +87,41 @@ export function FormatAIText({ text, className = '', asBullets = false }: Format
 
   if (paragraphs.length === 0) return null;
 
+  // 번호 패턴이 있는 항목들을 리스트로 분리
+  const hasNumberedItems = paragraphs.some(p => NUMBERED_PATTERN.test(p));
+
   // 단일 문단이면 그냥 <p> 렌더링
-  if (paragraphs.length === 1 && !asBullets) {
-    return <p className={`leading-relaxed ${className}`}>{paragraphs[0]}</p>;
+  if (paragraphs.length === 1 && !asBullets && !hasNumberedItems) {
+    return <p className={`leading-relaxed ${className}`}>{highlightKeywords(paragraphs[0])}</p>;
   }
 
-  if (asBullets) {
+  if (asBullets || hasNumberedItems) {
+    // 번호가 있는 항목과 없는 항목을 분리
+    const items: { isListItem: boolean; text: string }[] = paragraphs.map(p => ({
+      isListItem: NUMBERED_PATTERN.test(p),
+      text: p.replace(NUMBERED_PATTERN, '').trim(),
+    }));
+
     return (
-      <ul className={`space-y-1.5 ${className}`}>
-        {paragraphs.map((p, i) => (
-          <li key={i} className="flex items-start gap-2 leading-relaxed">
-            <span className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-current opacity-40" />
-            <span>{p}</span>
-          </li>
-        ))}
-      </ul>
+      <div className={`space-y-2 ${className}`}>
+        {items.map((item, i) =>
+          item.isListItem ? (
+            <div key={i} className="flex items-start gap-2 leading-relaxed">
+              <span className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-current opacity-40" />
+              <span>{highlightKeywords(item.text)}</span>
+            </div>
+          ) : (
+            <p key={i} className="leading-relaxed">{highlightKeywords(item.text)}</p>
+          )
+        )}
+      </div>
     );
   }
 
   return (
     <div className={`space-y-2 ${className}`}>
       {paragraphs.map((p, i) => (
-        <p key={i} className="leading-relaxed">{p}</p>
+        <p key={i} className="leading-relaxed">{highlightKeywords(p)}</p>
       ))}
     </div>
   );

@@ -150,8 +150,9 @@ function MetaHeader({
       color: 'orange',
       description: metaProfile.errorSignature?.primaryErrorTypes?.length
         ? metaProfile.errorSignature.primaryErrorTypes
-            .map(e => e.type.length > 25 ? e.type.slice(0, 25) + '…' : e.type)
-            .slice(0, 2).join(', ')
+            .slice(0, 3)
+            .map(e => e.type.length > 20 ? e.type.slice(0, 20) + '…' : e.type)
+            .join(' · ')
         : '분석 대기',
       tooltip: '반복적으로 나타나는 실수 유형 (개념 오류, 계산 오류 등)',
       isCount: true,
@@ -340,7 +341,7 @@ function IndicatorCard({
   const colors = colorClasses[color] || colorClasses.indigo;
 
   const getValueColor = (val: number): string => {
-    if (isCount) return 'text-gray-700';
+    if (isCount) return colors.text;
     if (val >= 70) return 'text-green-700';
     if (val >= 50) return 'text-amber-700';
     return 'text-red-700';
@@ -361,7 +362,9 @@ function IndicatorCard({
         <div className="text-right">
           <span className={`text-2xl font-bold ${getValueColor(value)}`}>
             {isCount ? value : `${value}`}
-            {!isCount && <span className="text-sm font-normal text-gray-400">%</span>}
+            {isCount
+              ? <span className="text-xs font-normal text-gray-400 ml-0.5">종류</span>
+              : <span className="text-sm font-normal text-gray-400">%</span>}
           </span>
           {!isCount && (
             <span className={`block text-xs ${getValueColor(value)}`}>

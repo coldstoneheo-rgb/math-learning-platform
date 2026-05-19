@@ -436,19 +436,19 @@ export default function ParentReportDetailPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 수학 역량</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
                   {[
-                    { key: 'calculationSpeed', label: '계산 속도' },
-                    { key: 'calculationAccuracy', label: '계산 정확도' },
-                    { key: 'applicationAbility', label: '응용력' },
-                    { key: 'logic', label: '논리력' },
-                    { key: 'anxietyControl', label: '불안 통제' },
-                  ].map(({ key, label }) => {
+                    { key: 'calculationSpeed', label: '계산 속도', numColor: 'text-blue-600', barColor: 'bg-blue-500' },
+                    { key: 'calculationAccuracy', label: '계산 정확도', numColor: 'text-emerald-600', barColor: 'bg-emerald-500' },
+                    { key: 'applicationAbility', label: '응용력', numColor: 'text-violet-600', barColor: 'bg-violet-500' },
+                    { key: 'logic', label: '논리력', numColor: 'text-amber-600', barColor: 'bg-amber-500' },
+                    { key: 'anxietyControl', label: '불안 통제', numColor: 'text-rose-600', barColor: 'bg-rose-500' },
+                  ].map(({ key, label, numColor, barColor }) => {
                     const value = mathCapability[key as keyof typeof mathCapability] || 0;
                     return (
                       <div key={key} className="text-center">
-                        <div className="text-2xl font-bold text-indigo-600">{value}</div>
+                        <div className={`text-2xl font-bold ${numColor}`}>{value}</div>
                         <div className="text-xs text-gray-500 mt-1">{label}</div>
                         <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${value}%` }} />
+                          <div className={`h-full ${barColor} rounded-full`} style={{ width: `${value}%` }} />
                         </div>
                       </div>
                     );
