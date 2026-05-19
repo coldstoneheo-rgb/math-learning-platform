@@ -419,7 +419,7 @@ export default function AdminDashboard() {
                   <a
                     key={report.id}
                     href={`/teacher/reports/${report.id}`}
-                    className="flex flex-col gap-3 py-3 hover:bg-gray-50 dark:hover:bg-slate-800/40 -mx-2 px-2 rounded transition-colors md:flex-row md:items-center md:justify-between"
+                    className="flex flex-col gap-3 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 -mx-2 px-2 rounded transition-colors md:flex-row md:items-center md:justify-between"
                   >
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="w-8 h-8 shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-sm">
