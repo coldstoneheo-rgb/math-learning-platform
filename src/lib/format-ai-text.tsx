@@ -116,7 +116,7 @@ export function FormatAIText({ text, className = '', asBullets = false }: Format
 
   // 단일 문단이면 그냥 <p> 렌더링
   if (paragraphs.length === 1 && !asBullets && !hasNumberedItems) {
-    return <p className={`leading-relaxed ${className}`}>{processTextNode(paragraphs[0])}</p>;
+    return <p className={`leading-relaxed animate-fade-in ${className}`}>{processTextNode(paragraphs[0])}</p>;
   }
 
   if (asBullets || hasNumberedItems) {
@@ -126,7 +126,7 @@ export function FormatAIText({ text, className = '', asBullets = false }: Format
     }));
 
     return (
-      <div className={`space-y-2 ${className}`}>
+      <div className={`space-y-2 animate-fade-in ${className}`}>
         {items.map((item, i) =>
           item.isListItem ? (
             <div key={i} className="flex items-start gap-2 leading-relaxed">
@@ -142,7 +142,7 @@ export function FormatAIText({ text, className = '', asBullets = false }: Format
   }
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-2 animate-fade-in ${className}`}>
       {paragraphs.map((p, i) => (
         <p key={i} className="leading-relaxed">{processTextNode(p)}</p>
       ))}

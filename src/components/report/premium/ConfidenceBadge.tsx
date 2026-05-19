@@ -172,13 +172,17 @@ function ConfidenceBadge({
                 (level === 'medium' && i === 3) ||
                 (level === 'low' && i === 1);
               return (
-                <div key={i} className="flex-1 flex flex-col items-center">
+                <div key={i} className="flex-1 flex flex-col items-center relative group cursor-pointer">
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full mb-1 hidden group-hover:block z-10 w-max px-2 py-1 text-[10px] text-white bg-gray-800 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    {i === 1 ? '매우 낮음' : i === 2 ? '낮음' : i === 3 ? '보통' : i === 4 ? '높음' : '매우 높음'}
+                  </div>
                   {isIndicator && (
                     <span className={`text-[10px] mb-0.5 ${config.textColor}`}>▼</span>
                   )}
                   {!isIndicator && <div className="h-[14px]" />}
                   <motion.div
-                    className={`h-2 w-full rounded-full ${
+                    className={`h-2 w-full rounded-full transition-transform duration-300 group-hover:scale-y-150 ${
                       filled ? segmentColors[i - 1] : 'bg-slate-200'
                     }`}
                     initial={{ scaleX: 0 }}

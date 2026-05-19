@@ -149,10 +149,7 @@ function MetaHeader({
       Icon: Target,
       color: 'orange',
       description: metaProfile.errorSignature?.primaryErrorTypes?.length
-        ? metaProfile.errorSignature.primaryErrorTypes
-            .slice(0, 3)
-            .map(e => e.type.length > 20 ? e.type.slice(0, 20) + '…' : e.type)
-            .join(' · ')
+        ? metaProfile.errorSignature.primaryErrorTypes.map(e => e.type).join(', ')
         : '분석 대기',
       tooltip: '반복적으로 나타나는 실수 유형 (개념 오류, 계산 오류 등)',
       isCount: true,
@@ -356,7 +353,7 @@ function IndicatorCard({
   };
 
   return (
-    <div className={`${colors.bg} rounded-lg p-3`} title={tooltip}>
+    <div className={`${colors.bg} rounded-lg p-3 group hover:shadow-md transition-all duration-300 relative cursor-default`} title={tooltip}>
       <div className="flex items-center justify-between mb-2">
         <Icon className={`w-5 h-5 ${colors.text}`} />
         <div className="text-right">
@@ -374,7 +371,7 @@ function IndicatorCard({
         </div>
       </div>
       <p className={`text-sm font-medium ${colors.text}`}>{label}</p>
-      <p className="text-xs text-gray-600 mt-1">{description}</p>
+      <p className="text-xs text-gray-600 mt-1 line-clamp-1 group-hover:line-clamp-none transition-all duration-300">{description}</p>
       {!isCount && (
         <div className="mt-2 h-1.5 bg-white/50 rounded-full overflow-hidden">
           <div
