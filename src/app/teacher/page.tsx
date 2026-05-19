@@ -243,22 +243,48 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="text-xl font-bold text-indigo-600 hover:text-indigo-700">
-            수학 학습 분석
-          </Link>
-          <div className="flex items-center gap-3">
-            <span className="text-gray-600">{user?.name} 선생님</span>
-            <ThemeToggle />
+      {/* 프리미엄 모바일 대응 헤더 */}
+      <header className="bg-white shadow-sm border-b border-indigo-50">
+        <div className="container mx-auto px-4 py-6 flex flex-col items-center gap-4 text-center">
+          
+          {/* 플랫폼 브랜딩 (My Math Master) */}
+          <div className="flex flex-col items-center">
+            <Link href="/" className="inline-flex items-center gap-2 text-2xl font-black text-indigo-900 tracking-tight">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-md shrink-0">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <span className="whitespace-nowrap">My Math Master</span>
+            </Link>
+            <p className="text-xs md:text-sm text-slate-500 mt-1.5 font-medium whitespace-nowrap">
+              데이터가 증명하는 최상위권 수학 성장 플랫폼
+            </p>
+          </div>
+
+          {/* 컨트롤 패널 (유저명, 테마, 로그아웃) */}
+          <div className="flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 rounded-full px-4 py-2 shadow-sm mt-1 overflow-x-auto max-w-full no-scrollbar">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">
+                {user?.name?.charAt(0) || 'T'}
+              </span>
+              <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+                {user?.name} 선생님
+              </span>
+            </div>
+            <div className="w-px h-4 bg-slate-300 mx-1 shrink-0"></div>
+            <div className="shrink-0">
+              <ThemeToggle />
+            </div>
+            <div className="w-px h-4 bg-slate-300 mx-1 shrink-0"></div>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="text-xs font-bold text-slate-500 hover:text-rose-600 transition-colors whitespace-nowrap px-1 shrink-0"
             >
               로그아웃
             </button>
           </div>
+          
         </div>
       </header>
 
