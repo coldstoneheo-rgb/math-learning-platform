@@ -102,11 +102,14 @@ export default function AdminDashboard() {
     let needsAttentionReports = 0;
     let from = 0;
     const pageSize = 1000;
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     while (true) {
       const { data: growthStatusReports, error: growthStatusError } = await supabase
         .from('reports')
         .select('report_type, analysis_data')
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .range(from, from + pageSize - 1);
 
       if (growthStatusError) {
@@ -162,53 +165,28 @@ export default function AdminDashboard() {
       return;
     }
 
-    // 각 학생별 추가 정보 로드
-    const todayInfo: TodayStudentInfo[] = [];
-
-    for (const schedule of schedules) {
+    // 각 학생별 쿼리 병렬 처리
+    const todayInfoPromises = schedules.map(async (schedule) => {
       const studentId = schedule.student_id;
 
-      // 최근 수업 기록
-      const { data: lastSessions } = await supabase
-        .from('class_sessions')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('session_date', { ascending: false })
-        .limit(1);
+      const [lastSessionsRes, assignmentsRes, weaknessesRes, recentReportsRes] = await Promise.all([
+        supabase.from('class_sessions').select('*').eq('student_id', studentId).order('session_date', { ascending: false }).limit(1),
+        supabase.from('assignments').select('*').eq('student_id', studentId).in('status', ['assigned', 'in_progress', 'overdue']),
+        supabase.from('student_weaknesses').select('*').eq('student_id', studentId).in('status', ['active', 'recurring']).order('severity', { ascending: false }).limit(3),
+        supabase.from('reports').select('*').eq('student_id', studentId).order('created_at', { ascending: false }).limit(1)
+      ]);
 
-      // 미완료 숙제
-      const { data: assignments } = await supabase
-        .from('assignments')
-        .select('*')
-        .eq('student_id', studentId)
-        .in('status', ['assigned', 'in_progress', 'overdue']);
-
-      // 활성 취약점
-      const { data: weaknesses } = await supabase
-        .from('student_weaknesses')
-        .select('*')
-        .eq('student_id', studentId)
-        .in('status', ['active', 'recurring'])
-        .order('severity', { ascending: false })
-        .limit(3);
-
-      // 최근 리포트
-      const { data: recentReports } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      todayInfo.push({
+      return {
         student: schedule.students,
         schedule: schedule,
-        lastSession: lastSessions?.[0] || undefined,
-        pendingAssignments: assignments || [],
-        activeWeaknesses: weaknesses || [],
-        recentReport: recentReports?.[0] || undefined,
-      });
-    }
+        lastSession: lastSessionsRes.data?.[0] || undefined,
+        pendingAssignments: assignmentsRes.data || [],
+        activeWeaknesses: weaknessesRes.data || [],
+        recentReport: recentReportsRes.data?.[0] || undefined,
+      };
+    });
+
+    const todayInfo = await Promise.all(todayInfoPromises);
 
     setTodayStudents(todayInfo);
   };
@@ -570,7 +548,7 @@ function TodayStudentCard({
                 {recentReport.total_score ? (
                   <span className="font-medium text-gray-900">
                     {recentReport.total_score}
-                    <span className="text-gray-400">/{recentReport.max_score}</span>
+                    <span className="text-gray-500">/{recentReport.max_score}</span>
                   </span>
                 ) : (
                   <span className="font-medium text-gray-900">리포트 확인</span>
@@ -619,7 +597,7 @@ function TodayStudentCard({
             ) : overdueAssignments > 0 ? (
               <span className="text-red-600">⏳ {overdueAssignments}건 미완료</span>
             ) : (
-              <span className="text-green-600">✓ {completedAssignments}건 완료</span>
+              <span className="text-emerald-700">✓ {completedAssignments}건 완료</span>
             )}
           </div>
         </div>
