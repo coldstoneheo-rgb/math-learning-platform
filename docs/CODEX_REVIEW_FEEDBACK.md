@@ -277,6 +277,20 @@
 
 ---
 
+## 📌 Phase 18: 다크 모드 시스템 동기화 및 컬러셋 대응 (Tailwind v4 대응)
+**상태**: ✅ 완료 (빌드 검증 통과)
+**개선 목적**: Tailwind CSS v4의 기본 다크 모드 감지 전략(Media Query)으로 인해, 앱 내부의 테마 토글 상태(`localStorage` / `.dark` 클래스)와 Tailwind의 `dark:` 유틸리티 클래스가 매칭되지 않던 문제 해결. 다크 모드 변환 시 카드 및 텍스트의 가독성이 하락(예: 흰색 카드 위에 흰색 텍스트가 겹침)하던 오류 개선.
+
+### 적용 내용
+- ✅ **Tailwind v4 커스텀 다크 배리언트 정의 (`globals.css`)**: 
+  - `@custom-variant dark (&:where(.dark, .dark *));` 구문을 추가하여 Tailwind의 `dark:` 프리픽스가 시스템 환경 설정이 아닌 HTML의 `.dark` 클래스 활성화 여부에만 동기화되도록 수정.
+- ✅ **선생님 대시보드 다크 모드 전면 대응 (`teacher/page.tsx`)**:
+  - **배경 및 레이아웃**: 메인 컨테이너 `bg-gray-50 dark:bg-slate-950` 및 헤더 `bg-white dark:bg-slate-900`에 테마 변환 스타일 주입.
+  - **컴포넌트 카드**: `StatCard`, `DashboardCard`, `TodayStudentCard`, 최근 이벤트 컨테이너 및 내부 카드의 하드코딩된 흰색 배경(`bg-white`)을 다크 모드용 배경(`dark:bg-slate-900`, `dark:bg-slate-800/40`)으로 전환하고 테두리 색상(`dark:border-slate-800`)을 적용해 계층 분리.
+  - **텍스트 가독성 최적화**: 다크 모드 활성화 시 텍스트가 묻히는 것을 방지하기 위해 `text-gray-900 dark:text-white`, `text-slate-700 dark:text-slate-300`, `text-gray-500 dark:text-gray-400` 등으로 적정 대비(Contrast)를 완벽 확보.
+
+---
+
 ## 🏁 최종 요약
-모든 검증 및 고도화 작업(Phase 1 ~ 17)이 성공적으로 완료되었습니다.
+모든 검증 및 고도화 작업(Phase 1 ~ 18)이 성공적으로 완료되었습니다.
 이 피드백 문서를 참고하여 향후 구현 시 로케이터 설정, 린트 경고 방지, 견고한 에러 핸들링, 접근성을 갖춘 프리미엄 UI 유지, 최신 프레임워크 규약 준수, 방어 코드 작성, AI 생성 텍스트의 방어적 렌더링(Defensive Rendering), 프론트엔드 성능 최적화, 모바일 우선 가독성 설계, 그리고 **마이크로 인터랙션(Hover, Transition)과 수식 렌더링(KaTeX)**에 각별히 신경 써주시길 바랍니다.
