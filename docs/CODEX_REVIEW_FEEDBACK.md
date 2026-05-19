@@ -165,6 +165,27 @@
 
 ---
 
+## 📌 Phase 11: 학부모 리포트 소급 적용 · 학생 프리미엄 컴포넌트
+**상태**: ✅ 완료 (빌드 검증 통과)
+**대상 화면**: 학부모 리포트 상세, 학생 리포트 상세
+**개선 목적**: Phase 10에서 교사 리포트에 적용한 가독성·UX 개선을 학부모/학생 뷰에 소급 적용하고, 학생 뷰에 프리미엄 컴포넌트를 도입.
+
+### Track A: 학부모 리포트 Phase 10 소급 적용
+- ✅ `FormatAIText` 7개 지점 적용 (summary, strengths, weaknesses, errorPattern, prescription description, level test strengths/weaknesses)
+- ✅ 문항별 분석: 테이블 → `ProblemAnalysisSection` 아코디언 교체
+- ✅ Prescription 카드: 2열 그리드 → 1열 `space-y-2` 레이아웃
+
+### Track B: 학생 리포트 프리미엄 컴포넌트 도입
+- ✅ `FivePerspectiveAnalysis`: 사고·풀이·계산·해석·습관 5관점 요약
+- ✅ `ProblemAnalysisSection`: 문항별 아코디언 카드
+- ✅ `GrowthProjectionChart`: 성장 예측 차트 (동기부여용)
+- ✅ `ConfidenceBadge` + `EvidenceBadge`: 분석 신뢰도·근거 표시
+
+### 다음 Phase (Track C — Phase 12 예정)
+- 교사 리포트 2,400줄+ 모놀리식 파일 → 7개 서브컴포넌트 분리
+
+---
+
 ## 🏁 최종 요약
-모든 검증 및 고도화 작업(Phase 1 ~ 10)이 성공적으로 완료되었습니다.
+모든 검증 및 고도화 작업(Phase 1 ~ 11)이 성공적으로 완료되었습니다.
 이 피드백 문서를 참고하여 향후 구현 시 로케이터 설정, 린트 경고 방지, 견고한 에러 핸들링, 접근성을 갖춘 프리미엄 UI 유지, 최신 프레임워크 규약 준수, 방어 코드 작성, AI 생성 텍스트의 방어적 렌더링(Defensive Rendering), 프론트엔드 성능(동적 로딩, 스켈레톤 UI, 빌드 제외 처리) 최적화, 그리고 모바일 우선 가독성 설계에 각별히 신경 써주시길 바랍니다.

@@ -30,6 +30,8 @@ import {
   calculateSessionAverages,
   generateWeeklyComparison,
 } from '@/lib/report-utils';
+import { FormatAIText } from '@/lib/format-ai-text';
+import ProblemAnalysisSection from '@/components/report/ProblemAnalysisSection';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -394,7 +396,7 @@ export default function ParentReportDetailPage() {
                 </div>
               )}
               {canShowDerivedGuidance ? (
-                <p className="text-gray-700 leading-relaxed mb-4">{testAnalysis.macroAnalysis?.summary}</p>
+                <FormatAIText text={testAnalysis.macroAnalysis?.summary} className="text-gray-700 text-sm mb-4" />
               ) : (
                 <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                   <p className="font-semibold">교사 확정값 기준 성장 분석 준비 중</p>
@@ -409,13 +411,13 @@ export default function ParentReportDetailPage() {
                 {testAnalysis.macroAnalysis?.strengths && (
                   <div className="p-4 bg-green-50 rounded-lg">
                     <h4 className="font-medium text-green-800 mb-2">💪 강점</h4>
-                    <p className="text-green-700 text-sm">{testAnalysis.macroAnalysis.strengths}</p>
+                    <FormatAIText text={testAnalysis.macroAnalysis.strengths} className="text-green-700 text-sm" />
                   </div>
                 )}
                 {testAnalysis.macroAnalysis?.weaknesses && (
                   <div className="p-4 bg-red-50 rounded-lg">
                     <h4 className="font-medium text-red-800 mb-2">⚠️ 보완점</h4>
-                    <p className="text-red-700 text-sm">{testAnalysis.macroAnalysis.weaknesses}</p>
+                    <FormatAIText text={testAnalysis.macroAnalysis.weaknesses} className="text-red-700 text-sm" />
                   </div>
                 )}
               </div>
@@ -423,7 +425,7 @@ export default function ParentReportDetailPage() {
               {canShowDerivedGuidance && testAnalysis.macroAnalysis?.errorPattern && (
                 <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
                   <h4 className="font-medium text-yellow-800 mb-2">🔍 주요 오류 패턴</h4>
-                  <p className="text-yellow-700 text-sm">{testAnalysis.macroAnalysis.errorPattern}</p>
+                  <FormatAIText text={testAnalysis.macroAnalysis.errorPattern} className="text-yellow-700 text-sm" />
                 </div>
               )}
             </div>
@@ -484,14 +486,29 @@ export default function ParentReportDetailPage() {
                         </span>
                         <span className="font-semibold text-gray-900">{item.title}</span>
                       </div>
-                      <p className="text-gray-600 text-sm mb-3">{item.description}</p>
-                      <div className="grid md:grid-cols-2 gap-2 text-sm bg-gray-50 rounded-lg p-3">
-                        <div><span className="text-gray-500">📚 무엇을:</span> {item.whatToDo}</div>
-                        <div><span className="text-gray-500">📍 어디서:</span> {item.where}</div>
-                        <div><span className="text-gray-500">⏱️ 얼마나:</span> {item.howMuch}</div>
-                        <div><span className="text-gray-500">💡 어떻게:</span> {item.howTo}</div>
+                      <FormatAIText text={item.description} className="text-gray-600 text-sm mb-3" />
+                      <div className="space-y-2 text-sm bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">📚</span>
+                          <div><span className="font-medium text-gray-700">무엇을: </span><span className="text-gray-600">{item.whatToDo}</span></div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">📍</span>
+                          <div><span className="font-medium text-gray-700">어디서: </span><span className="text-gray-600">{item.where}</span></div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">⏱️</span>
+                          <div><span className="font-medium text-gray-700">얼마나: </span><span className="text-gray-600">{item.howMuch}</span></div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">💡</span>
+                          <div><span className="font-medium text-gray-700">어떻게: </span><span className="text-gray-600">{item.howTo}</span></div>
+                        </div>
                         {item.measurementMethod && (
-                          <div className="md:col-span-2"><span className="text-gray-500">📏 측정 방법:</span> {item.measurementMethod}</div>
+                          <div className="flex items-start gap-2 pt-2 border-t border-gray-200">
+                            <span className="text-gray-400 shrink-0">📏</span>
+                            <div><span className="font-medium text-gray-700">측정 방법: </span><span className="text-gray-600">{item.measurementMethod}</span></div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -500,39 +517,9 @@ export default function ParentReportDetailPage() {
               </div>
             )}
 
-            {/* 문항별 분석 */}
+            {/* 문항별 분석 — 아코디언 카드 */}
             {testAnalysis.detailedAnalysis && testAnalysis.detailedAnalysis.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 문항별 분석</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left">번호</th>
-                        <th className="px-3 py-2 text-center">정오</th>
-                        <th className="px-3 py-2 text-left">핵심 개념</th>
-                        <th className="px-3 py-2 text-left">오류 유형</th>
-                        <th className="px-3 py-2 text-left">분석</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {testAnalysis.detailedAnalysis.map((item, index) => (
-                        <tr key={index} className={item.isCorrect === 'X' ? 'bg-red-50' : ''}>
-                          <td className="px-3 py-2 font-medium">{item.problemNumber}</td>
-                          <td className="px-3 py-2 text-center">
-                            <span className={`inline-block w-6 h-6 rounded-full text-white font-bold leading-6 text-xs ${
-                              item.isCorrect === 'O' ? 'bg-green-500' : item.isCorrect === 'X' ? 'bg-red-500' : 'bg-yellow-500'
-                            }`}>{item.isCorrect}</span>
-                          </td>
-                          <td className="px-3 py-2">{item.keyConcept}</td>
-                          <td className="px-3 py-2 text-gray-600">{item.errorType || '-'}</td>
-                          <td className="px-3 py-2 text-gray-600 text-xs">{item.analysis || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <ProblemAnalysisSection items={testAnalysis.detailedAnalysis} />
             )}
 
             {/* 학습 습관 & 위험 요인 */}
@@ -675,13 +662,13 @@ export default function ParentReportDetailPage() {
               {levelTestAnalysis.initialBaseline?.strengths && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">💪 잘하는 것</h3>
-                  <p className="text-sm text-gray-700 leading-relaxed">{levelTestAnalysis.initialBaseline.strengths}</p>
+                  <FormatAIText text={levelTestAnalysis.initialBaseline.strengths} className="text-sm text-gray-700" />
                 </div>
               )}
               {levelTestAnalysis.initialBaseline?.weaknesses && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">🔧 보완할 것</h3>
-                  <p className="text-sm text-gray-700 leading-relaxed">{levelTestAnalysis.initialBaseline.weaknesses}</p>
+                  <FormatAIText text={levelTestAnalysis.initialBaseline.weaknesses} className="text-sm text-gray-700" />
                 </div>
               )}
             </div>

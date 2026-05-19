@@ -6,6 +6,17 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
 import {
+  FivePerspectiveAnalysis,
+  ConfidenceBadge,
+  getConfidenceLevel,
+  EvidenceBadge,
+  ReportGrowthHero,
+} from '@/components/report/premium';
+import ProblemAnalysisSection from '@/components/report/ProblemAnalysisSection';
+import dynamic from 'next/dynamic';
+import ChartSkeleton from '@/components/common/ChartSkeleton';
+const GrowthProjectionChart = dynamic(() => import('@/components/report/premium').then(mod => mod.GrowthProjectionChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+import {
   canShowStudentDerivedNarrative,
   getDisplayableDerivedGuidance,
   getStudentGrowthTruthNotice,
@@ -160,6 +171,32 @@ export default function StudentReportDetailPage() {
   const selfAnalysis = isSelfAnalysis ? report.analysis_data as SelfAnalysisReport : null;
   const config = REPORT_TYPE_CONFIG[reportType];
 
+  // 프리미엄 컴포넌트용 데이터
+  const isTestAnalysis = reportType === 'test' || reportType === 'consolidated';
+  const confidenceDataCount = [
+    report.students?.meta_profile?.baseline?.assessmentDate,
+    ...(report.students?.meta_profile?.errorSignature?.signaturePatterns || []),
+    ...(report.students?.meta_profile?.legacySignals || []),
+    ...(analysisData?.detailedAnalysis || []),
+    ...displayableGuidance.growthPredictions,
+  ].filter(Boolean).length;
+  const evidenceSources = [
+    {
+      type: 'ai_analysis' as const,
+      label: 'AI 분석 결과',
+      date: report.test_date || report.created_at,
+      description: report.test_name || config?.name || '리포트',
+    },
+    ...(analysisData?.detailedAnalysis?.length
+      ? [{
+          type: 'test_paper' as const,
+          label: '문항별 분석',
+          date: report.test_date || undefined,
+          description: `${analysisData.detailedAnalysis.length}개 문항 근거`,
+        }]
+      : []),
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toast toasts={toasts} onRemove={removeToast} />
@@ -269,6 +306,21 @@ export default function StudentReportDetailPage() {
             </div>
           )}
 
+          {/* 프리미엄: 분석 신뢰도 + 근거 배지 */}
+          {isTestAnalysis && (
+            <div className="px-6 pb-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <ConfidenceBadge
+                  level={getConfidenceLevel(confidenceDataCount)}
+                  dataCount={confidenceDataCount}
+                  dataPeriod={report.test_date || report.created_at?.slice(0, 10)}
+                  description="누적 데이터와 선생님 피드백을 반영한 분석 신뢰도예요."
+                />
+                <EvidenceBadge sources={evidenceSources} />
+              </div>
+            </div>
+          )}
+
           {/* 분석 결과 요약 */}
           {analysisData?.macroAnalysis && canShowMacroNarrative && (
             <div className="p-6 border-b">
@@ -304,6 +356,51 @@ export default function StudentReportDetailPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* 프리미엄: 5관점 분석 */}
+          {analysisData?.macroAnalysis && canShowMacroNarrative && (
+            <div className="px-6 pb-4">
+              <FivePerspectiveAnalysis
+                perspectives={[
+                  {
+                    type: 'thinking_start',
+                    title: '사고의 출발점',
+                    summary: analysisData.macroAnalysis.strengths || '문제 접근 방식을 분석 중입니다.',
+                    status: 'good',
+                  },
+                  {
+                    type: 'solving_process',
+                    title: '풀이 진행 과정',
+                    summary: analysisData.macroAnalysis.summary || '풀이 과정을 분석 중입니다.',
+                    status: analysisData.macroAnalysis.errorPattern ? 'warning' : 'good',
+                  },
+                  {
+                    type: 'calculation_pattern',
+                    title: '계산 및 실수 패턴',
+                    summary: analysisData.macroAnalysis.errorPattern || '계산 패턴을 분석 중입니다.',
+                    status: 'warning',
+                  },
+                  {
+                    type: 'problem_interpretation',
+                    title: '문제 해석 능력',
+                    summary: analysisData.macroAnalysis.weaknesses || '문제 해석 능력을 분석 중입니다.',
+                    status: analysisData.macroAnalysis.weaknesses ? 'warning' : 'good',
+                  },
+                  {
+                    type: 'solving_habit',
+                    title: '풀이 습관 관찰',
+                    summary: displayableGuidance.learningHabits.length > 0
+                      ? displayableGuidance.learningHabits[0].description +
+                        (displayableGuidance.learningHabits.length > 1 ? ` 외 ${displayableGuidance.learningHabits.length - 1}건` : '')
+                      : '풀이 습관을 분석 중입니다.',
+                    status: displayableGuidance.learningHabits.some(h => h.type === 'bad') ? 'warning' : 'good',
+                  },
+                ]}
+                studentName={report.students?.name}
+                testName={report.test_name || undefined}
+              />
             </div>
           )}
 
@@ -372,6 +469,32 @@ export default function StudentReportDetailPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* 프리미엄: 문항별 분석 아코디언 */}
+          {analysisData?.detailedAnalysis && analysisData.detailedAnalysis.length > 0 && (
+            <div className="px-6 pb-4">
+              <ProblemAnalysisSection items={analysisData.detailedAnalysis} />
+            </div>
+          )}
+
+          {/* 프리미엄: 성장 예측 차트 */}
+          {displayableGuidance.growthPredictions.length > 0 && (
+            <div className="px-6 pb-4">
+              <GrowthProjectionChart
+                historicalData={[
+                  { date: report.test_date || '현재', score: report.total_score ?? 0 },
+                ]}
+                projectedData={displayableGuidance.growthPredictions.map(p => ({
+                  date: p.timeframe,
+                  score: p.predictedScore,
+                  label: `${p.timeframe} 예상`,
+                  isProjection: true,
+                }))}
+                targetScore={displayableGuidance.growthPredictions[displayableGuidance.growthPredictions.length - 1]?.predictedScore || 90}
+                studentName={report.students?.name}
+              />
             </div>
           )}
 
