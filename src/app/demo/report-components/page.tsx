@@ -8,18 +8,21 @@
 
 import { useState } from 'react';
 import {
-  HabitTrendChart,
   MomentumGauge,
   MomentumBadge,
-  MonthlyRadarChart,
   buildRadarData,
   WeaknessResolutionMap,
   buildWeaknessItems,
-  TrajectoryAreaChart,
   MetaProfileComparison,
   buildMetaProfileMetrics,
   AnnualGrowthStory,
 } from '@/components/report';
+import dynamic from 'next/dynamic';
+import ChartSkeleton from '@/components/common/ChartSkeleton';
+
+const HabitTrendChart = dynamic(() => import('@/components/report').then(mod => mod.HabitTrendChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const MonthlyRadarChart = dynamic(() => import('@/components/report').then(mod => mod.MonthlyRadarChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const TrajectoryAreaChart = dynamic(() => import('@/components/report').then(mod => mod.TrajectoryAreaChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
 
 // Sample data for demos
 const habitTrendData = [

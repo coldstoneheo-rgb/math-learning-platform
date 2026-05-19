@@ -3,21 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge, ReportComments } from '@/components/report';
-import GrowthRadarChart, { buildRadarData } from '@/components/report/GrowthRadarChart';
+import dynamic from 'next/dynamic';
+import ChartSkeleton from '@/components/common/ChartSkeleton';
+import { MetaHeader, VisionFooter, MomentumGauge, ReportComments } from '@/components/report';
+import { buildRadarData } from '@/components/report/GrowthRadarChart';
 import WeaknessResolutionMap, { buildWeaknessItems } from '@/components/report/WeaknessResolutionMap';
-import TrajectoryAreaChart from '@/components/report/TrajectoryAreaChart';
 import MetaProfileComparison, { buildMetaProfileMetrics } from '@/components/report/MetaProfileComparison';
 import AnnualGrowthStory from '@/components/report/AnnualGrowthStory';
 import {
   ReportGrowthHero,
   HomeActionCard,
-  GrowthProjectionChart,
   ConfidenceBadge,
   getConfidenceLevel,
   EvidenceBadge,
   ReportPDFExporter,
 } from '@/components/report/premium';
+
+const HabitTrendChart = dynamic(() => import('@/components/report').then(mod => mod.HabitTrendChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const GrowthRadarChart = dynamic(() => import('@/components/report/GrowthRadarChart'), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const TrajectoryAreaChart = dynamic(() => import('@/components/report/TrajectoryAreaChart'), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const GrowthProjectionChart = dynamic(() => import('@/components/report/premium').then(mod => mod.GrowthProjectionChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
 import {
   calculateHabitScore,
   convertMomentumStatus,

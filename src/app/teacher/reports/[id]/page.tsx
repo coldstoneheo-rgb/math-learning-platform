@@ -3,17 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import ChartSkeleton from '@/components/common/ChartSkeleton';
 import { createClient } from '@/lib/supabase/client';
 import {
   MetaHeader,
   VisionFooter,
-  GrowthTrajectoryChart,
-  ErrorPatternTrend,
   GrowthLoopIndicator,
   BaselineReferenceCard,
   VisionDistanceFooter,
   MomentumGauge,
-  HabitTrendChart,
   ReportComments,
 } from '@/components/report';
 import {
@@ -21,13 +20,17 @@ import {
   FivePerspectiveAnalysis,
   HomeActionCard,
   WeaknessJourneyMap,
-  GrowthProjectionChart,
   ConfidenceBadge,
   getConfidenceLevel,
   EvidenceBadge,
   ErrorSignatureTracker,
   ReportPDFExporter,
 } from '@/components/report/premium';
+
+const GrowthTrajectoryChart = dynamic(() => import('@/components/report').then(mod => mod.GrowthTrajectoryChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const ErrorPatternTrend = dynamic(() => import('@/components/report').then(mod => mod.ErrorPatternTrend), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const HabitTrendChart = dynamic(() => import('@/components/report').then(mod => mod.HabitTrendChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const GrowthProjectionChart = dynamic(() => import('@/components/report/premium').then(mod => mod.GrowthProjectionChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
 import {
   calculateHabitScore,
   convertMomentumStatus,
