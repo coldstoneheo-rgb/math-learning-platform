@@ -241,7 +241,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* 컨트롤 패널 (유저명, 테마, 로그아웃) */}
-          <div className="flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 rounded-full px-4 py-2 shadow-sm mt-1 overflow-x-auto max-w-full no-scrollbar">
+          <div className="flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 rounded-full px-4 py-2 shadow-sm mt-1 overflow-visible">
             <div className="flex items-center gap-2 shrink-0">
               <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">
                 {user?.name?.charAt(0) || 'T'}
