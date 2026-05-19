@@ -1,4 +1,5 @@
 import React from 'react';
+import { renderMathInText, hasMathContent } from './math-renderer';
 
 /**
  * AI가 생성한 긴 텍스트를 가독성 높은 문단으로 분리하여 렌더링합니다.
@@ -59,7 +60,7 @@ interface FormatAITextProps {
 
 /** 텍스트 내 키워드 하이라이트 (따옴표/괄호 안 텍스트를 강조) */
 function highlightKeywords(text: string): React.ReactNode[] {
-  // 「」, '', "", ** 안의 텍스트를 bold로, 콜론(:) 앞 라벨을 medium으로
+  // 「」, '', "", ** 안의 텍스트를 bold로
   const parts = text.split(/(「[^」]+」|'[^']+'|"[^"]+"|\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (/^[「'"\*\*]/.test(part) && /[」'"\*\*]$/.test(part)) {
@@ -68,6 +69,29 @@ function highlightKeywords(text: string): React.ReactNode[] {
     }
     return <React.Fragment key={i}>{part}</React.Fragment>;
   });
+}
+
+/**
+ * 텍스트를 처리하는 통합 파이프라인:
+ * 1. 수식 감지 + KaTeX 렌더링
+ * 2. 키워드 하이라이트
+ *
+ * 수식이 포함된 경우 수식 부분은 KaTeX로, 나머지는 키워드 하이라이트로 처리합니다.
+ */
+function processTextNode(text: string): React.ReactNode[] {
+  if (hasMathContent(text)) {
+    // 수식이 있으면 먼저 수식 처리 (수식 부분은 이미 React 노드로 변환됨)
+    const mathNodes = renderMathInText(text);
+    return mathNodes.flatMap((node, i) => {
+      // 문자열 부분만 키워드 하이라이트 적용
+      if (typeof node === 'string') {
+        return highlightKeywords(node);
+      }
+      return [node];
+    });
+  }
+  // 수식이 없으면 키워드 하이라이트만
+  return highlightKeywords(text);
 }
 
 /** 번호 패턴 감지 (1), 2), ①, - 등) */
@@ -92,11 +116,10 @@ export function FormatAIText({ text, className = '', asBullets = false }: Format
 
   // 단일 문단이면 그냥 <p> 렌더링
   if (paragraphs.length === 1 && !asBullets && !hasNumberedItems) {
-    return <p className={`leading-relaxed ${className}`}>{highlightKeywords(paragraphs[0])}</p>;
+    return <p className={`leading-relaxed ${className}`}>{processTextNode(paragraphs[0])}</p>;
   }
 
   if (asBullets || hasNumberedItems) {
-    // 번호가 있는 항목과 없는 항목을 분리
     const items: { isListItem: boolean; text: string }[] = paragraphs.map(p => ({
       isListItem: NUMBERED_PATTERN.test(p),
       text: p.replace(NUMBERED_PATTERN, '').trim(),
@@ -108,10 +131,10 @@ export function FormatAIText({ text, className = '', asBullets = false }: Format
           item.isListItem ? (
             <div key={i} className="flex items-start gap-2 leading-relaxed">
               <span className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-current opacity-40" />
-              <span>{highlightKeywords(item.text)}</span>
+              <span>{processTextNode(item.text)}</span>
             </div>
           ) : (
-            <p key={i} className="leading-relaxed">{highlightKeywords(item.text)}</p>
+            <p key={i} className="leading-relaxed">{processTextNode(item.text)}</p>
           )
         )}
       </div>
@@ -121,7 +144,7 @@ export function FormatAIText({ text, className = '', asBullets = false }: Format
   return (
     <div className={`space-y-2 ${className}`}>
       {paragraphs.map((p, i) => (
-        <p key={i} className="leading-relaxed">{highlightKeywords(p)}</p>
+        <p key={i} className="leading-relaxed">{processTextNode(p)}</p>
       ))}
     </div>
   );
