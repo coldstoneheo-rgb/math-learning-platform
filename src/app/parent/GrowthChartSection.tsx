@@ -99,7 +99,7 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
       {/* 성적 추이 차트 */}
       {visibleTab === 'trend' && scoreTrend.length > 0 && (
         <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <AreaChart
               data={scoreTrend}
               margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
@@ -170,7 +170,7 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
 
       {visibleTab === 'capability' && mathCapabilityData && (
         <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={mathCapabilityData}>
               <PolarGrid stroke="#e5e7eb" />
               <PolarAngleAxis

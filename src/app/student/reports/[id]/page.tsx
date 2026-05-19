@@ -11,6 +11,7 @@ import {
   getStudentGrowthTruthNotice,
 } from '@/lib/teacher-verified-analysis';
 import { exportReportToPdf } from '@/lib/pdf-export';
+import { FormatAIText } from '@/lib/format-ai-text';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -221,6 +222,7 @@ export default function StudentReportDetailPage() {
 
           {/* 메타 헤더 */}
           <MetaHeader
+            metaProfile={report.students?.meta_profile}
             studentName={report.students?.name || '학생'}
             studentGrade={report.students?.grade || 1}
             compact
@@ -277,7 +279,7 @@ export default function StudentReportDetailPage() {
                     <span className="text-2xl">💡</span>
                     <div>
                       <h3 className="font-bold text-indigo-800 mb-1">핵심 메시지</h3>
-                      <p className="text-indigo-700">{analysisData.macroAnalysis.analysisMessage}</p>
+                      <FormatAIText text={analysisData.macroAnalysis.analysisMessage} className="text-indigo-700 text-sm" />
                     </div>
                   </div>
                 </div>
@@ -290,7 +292,7 @@ export default function StudentReportDetailPage() {
                     <h4 className="font-bold text-green-800 mb-2 flex items-center gap-2">
                       <span>💪</span> 잘하는 점
                     </h4>
-                    <p className="text-green-700 text-sm">{analysisData.macroAnalysis.strengths}</p>
+                    <FormatAIText text={analysisData.macroAnalysis.strengths} className="text-green-700 text-sm" />
                   </div>
                 )}
                 {analysisData.macroAnalysis.weaknesses && (
@@ -298,7 +300,7 @@ export default function StudentReportDetailPage() {
                     <h4 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
                       <span>🎯</span> 더 연습하면 좋을 점
                     </h4>
-                    <p className="text-orange-700 text-sm">{analysisData.macroAnalysis.weaknesses}</p>
+                    <FormatAIText text={analysisData.macroAnalysis.weaknesses} className="text-orange-700 text-sm" />
                   </div>
                 )}
               </div>

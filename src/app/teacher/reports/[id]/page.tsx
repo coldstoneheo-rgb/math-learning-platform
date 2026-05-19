@@ -36,6 +36,8 @@ import {
   convertMomentumStatus,
   generateWeeklyComparison,
 } from '@/lib/report-utils';
+import { FormatAIText } from '@/lib/format-ai-text';
+import ProblemAnalysisSection from '@/components/report/ProblemAnalysisSection';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -642,7 +644,7 @@ export default function ReportDetailPage() {
                     </div>
                   </div>
                 </div>
-                <p className="mt-4 text-gray-600">{levelTestAnalysis.gradeLevelAssessment.explanation}</p>
+                <FormatAIText text={levelTestAnalysis.gradeLevelAssessment.explanation} className="mt-4 text-gray-600 text-sm" />
               </div>
             )}
 
@@ -758,23 +760,23 @@ export default function ReportDetailPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="p-4 bg-green-50 rounded-lg">
                     <h4 className="font-medium text-green-800 mb-2">💪 강점</h4>
-                    <p className="text-green-700 text-sm">{levelTestAnalysis.initialBaseline.strengths}</p>
+                    <FormatAIText text={levelTestAnalysis.initialBaseline.strengths} className="text-green-700 text-sm" />
                   </div>
                   <div className="p-4 bg-red-50 rounded-lg">
                     <h4 className="font-medium text-red-800 mb-2">⚠️ 약점</h4>
-                    <p className="text-red-700 text-sm">{levelTestAnalysis.initialBaseline.weaknesses}</p>
+                    <FormatAIText text={levelTestAnalysis.initialBaseline.weaknesses} className="text-red-700 text-sm" />
                   </div>
                 </div>
                 {levelTestAnalysis.initialBaseline.errorPatterns && (
                   <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
                     <h4 className="font-medium text-yellow-800 mb-2">🔍 오류 패턴</h4>
-                    <p className="text-yellow-700 text-sm">{levelTestAnalysis.initialBaseline.errorPatterns}</p>
+                    <FormatAIText text={levelTestAnalysis.initialBaseline.errorPatterns} className="text-yellow-700 text-sm" />
                   </div>
                 )}
                 {levelTestAnalysis.initialBaseline.learningPotential && (
                   <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
                     <h4 className="font-medium text-indigo-800 mb-2">✨ 학습 잠재력</h4>
-                    <p className="text-indigo-700 text-sm">{levelTestAnalysis.initialBaseline.learningPotential}</p>
+                    <FormatAIText text={levelTestAnalysis.initialBaseline.learningPotential} className="text-indigo-700 text-sm" />
                   </div>
                 )}
               </div>
@@ -807,7 +809,7 @@ export default function ReportDetailPage() {
             {levelTestAnalysis.parentBriefing && (
               <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-sm p-6 mb-6 text-white">
                 <h3 className="text-lg font-semibold mb-3">👨‍👩‍👧 학부모님께 전달할 내용</h3>
-                <p className="leading-relaxed">{levelTestAnalysis.parentBriefing}</p>
+                <FormatAIText text={levelTestAnalysis.parentBriefing} className="leading-relaxed text-sm" />
               </div>
             )}
 
@@ -837,9 +839,7 @@ export default function ReportDetailPage() {
           )}
 
           {canShowDerivedGuidance ? (
-            <p className="text-gray-700 leading-relaxed mb-4">
-              {analysis.macroAnalysis?.summary}
-            </p>
+            <FormatAIText text={analysis.macroAnalysis?.summary} className="text-gray-700 text-sm mb-4" />
           ) : (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <p className="font-semibold">교사 확정값 기준 성장 분석 보완 필요</p>
@@ -855,13 +855,13 @@ export default function ReportDetailPage() {
             {analysis.macroAnalysis?.strengths && (
               <div className="p-4 bg-green-50 rounded-lg">
                 <h4 className="font-medium text-green-800 mb-2">💪 강점</h4>
-                <p className="text-green-700 text-sm">{analysis.macroAnalysis.strengths}</p>
+                <FormatAIText text={analysis.macroAnalysis.strengths} className="text-green-700 text-sm" />
               </div>
             )}
             {analysis.macroAnalysis?.weaknesses && (
               <div className="p-4 bg-red-50 rounded-lg">
                 <h4 className="font-medium text-red-800 mb-2">⚠️ 약점</h4>
-                <p className="text-red-700 text-sm">{analysis.macroAnalysis.weaknesses}</p>
+                <FormatAIText text={analysis.macroAnalysis.weaknesses} className="text-red-700 text-sm" />
               </div>
             )}
           </div>
@@ -870,7 +870,7 @@ export default function ReportDetailPage() {
           {canShowDerivedGuidance && analysis.macroAnalysis?.errorPattern && (
             <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
               <h4 className="font-medium text-yellow-800 mb-2">🔍 오류 패턴</h4>
-              <p className="text-yellow-700 text-sm">{analysis.macroAnalysis.errorPattern}</p>
+              <FormatAIText text={analysis.macroAnalysis.errorPattern} className="text-yellow-700 text-sm" />
             </div>
           )}
         </div>
@@ -976,7 +976,7 @@ export default function ReportDetailPage() {
                     style={{ width: `${analysis.metaCognitionAnalysis.errorRecognition?.score ?? 0}%` }}
                   />
                 </div>
-                <p className="text-sm text-gray-600">{analysis.metaCognitionAnalysis.errorRecognition?.analysis}</p>
+                <FormatAIText text={analysis.metaCognitionAnalysis.errorRecognition?.analysis} className="text-sm text-gray-600" />
                 {analysis.metaCognitionAnalysis.errorRecognition?.evidence &&
                  analysis.metaCognitionAnalysis.errorRecognition.evidence.length > 0 && (
                   <div className="mt-2">
@@ -1004,7 +1004,7 @@ export default function ReportDetailPage() {
                     style={{ width: `${analysis.metaCognitionAnalysis.strategySelection?.score ?? 0}%` }}
                   />
                 </div>
-                <p className="text-sm text-gray-600">{analysis.metaCognitionAnalysis.strategySelection?.analysis}</p>
+                <FormatAIText text={analysis.metaCognitionAnalysis.strategySelection?.analysis} className="text-sm text-gray-600" />
                 <div className="mt-2 flex gap-4 text-xs">
                   <span className="text-green-600">
                     최적 풀이: {analysis.metaCognitionAnalysis.strategySelection?.optimalCount ?? 0}개
@@ -1029,7 +1029,7 @@ export default function ReportDetailPage() {
                     style={{ width: `${analysis.metaCognitionAnalysis.timeManagement?.score ?? 0}%` }}
                   />
                 </div>
-                <p className="text-sm text-gray-600">{analysis.metaCognitionAnalysis.timeManagement?.analysis}</p>
+                <FormatAIText text={analysis.metaCognitionAnalysis.timeManagement?.analysis} className="text-sm text-gray-600" />
                 <div className="mt-2 text-xs text-gray-500">
                   완료: {analysis.metaCognitionAnalysis.timeManagement?.completedProblems ?? 0}/{analysis.metaCognitionAnalysis.timeManagement?.totalProblems ?? 0}문제
                 </div>
@@ -1049,7 +1049,7 @@ export default function ReportDetailPage() {
                     style={{ width: `${analysis.metaCognitionAnalysis.selfChecking?.score ?? 0}%` }}
                   />
                 </div>
-                <p className="text-sm text-gray-600">{analysis.metaCognitionAnalysis.selfChecking?.analysis}</p>
+                <FormatAIText text={analysis.metaCognitionAnalysis.selfChecking?.analysis} className="text-sm text-gray-600" />
                 {analysis.metaCognitionAnalysis.selfChecking?.evidence &&
                  analysis.metaCognitionAnalysis.selfChecking.evidence.length > 0 && (
                   <div className="mt-2">
@@ -1117,7 +1117,7 @@ export default function ReportDetailPage() {
             {/* 피로도 패턴 설명 */}
             {analysis.staminaAnalysis.fatiguePattern?.description && (
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-700">{analysis.staminaAnalysis.fatiguePattern.description}</p>
+                <FormatAIText text={analysis.staminaAnalysis.fatiguePattern.description} className="text-sm text-gray-700" />
                 <div className="flex gap-4 mt-2 text-xs">
                   {analysis.staminaAnalysis.fatiguePattern.peakPerformanceRange && (
                     <span className="text-green-600">
@@ -1167,7 +1167,7 @@ export default function ReportDetailPage() {
               {/* 시간 배분 */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <h4 className="font-medium text-gray-700 mb-2">⏱️ 시간 배분 분석</h4>
-                <p className="text-sm text-gray-600 mb-3">{analysis.staminaAnalysis.timeDistribution?.analysis}</p>
+                <FormatAIText text={analysis.staminaAnalysis.timeDistribution?.analysis} className="text-sm text-gray-600 mb-3" />
                 {(analysis.staminaAnalysis.timeDistribution?.rushedProblems?.length ?? 0) > 0 && (
                   <div className="text-xs text-orange-600 mb-1">
                     ⚡ 급하게 푼 문제: {analysis.staminaAnalysis.timeDistribution?.rushedProblems?.join(', ')}
@@ -1194,7 +1194,7 @@ export default function ReportDetailPage() {
                     style={{ width: `${analysis.staminaAnalysis.focusAnalysis?.score ?? 0}%` }}
                   />
                 </div>
-                <p className="text-sm text-gray-600">{analysis.staminaAnalysis.focusAnalysis?.analysis}</p>
+                <FormatAIText text={analysis.staminaAnalysis.focusAnalysis?.analysis} className="text-sm text-gray-600" />
                 {analysis.staminaAnalysis.focusAnalysis?.signs &&
                  analysis.staminaAnalysis.focusAnalysis.signs.length > 0 && (
                   <div className="mt-2">
@@ -1249,16 +1249,29 @@ export default function ReportDetailPage() {
                     </span>
                     <span className="font-semibold text-gray-900">{item.title}</span>
                   </div>
-                  <p className="text-gray-600 text-sm mb-3">{item.description}</p>
+                  <FormatAIText text={item.description} className="text-gray-600 text-sm mb-3" />
                   
-                  <div className="grid md:grid-cols-2 gap-2 text-sm bg-gray-50 rounded-lg p-3">
-                    <div><span className="text-gray-500">📚 무엇을:</span> {item.whatToDo}</div>
-                    <div><span className="text-gray-500">📍 어디서:</span> {item.where}</div>
-                    <div><span className="text-gray-500">⏱️ 얼마나:</span> {item.howMuch}</div>
-                    <div><span className="text-gray-500">💡 어떻게:</span> {item.howTo}</div>
+                  <div className="space-y-2 text-sm bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">📚</span>
+                      <div><span className="font-medium text-gray-700">무엇을: </span><span className="text-gray-600">{item.whatToDo}</span></div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">📍</span>
+                      <div><span className="font-medium text-gray-700">어디서: </span><span className="text-gray-600">{item.where}</span></div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">⏱️</span>
+                      <div><span className="font-medium text-gray-700">얼마나: </span><span className="text-gray-600">{item.howMuch}</span></div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">💡</span>
+                      <div><span className="font-medium text-gray-700">어떻게: </span><span className="text-gray-600">{item.howTo}</span></div>
+                    </div>
                     {item.measurementMethod && (
-                      <div className="md:col-span-2">
-                        <span className="text-gray-500">📏 측정 방법:</span> {item.measurementMethod}
+                      <div className="flex items-start gap-2 pt-2 border-t border-gray-200">
+                        <span className="text-gray-400 shrink-0">📏</span>
+                        <div><span className="font-medium text-gray-700">측정 방법: </span><span className="text-gray-600">{item.measurementMethod}</span></div>
                       </div>
                     )}
                   </div>
@@ -1291,72 +1304,9 @@ export default function ReportDetailPage() {
           />
         )}
 
-        {/* 문항별 분석 */}
+        {/* 문항별 분석 — 아코디언 카드 (모바일/PC 통합) */}
         {analysis.detailedAnalysis && analysis.detailedAnalysis.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 문항별 분석</h3>
-
-            {/* Mobile: card view */}
-            <div className="md:hidden space-y-3">
-              {analysis.detailedAnalysis.map((item, index) => (
-                <div key={index} className={`rounded-lg border p-4 text-sm ${
-                  item.isCorrect === 'X' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="font-bold text-gray-800">문제 {item.problemNumber}</span>
-                    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white font-bold text-xs ${
-                      item.isCorrect === 'O' ? 'bg-green-500' :
-                      item.isCorrect === 'X' ? 'bg-red-500' : 'bg-yellow-500'
-                    }`}>
-                      {item.isCorrect}
-                    </span>
-                  </div>
-                  <p className="font-medium text-gray-800 mb-1">{item.keyConcept}</p>
-                  {item.errorType && (
-                    <p className="text-xs text-red-600 mb-1">오류: {item.errorType}</p>
-                  )}
-                  {item.analysis && (
-                    <p className="text-xs text-gray-600 leading-relaxed">{item.analysis}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Desktop: table view */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left">번호</th>
-                    <th className="px-3 py-2 text-center">정오</th>
-                    <th className="px-3 py-2 text-left">핵심 개념</th>
-                    <th className="px-3 py-2 text-left">오류 유형</th>
-                    <th className="px-3 py-2 text-left">분석</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {analysis.detailedAnalysis.map((item, index) => (
-                    <tr key={index} className={item.isCorrect === 'X' ? 'bg-red-50' : ''}>
-                      <td className="px-3 py-2 font-medium">{item.problemNumber}</td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={`inline-block w-6 h-6 rounded-full text-white font-bold leading-6 ${
-                          item.isCorrect === 'O' ? 'bg-green-500' :
-                          item.isCorrect === 'X' ? 'bg-red-500' : 'bg-yellow-500'
-                        }`}>
-                          {item.isCorrect}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">{item.keyConcept}</td>
-                      <td className="px-3 py-2 text-gray-600">{item.errorType || '-'}</td>
-                      <td className="px-3 py-2 text-gray-600 text-xs max-w-xs" title={item.analysis}>
-                        {item.analysis || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <ProblemAnalysisSection items={analysis.detailedAnalysis} />
         )}
 
         {/* 학습 습관 & 위험 요인 */}
@@ -1427,7 +1377,10 @@ export default function ReportDetailPage() {
               {
                 type: 'solving_habit',
                 title: '풀이 습관 관찰',
-                summary: displayableGuidance.learningHabits.map(h => h.description).join(', ') || '풀이 습관을 분석 중입니다.',
+                summary: displayableGuidance.learningHabits.length > 0
+                  ? displayableGuidance.learningHabits[0].description +
+                    (displayableGuidance.learningHabits.length > 1 ? ` 외 ${displayableGuidance.learningHabits.length - 1}건` : '')
+                  : '풀이 습관을 분석 중입니다.',
                 status: displayableGuidance.learningHabits.some(h => h.type === 'bad') ? 'warning' : 'good',
               },
             ]}

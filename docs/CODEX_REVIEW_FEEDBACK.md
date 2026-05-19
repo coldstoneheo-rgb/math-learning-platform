@@ -114,6 +114,57 @@
 
 ---
 
+## 📌 Phase 10: 가독성 개선, 기능 결함 수정, 문항별 분석 모바일 최적화
+**상태**: ✅ 완료 (빌드 검증 통과)
+**대상 화면**: 시험 분석 리포트 상세, 학부모 대시보드, 학생 리포트 상세
+**개선 목적**: 코드 정밀 검토 + 로컬 dev 서버 테스트 + 브라우저 에이전트 테스트를 통해 발견된 10개 이슈의 체계적 해결.
+
+### 📝 발견된 이슈 및 피드백 (To Codex)
+
+#### 🔴 Critical: AI 텍스트 가독성 — 단일 `<p>` 덩어리 렌더링
+- **상황**: Gemini AI가 생성한 종합 분석(`macroAnalysis.summary`), 강점/약점(`strengths`/`weaknesses`), 오류 패턴(`errorPattern`), 학부모 브리핑(`parentBriefing`) 등 14개 이상 지점에서 3~5문장의 긴 텍스트가 줄바꿈·구분 없이 하나의 `<p>` 태그에 회색 덩어리로 렌더링됨.
+- **원인**: 프론트엔드 렌더링 코드가 AI 텍스트를 그대로 `{text}` 보간으로 출력하고 있어, 문장 구분이나 시각적 위계(bullet, 하이라이트, 문단 분리) 처리가 전무함.
+- **처리 방법**: `formatAIText(text)` 유틸리티 함수를 작성하여 마침표·줄바꿈 기준으로 문단을 분리하고 각각 `<p>` 또는 `<li>`로 래핑. 모든 AI 텍스트 출력부에 공통 적용.
+- ✅ **대응 결과**: `src/lib/format-ai-text.tsx`에 `FormatAIText` 컴포넌트와 `splitAITextIntoParagraphs` 함수 생성. 교사·학생 리포트 상세의 14개 AI 텍스트 출력 지점에 일괄 적용 완료.
+
+#### 🔴 Critical: Recharts 차트 width/height 음수 오류
+- **상황**: 학부모 대시보드 진입 시 dev 서버 콘솔에 `The width(-1) and height(-1) of chart should be greater than 0` 경고 반복 발생.
+- **원인**: `GrowthChartSection`이 `next/dynamic`으로 lazy load되며, 부모 컨테이너 레이아웃이 결정되기 전 `ResponsiveContainer`가 마운트됨.
+- **처리 방법**: `ResponsiveContainer`에 `minWidth={0}` prop 추가.
+- ✅ **대응 결과**: `GrowthChartSection.tsx`(학부모)와 `StudentDashboardCharts.tsx`(학생) 모두 `ResponsiveContainer`에 `minWidth={0}` 적용 완료.
+
+#### 🔴 Critical: 학생 리포트 MetaHeader — `metaProfile` 미전달
+- **상황**: `student/reports/[id]/page.tsx`에서 `MetaHeader`에 `metaProfile` prop이 전달되지 않아 4개 지표 카드가 모두 기본값(50)으로 표시됨.
+- **처리 방법**: `report.students?.meta_profile`을 MetaHeader의 `metaProfile` prop으로 전달.
+- ✅ **대응 결과**: `metaProfile={report.students?.meta_profile}` prop 추가 완료.
+
+#### 🔴 Critical: 문항별 분석 — 모바일·PC 모두 가독성 불량
+- **상황**: `analysis` 필드에 AI가 생성한 5단계 플로우(출발점→풀이 과정→계산 패턴→문제 해석→풀이 습관) 텍스트가 한 줄에 나열되어 마치 엑셀 테이블에 긴 글을 우겨넣은 형태.
+- **처리 방법**: 문항별 아코디언(Accordion) + 5단계 스텝 인디케이터(Step Indicator) 패턴 도입.
+- ✅ **대응 결과**: `ProblemAnalysisSection.tsx` 신규 생성. 기존 테이블(PC)+카드(모바일) 이중 렌더링을 **통합 아코디언 카드**로 완전 교체. 오답 자동 펼침, "모두 펼치기/접기" 지원. 분석 텍스트는 `parseAnalysisToSteps`로 5단계 스텝 인디케이터로 시각화.
+
+#### 🟡 Major: `errorSignature.primaryErrorTypes[]` 100자+ 장문 노출
+- **상황**: MetaHeader의 '파악된 오류 유형' 카드 하단 설명에 AI가 반환한 오류 type이 100자 이상의 장문으로 카드 레이아웃 파괴.
+- **처리 방법**: 25자 이내 truncate + 말줄임(…) 처리.
+- ✅ **대응 결과**: `MetaHeader.tsx`에서 `e.type.length > 25 ? e.type.slice(0, 25) + '…' : e.type` 로직 적용 완료.
+
+#### 🟡 Major: 5관점 분석 `.join(',')` 패턴
+- **상황**: `FivePerspectiveAnalysis`의 '풀이 습관 관찰' 관점에서 여러 습관이 쉼표로 이어진 하나의 긴 문자열로 합쳐짐.
+- **처리 방법**: 첫 번째 항목만 표시 + "외 N건" 형태로 변경.
+- ✅ **대응 결과**: `.join(',')` → `habits[0].description + ' 외 N건'` 패턴으로 교체 완료.
+
+#### 🟡 Major: Prescription 카드 레이아웃 — 정보 밀도 과다
+- **상황**: 4개 필드가 좁은 2열 그리드에 빽빽하게 들어있어 읽기 어려움.
+- ✅ **대응 결과**: 2열 그리드 → 1열 `space-y-2` 레이아웃으로 변경. 각 항목에 아이콘·라벨·값 분리, `FormatAIText` 적용.
+
+### 📐 문항별 분석 모바일 UI 설계 방향
+(상세 구현 계획은 implementation_plan.md 참조)
+- ✅ 아코디언 접기/펼치기로 정보 밀도 조절
+- ✅ 5단계 스텝 인디케이터로 분석 플로우 시각화
+- ✅ 오답 문항 자동 펼침으로 핵심 정보 우선 노출
+
+---
+
 ## 🏁 최종 요약
-모든 검증 및 고도화 작업(Phase 1 ~ 9)이 성공적으로 완료되었습니다.
-이 피드백 문서를 참고하여 향후 구현 시 로케이터 설정, 린트 경고 방지, 견고한 에러 핸들링, 접근성을 갖춘 프리미엄 UI 유지, 최신 프레임워크 규약 준수, 방어 코드 작성 및 프론트엔드 성능(동적 로딩, 스켈레톤 UI, 빌드 제외 처리) 최적화에 각별히 신경 써주시길 바랍니다.
+모든 검증 및 고도화 작업(Phase 1 ~ 10)이 성공적으로 완료되었습니다.
+이 피드백 문서를 참고하여 향후 구현 시 로케이터 설정, 린트 경고 방지, 견고한 에러 핸들링, 접근성을 갖춘 프리미엄 UI 유지, 최신 프레임워크 규약 준수, 방어 코드 작성, AI 생성 텍스트의 방어적 렌더링(Defensive Rendering), 프론트엔드 성능(동적 로딩, 스켈레톤 UI, 빌드 제외 처리) 최적화, 그리고 모바일 우선 가독성 설계에 각별히 신경 써주시길 바랍니다.

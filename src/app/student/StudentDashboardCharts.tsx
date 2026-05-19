@@ -31,7 +31,7 @@ export default function StudentDashboardCharts({ scoreTrendData, capabilityView 
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-4">점수 추이</h2>
         {scoreTrendData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={240} minWidth={0}>
             <LineChart data={scoreTrendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
@@ -57,7 +57,7 @@ export default function StudentDashboardCharts({ scoreTrendData, capabilityView 
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-4">수학 역량</h2>
         {capabilityView?.status === 'available' ? (
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={240} minWidth={0}>
             <RadarChart data={capabilityView.data}>
               <PolarGrid />
               <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />

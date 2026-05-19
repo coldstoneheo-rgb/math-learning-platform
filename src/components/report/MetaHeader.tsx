@@ -149,7 +149,9 @@ function MetaHeader({
       Icon: Target,
       color: 'orange',
       description: metaProfile.errorSignature?.primaryErrorTypes?.length
-        ? metaProfile.errorSignature.primaryErrorTypes.map(e => e.type).slice(0, 2).join(', ')
+        ? metaProfile.errorSignature.primaryErrorTypes
+            .map(e => e.type.length > 25 ? e.type.slice(0, 25) + '…' : e.type)
+            .slice(0, 2).join(', ')
         : '분석 대기',
       tooltip: '반복적으로 나타나는 실수 유형 (개념 오류, 계산 오류 등)',
       isCount: true,
