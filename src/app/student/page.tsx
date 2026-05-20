@@ -62,6 +62,10 @@ export default function StudentDashboard() {
   const [student, setStudent] = useState<StudentWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportTypeFilter, setReportTypeFilter] = useState<string>('all');
+  const [connectCode, setConnectCode] = useState('');
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [connectError, setConnectError] = useState('');
+  const [connectSuccess, setConnectSuccess] = useState('');
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -276,13 +280,111 @@ export default function StudentDashboard() {
     return <LoadingSpinner />;
   }
 
+  const handleConnect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!connectCode.trim()) {
+      setConnectError('연결 코드를 입력해주세요.');
+      return;
+    }
+    setConnectLoading(true);
+    setConnectError('');
+    setConnectSuccess('');
+
+    try {
+      const response = await fetch('/api/student/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionCode: connectCode.trim() }),
+      });
+
+      const resData = await response.json();
+
+      if (!response.ok) {
+        setConnectError(resData.error || '연결에 실패했습니다.');
+        return;
+      }
+
+      setConnectSuccess(`${resData.studentName} 학생과 성공적으로 연결되었습니다!`);
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err) {
+      setConnectError('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+      console.error(err);
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
   if (!student) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
-          <div className="text-6xl mb-4">😔</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">학생 정보를 찾을 수 없습니다</h2>
-          <p className="text-gray-600">선생님께 문의하여 계정을 연결해 주세요.</p>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6">
+          <div className="text-center">
+            <span className="text-6xl inline-block transform hover:scale-110 transition-transform duration-300">👨‍🏫</span>
+            <h2 className="mt-4 text-2xl font-bold text-slate-800">아직 학생 정보가 연결되지 않았어요</h2>
+            <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+              수학을 더 쉽고 재미있게 공부할 준비는 되었나요? 
+              학습 리포트와 분석 내용을 확인하려면 담당 선생님께 <strong>“학생 계정 연결”</strong>을 요청해 주시거나, 
+              선생님께 전달받은 초대 코드가 있다면 아래에 직접 입력해 보세요!
+            </p>
+          </div>
+
+          <form onSubmit={handleConnect} className="space-y-4">
+            {connectError && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl text-sm font-medium">
+                ⚠️ {connectError}
+              </div>
+            )}
+            {connectSuccess && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm font-medium">
+                ✅ {connectSuccess}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                연결 코드 입력
+              </label>
+              <input
+                type="text"
+                value={connectCode}
+                onChange={(e) => setConnectCode(e.target.value)}
+                placeholder="예: STU-12AB34"
+                disabled={connectLoading || !!connectSuccess}
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors uppercase font-mono text-center tracking-wider placeholder-slate-300 text-slate-800 bg-slate-50/50"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={connectLoading || !!connectSuccess}
+              className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-indigo-100 hover:shadow-indigo-200 active:scale-98"
+            >
+              {connectLoading ? '연결 확인 중...' : '프로필 연결하기'}
+            </button>
+          </form>
+
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              onClick={() => {
+                alert("담당 선생님 혹은 다니고 있는 학원에 '수학 학습 분석 플랫폼 학생 계정(이메일: " + user?.email + ")과 제 프로필을 연결해 주세요' 라고 요청해 주세요. 선생님이 연결해 주시면 자동으로 본 화면이 사라지고 대시보드로 진입합니다.");
+              }}
+              className="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+            >
+              선생님께 문의 방법 확인
+            </button>
+            <button
+              onClick={async () => {
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                router.push('/login');
+              }}
+              className="w-full py-2.5 text-rose-600 text-sm font-semibold hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
+            >
+              다른 계정으로 로그인 (로그아웃)
+            </button>
+          </div>
         </div>
       </div>
     );

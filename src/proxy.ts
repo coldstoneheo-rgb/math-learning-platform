@@ -100,34 +100,52 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 로그인한 사용자가 로그인/회원가입 페이지 접근 시 역할별 대시보드로 리다이렉트
-  if (user && isAuthPage) {
+  // 로그인한 사용자 처리
+  if (user) {
     const { data: userData, error } = await supabase
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    // users 테이블에 데이터가 없으면 로그인 페이지에 머무름 (신규 가입 등)
-    if (error || !userData) {
-      return supabaseResponse;
-    }
+    if (userData && !error) {
+      const role = userData.role;
+      const pathname = request.nextUrl.pathname;
 
-    const url = request.nextUrl.clone();
-    if (userData.role === 'super_admin') {
-      url.pathname = '/super-admin';
-    } else if (userData.role === 'teacher') {
-      url.pathname = '/teacher';
-    } else if (userData.role === 'parent') {
-      url.pathname = '/parent';
-    } else if (userData.role === 'student') {
-      url.pathname = '/student';
-    } else {
-      url.pathname = '/';
+      // 1. 로그인/회원가입 페이지 접근 시 본인 대시보드로 리다이렉트
+      if (isAuthPage) {
+        const url = request.nextUrl.clone();
+        if (role === 'super_admin') url.pathname = '/super-admin';
+        else if (role === 'teacher') url.pathname = '/teacher';
+        else if (role === 'parent') url.pathname = '/parent';
+        else if (role === 'student') url.pathname = '/student';
+        else url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
+
+      // 2. 역할별 경로 보호 (RBAC)
+      if (pathname.startsWith('/super-admin') && role !== 'super_admin') {
+        const url = request.nextUrl.clone();
+        url.pathname = role === 'teacher' ? '/teacher' : role === 'parent' ? '/parent' : '/student';
+        return NextResponse.redirect(url);
+      }
+      if (pathname.startsWith('/teacher') && role !== 'teacher') {
+        const url = request.nextUrl.clone();
+        url.pathname = role === 'super_admin' ? '/super-admin' : role === 'parent' ? '/parent' : '/student';
+        return NextResponse.redirect(url);
+      }
+      if (pathname.startsWith('/parent') && role !== 'parent') {
+        const url = request.nextUrl.clone();
+        url.pathname = role === 'super_admin' ? '/super-admin' : role === 'teacher' ? '/teacher' : '/student';
+        return NextResponse.redirect(url);
+      }
+      if (pathname.startsWith('/student') && role !== 'student') {
+        const url = request.nextUrl.clone();
+        url.pathname = role === 'super_admin' ? '/super-admin' : role === 'teacher' ? '/teacher' : '/parent';
+        return NextResponse.redirect(url);
+      }
     }
-    return NextResponse.redirect(url);
   }
-
   return supabaseResponse;
 }
 

@@ -17,6 +17,7 @@ export interface Student {
   start_date?: string;
   parent_id?: string;
   user_id?: string; // 학생 계정과 연결되는 auth.users(id)
+  connection_code?: string; // 학생용 고유 연결 코드 (STU-XXXXXX)
   learning_style?: 'visual' | 'verbal' | 'logical';
   personality_traits?: string[];
   // 학생 메타프로필 (JSONB)

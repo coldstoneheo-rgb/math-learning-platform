@@ -115,6 +115,15 @@ export default function StudentsPage() {
     return `${prefix}${grade}${sequence.toString().padStart(3, '0')}`;
   };
 
+  const generateConnectionCode = (): string => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = 'STU-';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -134,17 +143,21 @@ export default function StudentsPage() {
             school: formData.school.trim() || null,
             start_date: formData.start_date || null,
             learning_style: formData.learning_style || null,
+            connection_code: editingStudent.connection_code || generateConnectionCode(),
           })
           .eq('id', editingStudent.id);
 
         if (error) throw error;
+        addToast('학생 정보가 수정되었습니다.', 'success');
       } else {
         // 추가
         const studentId = await generateStudentId(gradeNum);
+        const connectionCode = generateConnectionCode();
         const { error } = await supabase
           .from('students')
           .insert({
             student_id: studentId,
+            connection_code: connectionCode,
             name: formData.name.trim(),
             grade: gradeNum,
             school: formData.school.trim() || null,
@@ -153,6 +166,7 @@ export default function StudentsPage() {
           });
 
         if (error) throw error;
+        addToast(`학생 등록 완료! (연결 코드: ${connectionCode})`, 'success');
       }
 
       await loadStudents();
@@ -337,6 +351,7 @@ export default function StudentsPage() {
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">이름</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">학년</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden sm:table-cell">학교</th>
+                  <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">연결 코드</th>
                   <th className="px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">계정 연결</th>
                   <th className="px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">관리</th>
                 </tr>
@@ -348,14 +363,19 @@ export default function StudentsPage() {
                     <td className="px-4 md:px-6 py-3 md:py-4 text-sm font-medium text-gray-900">{student.name}</td>
                     <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600">{getGradeLabel(student.grade)}</td>
                     <td className="px-4 md:px-6 py-3 md:py-4 text-sm text-gray-600 hidden sm:table-cell">{student.school || '-'}</td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 text-sm">
+                      <span className="font-mono text-indigo-600 font-bold bg-indigo-50/50 px-2.5 py-1 rounded-md select-all border border-indigo-100">
+                        {student.connection_code || '-'}
+                      </span>
+                    </td>
                     <td className="px-4 md:px-6 py-3 md:py-4">
                       {student.user_id ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-100">
                           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><polyline points="20 6 9 17 4 12"/></svg>
                           연결됨
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded-full text-xs border border-slate-200">
                           미연결
                         </span>
                       )}
@@ -402,6 +422,29 @@ export default function StudentsPage() {
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                   {error}
+                </div>
+              )}
+
+              {editingStudent && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-slate-500 font-bold block mb-1">학생 연결 코드</span>
+                    <span className="text-sm font-mono text-indigo-600 font-bold">
+                      {editingStudent.connection_code || '연결 코드 없음'}
+                    </span>
+                  </div>
+                  {editingStudent.connection_code && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(editingStudent.connection_code || '');
+                        addToast('연결 코드가 복사되었습니다.', 'success');
+                      }}
+                      className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 rounded-lg shadow-sm transition-colors"
+                    >
+                      코드 복사
+                    </button>
+                  )}
                 </div>
               )}
 
