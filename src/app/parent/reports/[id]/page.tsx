@@ -193,8 +193,8 @@ export default function ParentReportDetailPage() {
       ? [{
           type: 'teacher_observation' as const,
           label: '누적 관찰 데이터',
-          date: report.students.meta_profile.legacySignals.at(-1)?.date,
-          description: `${report.students.meta_profile.legacySignals.length}건 누적`,
+          date: report.students?.meta_profile?.legacySignals?.at(-1)?.date,
+          description: `${report.students?.meta_profile?.legacySignals?.length || 0}건 누적`,
         }]
       : []),
   ];

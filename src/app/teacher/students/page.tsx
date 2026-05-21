@@ -115,13 +115,30 @@ export default function StudentsPage() {
     return `${prefix}${grade}${sequence.toString().padStart(3, '0')}`;
   };
 
-  const generateConnectionCode = (): string => {
+  const generateConnectionCode = async (supabase: any): Promise<string> => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = 'STU-';
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    let attempts = 0;
+    
+    while (attempts < 5) {
+      let code = 'STU-';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      const { data, error } = await supabase
+        .from('students')
+        .select('id')
+        .eq('connection_code', code)
+        .maybeSingle();
+        
+      if (!data && !error) {
+        return code;
+      }
+      attempts++;
     }
-    return code;
+    
+    // 5회 충돌 시 타임스탬프 일부를 섞어서 반환
+    return 'STU-' + Date.now().toString(36).toUpperCase().slice(-6);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,7 +160,7 @@ export default function StudentsPage() {
             school: formData.school.trim() || null,
             start_date: formData.start_date || null,
             learning_style: formData.learning_style || null,
-            connection_code: editingStudent.connection_code || generateConnectionCode(),
+            connection_code: editingStudent.connection_code || await generateConnectionCode(supabase),
           })
           .eq('id', editingStudent.id);
 
@@ -152,7 +169,7 @@ export default function StudentsPage() {
       } else {
         // 추가
         const studentId = await generateStudentId(gradeNum);
-        const connectionCode = generateConnectionCode();
+        const connectionCode = await generateConnectionCode(supabase);
         const { error } = await supabase
           .from('students')
           .insert({

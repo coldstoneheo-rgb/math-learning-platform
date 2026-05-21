@@ -39,6 +39,22 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      // 학생 계정 연결 코드 선제 검증
+      if (formData.role === 'student' && formData.connectionCode && formData.connectionCode.trim() !== '') {
+        const validateResponse = await fetch('/api/auth/validate-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ connectionCode: formData.connectionCode }),
+        });
+        
+        if (!validateResponse.ok) {
+          const errData = await validateResponse.json();
+          setError(errData.error || '유효하지 않은 연결 코드입니다.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const supabase = createClient();
       const { data, error: authError } = await supabase.auth.signUp({
         email: formData.email,

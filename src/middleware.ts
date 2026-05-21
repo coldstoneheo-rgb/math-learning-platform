@@ -102,14 +102,9 @@ export async function middleware(request: NextRequest) {
 
   // 로그인한 사용자 처리
   if (user) {
-    const { data: userData, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    const role = user.user_metadata?.role;
 
-    if (userData && !error) {
-      const role = userData.role;
+    if (role) {
       const pathname = request.nextUrl.pathname;
 
       // 1. 로그인/회원가입 페이지 접근 시 본인 대시보드로 리다이렉트

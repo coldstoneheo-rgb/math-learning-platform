@@ -304,8 +304,8 @@ export default function ReportDetailPage() {
       ? [{
           type: 'teacher_observation' as const,
           label: '레거시 시그널',
-          date: report.students.meta_profile.legacySignals.at(-1)?.date,
-          description: `${report.students.meta_profile.legacySignals.length}건 누적`,
+          date: report.students?.meta_profile?.legacySignals?.at(-1)?.date,
+          description: `${report.students?.meta_profile?.legacySignals?.length || 0}건 누적`,
         }]
       : []),
   ];
