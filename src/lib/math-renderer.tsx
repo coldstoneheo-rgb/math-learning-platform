@@ -107,7 +107,7 @@ function renderLatexToHtml(latex: string): string {
       throwOnError: false,
       displayMode: false,
       strict: false,
-      trust: true,
+      trust: false,
       output: 'html',
     });
   } catch {
@@ -186,7 +186,7 @@ export const MathBlock = memo(function MathBlock({
       throwOnError: false,
       displayMode: display,
       strict: false,
-      trust: true,
+      trust: false,
       output: 'html',
     });
 

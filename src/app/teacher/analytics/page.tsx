@@ -101,7 +101,7 @@ export default function AnalyticsDashboard() {
       .eq('id', user.id)
       .single();
 
-    if (userData?.role !== 'teacher') {
+    if (!['teacher', 'super_admin'].includes(userData?.role ?? '')) {
       router.push('/');
       return;
     }

@@ -100,7 +100,7 @@ export default function NewReportPage() {
       .eq('id', authUser.id)
       .single();
 
-    if (!userData || userData.role !== 'teacher') {
+    if (!userData || !['teacher', 'super_admin'].includes(userData.role)) {
       router.push('/');
       return;
     }
