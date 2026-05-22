@@ -16,8 +16,11 @@ function createServiceClient() {
 export async function POST(request: Request) {
   try {
     const { connectionCode } = await request.json();
+    const normalizedConnectionCode = typeof connectionCode === 'string'
+      ? connectionCode.trim()
+      : '';
 
-    if (!connectionCode || connectionCode.trim() === '') {
+    if (!normalizedConnectionCode) {
       return NextResponse.json(
         { isValid: false, error: '연결 코드가 제공되지 않았습니다.' },
         { status: 400 }
@@ -29,7 +32,7 @@ export async function POST(request: Request) {
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('id, user_id, name')
-      .eq('connection_code', connectionCode.trim())
+      .eq('connection_code', normalizedConnectionCode)
       .single();
 
     if (studentError || !student) {
@@ -42,7 +45,7 @@ export async function POST(request: Request) {
     if (student.user_id) {
       return NextResponse.json(
         { isValid: false, error: '이미 다른 계정에 연결된 코드입니다.' },
-        { status: 400 }
+        { status: 409 }
       );
     }
 

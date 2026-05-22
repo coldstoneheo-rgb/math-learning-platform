@@ -124,7 +124,7 @@ export async function middleware(request: NextRequest) {
         url.pathname = role === 'teacher' ? '/teacher' : role === 'parent' ? '/parent' : '/student';
         return NextResponse.redirect(url);
       }
-      if (pathname.startsWith('/teacher') && role !== 'teacher') {
+      if (pathname.startsWith('/teacher') && role !== 'teacher' && role !== 'super_admin') {
         const url = request.nextUrl.clone();
         url.pathname = role === 'super_admin' ? '/super-admin' : role === 'parent' ? '/parent' : '/student';
         return NextResponse.redirect(url);

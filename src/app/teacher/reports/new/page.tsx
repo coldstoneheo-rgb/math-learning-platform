@@ -504,7 +504,7 @@ export default function NewReportPage() {
             {/* 학생 선택 */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">1. 학생 선택</h2>
-              
+
               {students.length === 0 ? (
                 <div className="text-center py-4">
                   <p className="text-gray-500 mb-2">등록된 학생이 없습니다.</p>
@@ -531,7 +531,7 @@ export default function NewReportPage() {
             {/* 시험 정보 */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">2. 시험 정보</h2>
-              
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -645,7 +645,7 @@ export default function NewReportPage() {
               <p className="text-sm text-gray-500 mb-4">
                 이미지 분석만으로는 알기 어려운 학생의 행동 데이터를 입력하면 AI가 더 정밀한 분석을 제공합니다.
               </p>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">문제 풀이 태도 및 집중도</label>
@@ -695,7 +695,7 @@ export default function NewReportPage() {
               <p className="text-sm text-gray-500 mb-4">
                 학생 스스로 확신도를 평가하게 하거나 유독 오래 걸린 문제를 기록하세요. AI가 오답 원인을 더 정확히 좁혀줍니다.
               </p>
-              
+
               <div className="space-y-3">
                 {formData.problemBehaviorData?.map((item, index) => (
                   <div key={index} className="flex gap-3 items-center">
@@ -748,7 +748,7 @@ export default function NewReportPage() {
                     </button>
                   </div>
                 ))}
-                
+
                 <button
                   type="button"
                   onClick={() => {
@@ -802,21 +802,21 @@ export default function NewReportPage() {
             {/* 교사 확정 */}
             {verificationDraft && (
               <div className={`relative rounded-2xl shadow-lg p-6 sm:p-8 mb-8 transition-all duration-300 border-2 ${
-                isTeacherVerified 
-                  ? 'bg-emerald-50/50 border-emerald-400' 
+                isTeacherVerified
+                  ? 'bg-emerald-50/50 border-emerald-400'
                   : 'bg-white border-amber-400 ring-4 ring-amber-100'
               }`}>
                 {/* Status Badge */}
                 <div className="absolute -top-4 left-6 flex gap-2">
                   <span className={`px-4 py-1.5 rounded-full text-sm font-bold shadow-md flex items-center gap-2 transition-all ${
-                    isTeacherVerified 
-                      ? 'bg-emerald-500 text-white' 
+                    isTeacherVerified
+                      ? 'bg-emerald-500 text-white'
                       : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white animate-pulse'
                   }`}>
                     {isTeacherVerified ? '✨ 최종 확정 완료' : '⚠️ 교사 확인 필요'}
                   </span>
                 </div>
-                
+
                 <div className="mt-2 mb-6">
                   <h3 className="text-xl font-bold text-gray-900">최종 데이터 검수</h3>
                   <p className="text-sm text-gray-600 mt-1">
@@ -1102,10 +1102,10 @@ export default function NewReportPage() {
                   onClick={handleSaveReport}
                   disabled={saving || !isTeacherVerified}
                   className={`flex-1 py-3 text-white font-bold rounded-xl transition-all shadow-md ${
-                    saving 
-                      ? 'bg-indigo-400 cursor-not-allowed' 
-                      : !isTeacherVerified 
-                        ? 'bg-gray-300 cursor-not-allowed text-gray-500' 
+                    saving
+                      ? 'bg-indigo-400 cursor-not-allowed'
+                      : !isTeacherVerified
+                        ? 'bg-gray-300 cursor-not-allowed text-gray-500'
                         : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg transform hover:-translate-y-0.5'
                   }`}
                 >

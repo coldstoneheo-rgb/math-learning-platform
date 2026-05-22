@@ -14,9 +14,18 @@ function createServiceClient() {
   });
 }
 
+type StudentLinkTarget = {
+  id: number;
+  user_id: string | null;
+  name: string;
+};
+
 export async function POST(request: Request) {
   try {
     const { userId, email, name, role, connectionCode } = await request.json();
+    const normalizedConnectionCode = typeof connectionCode === 'string'
+      ? connectionCode.trim()
+      : '';
 
     // 필수 파라미터 검증
     if (!userId || !email || !name || !role) {
@@ -37,12 +46,36 @@ export async function POST(request: Request) {
     const supabase = createServiceClient();
 
     // 학생 계정이고 연결 코드가 입력된 경우 사전 검증
-    let studentToLink = null;
-    if (role === 'student' && connectionCode && connectionCode.trim() !== '') {
+    let studentToLink: StudentLinkTarget | null = null;
+    if (role === 'student' && normalizedConnectionCode) {
+      const { data: existingLinkedStudent, error: existingLinkedStudentError } = await supabase
+        .from('students')
+        .select('id, name')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingLinkedStudentError) {
+        console.error('Failed to check existing student link:', existingLinkedStudentError);
+        return NextResponse.json(
+          { error: '학생 계정 연결 상태를 확인하지 못했습니다.' },
+          { status: 500 }
+        );
+      }
+
+      if (existingLinkedStudent) {
+        return NextResponse.json(
+          {
+            error: '이미 학생 프로필에 연결된 계정입니다.',
+            studentName: existingLinkedStudent.name,
+          },
+          { status: 409 }
+        );
+      }
+
       const { data: student, error: studentError } = await supabase
         .from('students')
-        .select('id, user_id')
-        .eq('connection_code', connectionCode.trim())
+        .select('id, user_id, name')
+        .eq('connection_code', normalizedConnectionCode)
         .single();
 
       if (studentError || !student) {
@@ -55,7 +88,7 @@ export async function POST(request: Request) {
       if (student.user_id) {
         return NextResponse.json(
           { error: '이미 다른 계정에 연결된 코드입니다.' },
-          { status: 400 }
+          { status: 409 }
         );
       }
 
@@ -90,9 +123,19 @@ export async function POST(request: Request) {
       const { error: updateError } = await supabase
         .from('students')
         .update({ user_id: userId })
-        .eq('id', studentToLink.id);
+        .eq('id', studentToLink.id)
+        .is('user_id', null)
+        .select('id')
+        .single();
 
       if (updateError) {
+        if (updateError.code === 'PGRST116') {
+          return NextResponse.json(
+            { error: '이미 다른 계정에 연결된 코드입니다.' },
+            { status: 409 }
+          );
+        }
+
         console.error('Failed to link student:', updateError);
         return NextResponse.json(
           { error: '유저 프로필은 생성되었으나 학생 연결에 실패했습니다. 대시보드에서 다시 연결해주세요.' },

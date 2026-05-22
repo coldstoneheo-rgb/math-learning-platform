@@ -224,7 +224,7 @@ export default function AdminDashboard() {
       {/* 프리미엄 모바일 대응 헤더 */}
       <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-indigo-50 dark:border-slate-800">
         <div className="container mx-auto px-4 py-6 flex flex-col items-center gap-4 text-center">
-          
+
           {/* 플랫폼 브랜딩 (My Math Master) */}
           <div className="flex flex-col items-center">
             <Link href="/" className="inline-flex items-center gap-2 text-2xl font-black text-indigo-900 dark:text-indigo-400 tracking-tight">
@@ -239,7 +239,7 @@ export default function AdminDashboard() {
               데이터가 증명하는 최상위권 수학 성장 플랫폼
             </p>
           </div>
- 
+
           {/* 컨트롤 패널 (유저명, 테마, 로그아웃) */}
           <div className="flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-4 py-2 shadow-sm mt-1 overflow-visible">
             <div className="flex items-center gap-2 shrink-0">
@@ -262,7 +262,7 @@ export default function AdminDashboard() {
               로그아웃
             </button>
           </div>
-          
+
         </div>
       </header>
 

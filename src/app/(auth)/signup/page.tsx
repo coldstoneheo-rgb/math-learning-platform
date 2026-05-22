@@ -39,14 +39,16 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      const normalizedConnectionCode = formData.connectionCode.trim();
+
       // 학생 계정 연결 코드 선제 검증
-      if (formData.role === 'student' && formData.connectionCode && formData.connectionCode.trim() !== '') {
+      if (formData.role === 'student' && normalizedConnectionCode) {
         const validateResponse = await fetch('/api/auth/validate-code', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ connectionCode: formData.connectionCode }),
+          body: JSON.stringify({ connectionCode: normalizedConnectionCode }),
         });
-        
+
         if (!validateResponse.ok) {
           const errData = await validateResponse.json();
           setError(errData.error || '유효하지 않은 연결 코드입니다.');
@@ -77,7 +79,9 @@ export default function SignupPage() {
             email: formData.email,
             name: formData.name,
             role: formData.role,
-            connectionCode: formData.role === 'student' ? formData.connectionCode : undefined,
+            connectionCode: formData.role === 'student' && normalizedConnectionCode
+              ? normalizedConnectionCode
+              : undefined,
           }),
         });
 
@@ -149,7 +153,7 @@ export default function SignupPage() {
               <option value="student">학생</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              학부모 계정은 선생님의 초대를 통해 학생과 연결됩니다. 
+              학부모 계정은 선생님의 초대를 통해 학생과 연결됩니다.
               학생 계정은 선생님이 발급한 연결 코드를 입력하여 자신의 데이터와 연동할 수 있습니다.
             </p>
           </div>

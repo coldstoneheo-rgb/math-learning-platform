@@ -7,7 +7,7 @@ interface ChartSkeletonProps {
 
 export default function ChartSkeleton({ height = 300, className = '' }: ChartSkeletonProps) {
   return (
-    <div 
+    <div
       className={`w-full flex items-center justify-center bg-gray-50 rounded-xl border border-gray-100 animate-pulse ${className}`}
       style={{ height }}
     >

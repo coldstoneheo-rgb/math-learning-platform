@@ -893,8 +893,8 @@ export default function ReportDetailPage() {
                     <div className={`text-2xl font-bold ${numColor}`}>{value}</div>
                     <div className="text-xs text-gray-500 mt-1">{label}</div>
                     <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full ${barColor} rounded-full`} 
+                      <div
+                        className={`h-full ${barColor} rounded-full`}
                         style={{ width: `${value}%` }}
                       />
                     </div>
@@ -1250,7 +1250,7 @@ export default function ReportDetailPage() {
                     <span className="font-semibold text-gray-900">{item.title}</span>
                   </div>
                   <FormatAIText text={item.description} className="text-gray-600 text-sm mb-3" />
-                  
+
                   <div className="space-y-2 text-sm bg-gray-50 rounded-lg p-4">
                     <div className="flex items-start gap-2">
                       <span className="text-gray-400 shrink-0">📚</span>

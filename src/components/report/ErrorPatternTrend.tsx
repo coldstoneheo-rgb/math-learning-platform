@@ -224,10 +224,10 @@ function ErrorPatternTrend({
                     labelLine={false}
                   >
                     {pieData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.color} 
-                        stroke="#fff" 
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        stroke="#fff"
                         strokeWidth={2}
                         className="transition-all duration-300 hover:opacity-80 cursor-pointer"
                       />

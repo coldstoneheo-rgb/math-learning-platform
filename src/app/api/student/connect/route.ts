@@ -17,8 +17,11 @@ function createServiceClient() {
 export async function POST(request: Request) {
   try {
     const { connectionCode } = await request.json();
+    const normalizedConnectionCode = typeof connectionCode === 'string'
+      ? connectionCode.trim()
+      : '';
 
-    if (!connectionCode || connectionCode.trim() === '') {
+    if (!normalizedConnectionCode) {
       return NextResponse.json(
         { error: '연결 코드를 입력해주세요.' },
         { status: 400 }
@@ -52,10 +55,35 @@ export async function POST(request: Request) {
 
     // 3. connection_code로 학생 검색
     const serviceSupabase = createServiceClient();
+
+    const { data: existingLinkedStudent, error: existingLinkedStudentError } = await serviceSupabase
+      .from('students')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (existingLinkedStudentError) {
+      console.error('Failed to check existing student link:', existingLinkedStudentError);
+      return NextResponse.json(
+        { error: '학생 계정 연결 상태를 확인하지 못했습니다.' },
+        { status: 500 }
+      );
+    }
+
+    if (existingLinkedStudent) {
+      return NextResponse.json(
+        {
+          error: '이미 학생 프로필에 연결된 계정입니다.',
+          studentName: existingLinkedStudent.name,
+        },
+        { status: 409 }
+      );
+    }
+
     const { data: student, error: studentError } = await serviceSupabase
       .from('students')
       .select('id, user_id, name')
-      .eq('connection_code', connectionCode.trim())
+      .eq('connection_code', normalizedConnectionCode)
       .single();
 
     if (studentError || !student) {
@@ -68,7 +96,7 @@ export async function POST(request: Request) {
     if (student.user_id) {
       return NextResponse.json(
         { error: '이미 다른 계정에 연결된 코드입니다.' },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
@@ -76,9 +104,19 @@ export async function POST(request: Request) {
     const { error: updateError } = await serviceSupabase
       .from('students')
       .update({ user_id: user.id })
-      .eq('id', student.id);
+      .eq('id', student.id)
+      .is('user_id', null)
+      .select('id')
+      .single();
 
     if (updateError) {
+      if (updateError.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: '이미 다른 계정에 연결된 코드입니다.' },
+          { status: 409 }
+        );
+      }
+
       console.error('Failed to link student:', updateError);
       return NextResponse.json(
         { error: '학생 계정 연결에 실패했습니다.' },

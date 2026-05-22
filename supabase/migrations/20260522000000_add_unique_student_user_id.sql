@@ -9,9 +9,15 @@ WHERE id NOT IN (
 ) AND user_id IS NOT NULL;
 
 -- 2. students 테이블의 user_id 컬럼에 UNIQUE 제약 조건 추가
-DO $$ 
-BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'students_user_id_unique') THEN
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_namespace n ON n.oid = c.connamespace
+        WHERE c.conname = 'students_user_id_unique'
+          AND n.nspname = 'public'
+    ) THEN
         ALTER TABLE public.students ADD CONSTRAINT students_user_id_unique UNIQUE (user_id);
     END IF;
 END $$;

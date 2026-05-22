@@ -19,21 +19,21 @@ export default function SuperAdminDashboard() {
         return;
       }
       setUserEmail(user.email || '');
-      
+
       const { data: userData } = await supabase
         .from('users')
         .select('role')
         .eq('id', user.id)
         .single();
-        
+
       if (userData?.role !== 'super_admin') {
         router.push('/');
         return;
       }
-      
+
       setLoading(false);
     }
-    
+
     checkSuperAdmin();
   }, [supabase, router]);
 
@@ -81,19 +81,19 @@ export default function SuperAdminDashboard() {
 
         {/* Main Content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-6 sm:px-10 py-12">
-          
+
           {/* Quick Actions / Role Switch */}
           <section className="mb-12">
             <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-900/40 to-violet-900/40 border border-indigo-500/20 backdrop-blur-xl shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
                 <svg className="w-32 h-32 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z" /><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" /></svg>
               </div>
-              
+
               <h2 className="text-2xl font-semibold mb-2">환영합니다, 관리자님</h2>
               <p className="text-slate-300 mb-8 max-w-2xl">
                 선생님 대시보드로 이동하여 학급 및 학생 관리를 진행하거나, 시스템 전반의 상태를 모니터링하세요.
               </p>
-              
+
               <Link href="/teacher" className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-medium shadow-lg shadow-indigo-500/30 transition-all gap-2 group">
                 선생님 대시보드로 전환
                 <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -127,7 +127,7 @@ export default function SuperAdminDashboard() {
               ))}
             </div>
           </section>
-          
+
           {/* Admin Menus */}
           <section>
             <h3 className="text-lg font-medium text-slate-300 mb-6 px-2">관리 메뉴</h3>
@@ -150,7 +150,7 @@ export default function SuperAdminDashboard() {
                     {menu.desc}
                   </p>
                   <div className="text-indigo-400/50 text-sm font-medium flex items-center gap-2">
-                    접근하기 
+                    접근하기
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>

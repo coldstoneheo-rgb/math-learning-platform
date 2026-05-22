@@ -53,4 +53,4 @@ next-env.d.ts
 .mcp.json
 
 # Scratch (temporary files)
-**/scratch/phase4-real-exam-images/
+scratch/

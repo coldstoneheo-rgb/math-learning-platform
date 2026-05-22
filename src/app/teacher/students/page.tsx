@@ -16,6 +16,8 @@ interface StudentUser {
   created_at: string;
 }
 
+type SupabaseClient = ReturnType<typeof createClient>;
+
 export default function StudentsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -89,7 +91,7 @@ export default function StudentsPage() {
     const supabase = createClient();
     const now = new Date();
     const year = now.getFullYear().toString().slice(-2);
-    
+
     // 학년에 따른 레벨 결정
     let level = 'M'; // 기본 중등
     if (grade <= 6) level = 'P'; // 초등
@@ -115,28 +117,28 @@ export default function StudentsPage() {
     return `${prefix}${grade}${sequence.toString().padStart(3, '0')}`;
   };
 
-  const generateConnectionCode = async (supabase: any): Promise<string> => {
+  const generateConnectionCode = async (supabase: SupabaseClient): Promise<string> => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let attempts = 0;
-    
+
     while (attempts < 5) {
       let code = 'STU-';
       for (let i = 0; i < 6; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
       }
-      
+
       const { data, error } = await supabase
         .from('students')
         .select('id')
         .eq('connection_code', code)
         .maybeSingle();
-        
+
       if (!data && !error) {
         return code;
       }
       attempts++;
     }
-    
+
     // 5회 충돌 시 타임스탬프 일부를 섞어서 반환
     return 'STU-' + Date.now().toString(36).toUpperCase().slice(-6);
   };

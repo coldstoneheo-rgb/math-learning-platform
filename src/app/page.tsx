@@ -45,7 +45,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-slate-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 transition-colors duration-300">
-      
+
       {/* 글로벌 상단 헤더 */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-white/75 dark:bg-slate-950/75 border-b border-indigo-50 dark:border-slate-800 transition-colors">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -72,7 +72,7 @@ export default function Home() {
       {/* 히어로 섹션 */}
       <main className="container mx-auto px-4 py-12 md:py-24">
         <div className="grid lg:grid-cols-12 gap-12 items-center max-w-6xl mx-auto">
-          
+
           {/* 히어로 설명구 */}
           <div className="lg:col-span-7 text-left space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100/80 dark:bg-indigo-950/50 border border-indigo-200/50 dark:border-indigo-900/50">
@@ -100,7 +100,7 @@ export default function Home() {
           <div className="lg:col-span-5 flex justify-center">
             <div className="w-full max-w-sm bg-white/90 dark:bg-slate-900/90 border border-indigo-50 dark:border-slate-800/80 p-6 rounded-3xl shadow-xl backdrop-blur-md relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-xl"></div>
-              
+
               {/* 상단 프로필 헤더 */}
               <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ export default function Home() {
                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-gray-100 dark:border-slate-800">
                   <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 block mb-1">🧠 AI 성장 처방 전략</span>
                   <p className="text-[11px] leading-relaxed text-gray-700 dark:text-slate-300 font-medium">
-                    "연립방정식의 문장제 문제 해결 시, 문제를 끊어 읽으며 구하고자 하는 변수(x, y)를 명시적으로 식 위에 표시하는 식 수립 훈련 4주 진행 제안"
+                    &quot;연립방정식의 문장제 문제 해결 시, 문제를 끊어 읽으며 구하고자 하는 변수(x, y)를 명시적으로 식 위에 표시하는 식 수립 훈련 4주 진행 제안&quot;
                   </p>
                 </div>
 
@@ -298,4 +298,3 @@ function FeatureCard({ icon, title, description, tag }: { icon: string; title: s
     </div>
   );
 }
-

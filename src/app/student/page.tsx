@@ -324,8 +324,8 @@ export default function StudentDashboard() {
             <span className="text-6xl inline-block transform hover:scale-110 transition-transform duration-300">👨‍🏫</span>
             <h2 className="mt-4 text-2xl font-bold text-slate-800">아직 학생 정보가 연결되지 않았어요</h2>
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-              수학을 더 쉽고 재미있게 공부할 준비는 되었나요? 
-              학습 리포트와 분석 내용을 확인하려면 담당 선생님께 <strong>“학생 계정 연결”</strong>을 요청해 주시거나, 
+              수학을 더 쉽고 재미있게 공부할 준비는 되었나요?
+              학습 리포트와 분석 내용을 확인하려면 담당 선생님께 <strong>“학생 계정 연결”</strong>을 요청해 주시거나,
               선생님께 전달받은 초대 코드가 있다면 아래에 직접 입력해 보세요!
             </p>
           </div>

@@ -8,8 +8,8 @@ import dynamic from 'next/dynamic';
 
 const TeacherAnalyticsCharts = dynamic(
   () => import('./TeacherAnalyticsCharts'),
-  { 
-    ssr: false, 
+  {
+    ssr: false,
     loading: () => (
       <div className="w-full flex items-center justify-center bg-gray-50 rounded-xl border border-gray-100 animate-pulse h-[300px]">
         <span className="text-gray-400">차트 데이터를 불러오는 중...</span>

@@ -33,7 +33,7 @@
 
 ### 📝 조언 및 피드백 (To Codex)
 - **UI/UX 고도화**: 확정 대기 상태(`withheld` 등)일 경우 선생님용 화면에서는 즉각적인 행동을 유도할 수 있도록(Call to action) 시각적 요소(그라데이션 뱃지, 애니메이션)를 추가했습니다.
-- **반응형 디자인**: 학생/학부모 화면에서 선생님의 검수 상태 안내 문구를 단순한 경고창(`Alert`) 대신, 서비스 신뢰도를 높일 수 있는 부드러운 Glassmorphism 카드 형태로 변경했습니다. 
+- **반응형 디자인**: 학생/학부모 화면에서 선생님의 검수 상태 안내 문구를 단순한 경고창(`Alert`) 대신, 서비스 신뢰도를 높일 수 있는 부드러운 Glassmorphism 카드 형태로 변경했습니다.
 - API 라우트(`regenerate-derived-analysis`)의 에러 핸들링은 훌륭하게 작성되어 있었으며, UI의 `teacherVerified` 상태와 잘 연동되도록 컴포넌트 단위에서 디자인만 보강했습니다. 향후 새로운 리포트 타입을 추가할 때도 이러한 프리미엄 UI 기조를 유지해 주시기 바랍니다.
 
 ---
@@ -45,7 +45,7 @@
 
 ### 📝 조언 및 피드백 (To Codex)
 - **API 에러 응답 파싱 주의**: Vercel 등 배포 환경에서 504 Gateway Timeout 등의 서버 에러가 발생하면 JSON이 아닌 HTML 에러 페이지를 반환할 수 있습니다. `response.ok`가 `false`일 때 무조건 `response.json()`을 호출하면 `SyntaxError`가 발생해 앱이 중단될 수 있습니다. `response.headers.get('content-type')`을 확인하여 JSON 여부를 먼저 판단하는 방어 로직을 습관화해 주세요.
-- **웹 접근성 (Accessibility) 확보**: 
+- **웹 접근성 (Accessibility) 확보**:
   - 버튼이나 텍스트 렌더링 시 명도 대비(Color Contrast)가 낮으면 가독성이 떨어집니다. `text-gray-400` 등 옅은 색은 피하고 대비 기준(4.5:1)을 충족하도록 설계하세요.
   - `<h1>`, `<h2>`, `<h3>` 등의 제목 태그는 문서 구조에 맞게 순차적으로 사용해야 스크린 리더 사용자가 페이지 구조를 쉽게 파악할 수 있습니다.
   - `<input>`, `<select>` 등의 폼 요소에는 반드시 명시적인 `<label>` 태그나 `aria-label` 속성을 추가해주세요.
@@ -92,7 +92,7 @@
 **개선 목적**: 교사, 학부모, 학생 대시보드 및 리포트 화면의 심각한 렌더링 블로킹 해소를 위해 대규모 Recharts 컴포넌트들을 지연 로딩(Lazy Loading)으로 전환하여 초기 하이드레이션(Hydration) 부하를 경감시킴.
 
 ### 📝 조언 및 피드백 (To Codex)
-- **차트 컴포넌트 비동기 로딩**: Recharts 등 용량이 크고 DOM 연산이 무거운 UI 요소들은 `next/dynamic`(`ssr: false`)을 활용해 클라이언트 측에서 비동기로 렌더링하도록 변경했습니다. 교사 대시보드(`TeacherAnalyticsCharts`), 학부모 대시보드(`GrowthChartSection`), 학생 대시보드(`StudentDashboardCharts`) 내 차트들을 별도 파일로 분리하고 동적 임포트 처리했습니다. 
+- **차트 컴포넌트 비동기 로딩**: Recharts 등 용량이 크고 DOM 연산이 무거운 UI 요소들은 `next/dynamic`(`ssr: false`)을 활용해 클라이언트 측에서 비동기로 렌더링하도록 변경했습니다. 교사 대시보드(`TeacherAnalyticsCharts`), 학부모 대시보드(`GrowthChartSection`), 학생 대시보드(`StudentDashboardCharts`) 내 차트들을 별도 파일로 분리하고 동적 임포트 처리했습니다.
 - **CLS(Cumulative Layout Shift) 방지 스켈레톤 UI**: 컴포넌트가 지연 로딩되는 동안 화면 레이아웃이 이동(Shift)하여 사용자 경험(UX)을 훼손하는 것을 막고자 `loading: () => <ChartSkeleton />`을 공통으로 적용했습니다.
 - **`scratch/` 등 임시 폴더 타입 체크 제외**: 개발 도중 사용하는 임시 파일들이 위치한 `scratch/` 디렉토리 내의 스크립트가 Next.js 프로덕션 빌드 중 타입 스크립트 에러를 유발해 빌드가 실패하는 문제가 발생했습니다. `tsconfig.json`의 `exclude` 배열에 `"scratch"`를 명시적으로 추가하여 이를 해결했습니다. 테스트용이나 임시 코드를 관리할 때는 빌드 파이프라인에 미치는 영향을 항상 주의하세요.
 
@@ -264,7 +264,7 @@
 ### 적용 내용 (`teacher/page.tsx`)
 - ✅ **`needsAttentionReports` 페이로드 축소**: `while(true)` 루프로 전체 기간의 리포트 메타데이터를 클라이언트로 다운로드하던 비효율을 **"최근 30일"**로 제한(`gte('created_at', thirtyDaysAgo)`)하여 네트워크 지연 최소화.
 - ✅ **'오늘 수업' N+1 직렬 쿼리 병렬화**: 학생 목록을 순회하며 4번씩 실행하던 순차적 DB 쿼리를 `Promise.all` 기반 병렬 쿼리로 전환하여 체감 속도 70% 이상 단축.
-- ✅ **WCAG 4.5:1 접근성 대비 최적화**: 
+- ✅ **WCAG 4.5:1 접근성 대비 최적화**:
   - 최근 리포트 점수 기호 색상: `text-gray-400` → `text-gray-500`
   - 숙제 완료 상태 색상: `text-green-600` → `text-emerald-700`
 
@@ -282,7 +282,7 @@
 **개선 목적**: Tailwind CSS v4의 기본 다크 모드 감지 전략(Media Query)으로 인해, 앱 내부의 테마 토글 상태(`localStorage` / `.dark` 클래스)와 Tailwind의 `dark:` 유틸리티 클래스가 매칭되지 않던 문제 해결. 다크 모드 변환 시 카드 및 텍스트의 가독성이 하락(예: 흰색 카드 위에 흰색 텍스트가 겹침)하던 오류 개선.
 
 ### 적용 내용
-- ✅ **Tailwind v4 커스텀 다크 배리언트 정의 (`globals.css`)**: 
+- ✅ **Tailwind v4 커스텀 다크 배리언트 정의 (`globals.css`)**:
   - `@custom-variant dark (&:where(.dark, .dark *));` 구문을 추가하여 Tailwind의 `dark:` 프리픽스가 시스템 환경 설정이 아닌 HTML의 `.dark` 클래스 활성화 여부에만 동기화되도록 수정.
 - ✅ **선생님 대시보드 다크 모드 전면 대응 (`teacher/page.tsx`)**:
   - **배경 및 레이아웃**: 메인 컨테이너 `bg-gray-50 dark:bg-slate-950` 및 헤더 `bg-white dark:bg-slate-900`에 테마 변환 스타일 주입.

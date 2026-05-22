@@ -4,7 +4,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- public.users 테이블의 role이 변경되었을 때, auth.users의 raw_user_meta_data->'role'을 업데이트합니다.
   UPDATE auth.users
-  SET raw_user_meta_data = 
+  SET raw_user_meta_data =
     coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('role', NEW.role)
   WHERE id = NEW.id;
   RETURN NEW;
@@ -25,13 +25,13 @@ DECLARE
 BEGIN
   -- public.users 테이블의 role을 조회합니다.
   SELECT role INTO public_role FROM public.users WHERE id = NEW.id;
-  
+
   -- 만약 public.users에 사용자 레코드가 이미 존재하고, 입력된 metadata의 role이 public_role과 다르면
   -- public_role 값으로 강제 동기화시킵니다. (클라이언트 단의 위조 방지)
   IF public_role IS NOT NULL AND (NEW.raw_user_meta_data->>'role' IS NULL OR NEW.raw_user_meta_data->>'role' <> public_role) THEN
     NEW.raw_user_meta_data = coalesce(NEW.raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('role', public_role);
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
