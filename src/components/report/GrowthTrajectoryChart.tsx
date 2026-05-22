@@ -276,11 +276,11 @@ function GrowthTrajectoryChart({
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1">
             <div className="w-4 h-0.5 bg-indigo-500" />
-            <span className="text-gray-500">실제 점수</span>
+            <span className="text-gray-600">실제 점수</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-4 h-0.5 bg-indigo-500 border-dashed" style={{ borderStyle: 'dashed' }} />
-            <span className="text-gray-500">예측</span>
+            <span className="text-gray-600">예측</span>
           </div>
         </div>
       </div>
@@ -360,11 +360,11 @@ function GrowthTrajectoryChart({
                 className="bg-indigo-50 rounded-lg p-3 text-center"
                 whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
               >
-                <div className="text-xs text-indigo-600 mb-1">{pred.timeframe} 후</div>
+                <div className="text-xs text-indigo-700 mb-1">{pred.timeframe} 후</div>
                 <div className="text-lg font-bold text-indigo-700">
                   {pred.predictedScore}점
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-600">
                   신뢰도 {pred.confidenceLevel}%
                 </div>
               </motion.div>

@@ -51,7 +51,7 @@ export default function EmbeddingsAdminPage() {
     if (!user) { router.push('/login'); return; }
 
     const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
-    if (!userData || userData.role !== 'teacher') { router.push('/'); return; }
+    if (!userData || !['teacher', 'super_admin'].includes(userData.role)) { router.push('/'); return; }
 
     const { data: studentList } = await supabase.from('students').select('*').order('name');
     setStudents(studentList ?? []);

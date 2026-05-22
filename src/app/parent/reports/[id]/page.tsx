@@ -3,21 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { MetaHeader, VisionFooter, HabitTrendChart, MomentumGauge, ReportComments } from '@/components/report';
-import GrowthRadarChart, { buildRadarData } from '@/components/report/GrowthRadarChart';
+import dynamic from 'next/dynamic';
+import ChartSkeleton from '@/components/common/ChartSkeleton';
+import { MetaHeader, VisionFooter, MomentumGauge, ReportComments } from '@/components/report';
+import { buildRadarData } from '@/components/report/GrowthRadarChart';
 import WeaknessResolutionMap, { buildWeaknessItems } from '@/components/report/WeaknessResolutionMap';
-import TrajectoryAreaChart from '@/components/report/TrajectoryAreaChart';
 import MetaProfileComparison, { buildMetaProfileMetrics } from '@/components/report/MetaProfileComparison';
 import AnnualGrowthStory from '@/components/report/AnnualGrowthStory';
 import {
   ReportGrowthHero,
   HomeActionCard,
-  GrowthProjectionChart,
   ConfidenceBadge,
   getConfidenceLevel,
   EvidenceBadge,
   ReportPDFExporter,
 } from '@/components/report/premium';
+
+const HabitTrendChart = dynamic(() => import('@/components/report').then(mod => mod.HabitTrendChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const GrowthRadarChart = dynamic(() => import('@/components/report/GrowthRadarChart'), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const TrajectoryAreaChart = dynamic(() => import('@/components/report/TrajectoryAreaChart'), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+const GrowthProjectionChart = dynamic(() => import('@/components/report/premium').then(mod => mod.GrowthProjectionChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
 import {
   calculateHabitScore,
   convertMomentumStatus,
@@ -25,6 +30,8 @@ import {
   calculateSessionAverages,
   generateWeeklyComparison,
 } from '@/lib/report-utils';
+import { FormatAIText } from '@/lib/format-ai-text';
+import ProblemAnalysisSection from '@/components/report/ProblemAnalysisSection';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -186,8 +193,8 @@ export default function ParentReportDetailPage() {
       ? [{
           type: 'teacher_observation' as const,
           label: '누적 관찰 데이터',
-          date: report.students.meta_profile.legacySignals.at(-1)?.date,
-          description: `${report.students.meta_profile.legacySignals.length}건 누적`,
+          date: report.students?.meta_profile?.legacySignals?.at(-1)?.date,
+          description: `${report.students?.meta_profile?.legacySignals?.length || 0}건 누적`,
         }]
       : []),
   ];
@@ -268,13 +275,33 @@ export default function ParentReportDetailPage() {
         </div>
 
         {testAnalysis?.teacherVerified && verificationStatusInfo && (
-          <div className={`mb-6 rounded-xl border p-4 ${
+          <div className={`mb-6 relative overflow-hidden rounded-2xl border p-5 shadow-sm transition-all ${
             verificationStatusInfo.tone === 'warning'
-              ? 'border-amber-200 bg-amber-50 text-amber-800'
-              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              ? 'border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50/30'
+              : 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50/30'
           }`}>
-            <p className="text-sm font-semibold">{verificationStatusInfo.label}</p>
-            <p className="mt-1 text-sm leading-relaxed">{verificationStatusInfo.description}</p>
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full blur-2xl opacity-50 pointer-events-none mix-blend-multiply ${
+              verificationStatusInfo.tone === 'warning' ? 'bg-amber-300' : 'bg-emerald-300'
+            }" />
+            <div className="relative z-10 flex items-start gap-3">
+              <div className={`shrink-0 mt-1 flex items-center justify-center w-8 h-8 rounded-full ${
+                verificationStatusInfo.tone === 'warning' ? 'bg-amber-200 text-amber-700' : 'bg-emerald-200 text-emerald-700'
+              }`}>
+                {verificationStatusInfo.tone === 'warning' ? '⚠️' : '✨'}
+              </div>
+              <div>
+                <p className={`text-sm font-bold ${
+                  verificationStatusInfo.tone === 'warning' ? 'text-amber-900' : 'text-emerald-900'
+                }`}>
+                  {verificationStatusInfo.label}
+                </p>
+                <p className={`mt-1 text-sm leading-relaxed ${
+                  verificationStatusInfo.tone === 'warning' ? 'text-amber-800' : 'text-emerald-800'
+                }`}>
+                  {verificationStatusInfo.description}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -369,7 +396,7 @@ export default function ParentReportDetailPage() {
                 </div>
               )}
               {canShowDerivedGuidance ? (
-                <p className="text-gray-700 leading-relaxed mb-4">{testAnalysis.macroAnalysis?.summary}</p>
+                <FormatAIText text={testAnalysis.macroAnalysis?.summary} className="text-gray-700 text-sm mb-4" />
               ) : (
                 <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                   <p className="font-semibold">교사 확정값 기준 성장 분석 준비 중</p>
@@ -384,13 +411,13 @@ export default function ParentReportDetailPage() {
                 {testAnalysis.macroAnalysis?.strengths && (
                   <div className="p-4 bg-green-50 rounded-lg">
                     <h4 className="font-medium text-green-800 mb-2">💪 강점</h4>
-                    <p className="text-green-700 text-sm">{testAnalysis.macroAnalysis.strengths}</p>
+                    <FormatAIText text={testAnalysis.macroAnalysis.strengths} className="text-green-700 text-sm" />
                   </div>
                 )}
                 {testAnalysis.macroAnalysis?.weaknesses && (
                   <div className="p-4 bg-red-50 rounded-lg">
                     <h4 className="font-medium text-red-800 mb-2">⚠️ 보완점</h4>
-                    <p className="text-red-700 text-sm">{testAnalysis.macroAnalysis.weaknesses}</p>
+                    <FormatAIText text={testAnalysis.macroAnalysis.weaknesses} className="text-red-700 text-sm" />
                   </div>
                 )}
               </div>
@@ -398,7 +425,7 @@ export default function ParentReportDetailPage() {
               {canShowDerivedGuidance && testAnalysis.macroAnalysis?.errorPattern && (
                 <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
                   <h4 className="font-medium text-yellow-800 mb-2">🔍 주요 오류 패턴</h4>
-                  <p className="text-yellow-700 text-sm">{testAnalysis.macroAnalysis.errorPattern}</p>
+                  <FormatAIText text={testAnalysis.macroAnalysis.errorPattern} className="text-yellow-700 text-sm" />
                 </div>
               )}
             </div>
@@ -409,19 +436,19 @@ export default function ParentReportDetailPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 수학 역량</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
                   {[
-                    { key: 'calculationSpeed', label: '계산 속도' },
-                    { key: 'calculationAccuracy', label: '계산 정확도' },
-                    { key: 'applicationAbility', label: '응용력' },
-                    { key: 'logic', label: '논리력' },
-                    { key: 'anxietyControl', label: '불안 통제' },
-                  ].map(({ key, label }) => {
+                    { key: 'calculationSpeed', label: '계산 속도', numColor: 'text-blue-600', barColor: 'bg-blue-500' },
+                    { key: 'calculationAccuracy', label: '계산 정확도', numColor: 'text-emerald-600', barColor: 'bg-emerald-500' },
+                    { key: 'applicationAbility', label: '응용력', numColor: 'text-violet-600', barColor: 'bg-violet-500' },
+                    { key: 'logic', label: '논리력', numColor: 'text-amber-600', barColor: 'bg-amber-500' },
+                    { key: 'anxietyControl', label: '불안 통제', numColor: 'text-rose-600', barColor: 'bg-rose-500' },
+                  ].map(({ key, label, numColor, barColor }) => {
                     const value = mathCapability[key as keyof typeof mathCapability] || 0;
                     return (
                       <div key={key} className="text-center">
-                        <div className="text-2xl font-bold text-indigo-600">{value}</div>
+                        <div className={`text-2xl font-bold ${numColor}`}>{value}</div>
                         <div className="text-xs text-gray-500 mt-1">{label}</div>
                         <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${value}%` }} />
+                          <div className={`h-full ${barColor} rounded-full`} style={{ width: `${value}%` }} />
                         </div>
                       </div>
                     );
@@ -459,14 +486,29 @@ export default function ParentReportDetailPage() {
                         </span>
                         <span className="font-semibold text-gray-900">{item.title}</span>
                       </div>
-                      <p className="text-gray-600 text-sm mb-3">{item.description}</p>
-                      <div className="grid md:grid-cols-2 gap-2 text-sm bg-gray-50 rounded-lg p-3">
-                        <div><span className="text-gray-500">📚 무엇을:</span> {item.whatToDo}</div>
-                        <div><span className="text-gray-500">📍 어디서:</span> {item.where}</div>
-                        <div><span className="text-gray-500">⏱️ 얼마나:</span> {item.howMuch}</div>
-                        <div><span className="text-gray-500">💡 어떻게:</span> {item.howTo}</div>
+                      <FormatAIText text={item.description} className="text-gray-600 text-sm mb-3" />
+                      <div className="space-y-2 text-sm bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">📚</span>
+                          <div><span className="font-medium text-gray-700">무엇을: </span><span className="text-gray-600">{item.whatToDo}</span></div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">📍</span>
+                          <div><span className="font-medium text-gray-700">어디서: </span><span className="text-gray-600">{item.where}</span></div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">⏱️</span>
+                          <div><span className="font-medium text-gray-700">얼마나: </span><span className="text-gray-600">{item.howMuch}</span></div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">💡</span>
+                          <div><span className="font-medium text-gray-700">어떻게: </span><span className="text-gray-600">{item.howTo}</span></div>
+                        </div>
                         {item.measurementMethod && (
-                          <div className="md:col-span-2"><span className="text-gray-500">📏 측정 방법:</span> {item.measurementMethod}</div>
+                          <div className="flex items-start gap-2 pt-2 border-t border-gray-200">
+                            <span className="text-gray-400 shrink-0">📏</span>
+                            <div><span className="font-medium text-gray-700">측정 방법: </span><span className="text-gray-600">{item.measurementMethod}</span></div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -475,39 +517,9 @@ export default function ParentReportDetailPage() {
               </div>
             )}
 
-            {/* 문항별 분석 */}
+            {/* 문항별 분석 — 아코디언 카드 */}
             {testAnalysis.detailedAnalysis && testAnalysis.detailedAnalysis.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 문항별 분석</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left">번호</th>
-                        <th className="px-3 py-2 text-center">정오</th>
-                        <th className="px-3 py-2 text-left">핵심 개념</th>
-                        <th className="px-3 py-2 text-left">오류 유형</th>
-                        <th className="px-3 py-2 text-left">분석</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {testAnalysis.detailedAnalysis.map((item, index) => (
-                        <tr key={index} className={item.isCorrect === 'X' ? 'bg-red-50' : ''}>
-                          <td className="px-3 py-2 font-medium">{item.problemNumber}</td>
-                          <td className="px-3 py-2 text-center">
-                            <span className={`inline-block w-6 h-6 rounded-full text-white font-bold leading-6 text-xs ${
-                              item.isCorrect === 'O' ? 'bg-green-500' : item.isCorrect === 'X' ? 'bg-red-500' : 'bg-yellow-500'
-                            }`}>{item.isCorrect}</span>
-                          </td>
-                          <td className="px-3 py-2">{item.keyConcept}</td>
-                          <td className="px-3 py-2 text-gray-600">{item.errorType || '-'}</td>
-                          <td className="px-3 py-2 text-gray-600 text-xs">{item.analysis || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <ProblemAnalysisSection items={testAnalysis.detailedAnalysis} />
             )}
 
             {/* 학습 습관 & 위험 요인 */}
@@ -650,13 +662,13 @@ export default function ParentReportDetailPage() {
               {levelTestAnalysis.initialBaseline?.strengths && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">💪 잘하는 것</h3>
-                  <p className="text-sm text-gray-700 leading-relaxed">{levelTestAnalysis.initialBaseline.strengths}</p>
+                  <FormatAIText text={levelTestAnalysis.initialBaseline.strengths} className="text-sm text-gray-700" />
                 </div>
               )}
               {levelTestAnalysis.initialBaseline?.weaknesses && (
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">🔧 보완할 것</h3>
-                  <p className="text-sm text-gray-700 leading-relaxed">{levelTestAnalysis.initialBaseline.weaknesses}</p>
+                  <FormatAIText text={levelTestAnalysis.initialBaseline.weaknesses} className="text-sm text-gray-700" />
                 </div>
               )}
             </div>

@@ -7,7 +7,14 @@ import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '', name: '', role: 'teacher' as 'teacher' | 'parent' | 'student' });
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    name: '',
+    role: 'teacher' as 'teacher' | 'parent' | 'student',
+    connectionCode: '',
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -32,6 +39,24 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      const normalizedConnectionCode = formData.connectionCode.trim();
+
+      // 학생 계정 연결 코드 선제 검증
+      if (formData.role === 'student' && normalizedConnectionCode) {
+        const validateResponse = await fetch('/api/auth/validate-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ connectionCode: normalizedConnectionCode }),
+        });
+
+        if (!validateResponse.ok) {
+          const errData = await validateResponse.json();
+          setError(errData.error || '유효하지 않은 연결 코드입니다.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const supabase = createClient();
       const { data, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -54,11 +79,16 @@ export default function SignupPage() {
             email: formData.email,
             name: formData.name,
             role: formData.role,
+            connectionCode: formData.role === 'student' && normalizedConnectionCode
+              ? normalizedConnectionCode
+              : undefined,
           }),
         });
 
         if (!createUserResponse.ok) {
           const errorData = await createUserResponse.json();
+          // 회원가입 실패 시 Auth 유저 삭제가 어려우므로 구체적인 에러 메시지를 보여주고
+          // 유저가 오류 해결 후 재시도할 수 있도록 에러를 던집니다.
           throw new Error(errorData.error || 'Failed to create user profile');
         }
 
@@ -67,7 +97,7 @@ export default function SignupPage() {
         else router.push(formData.role === 'teacher' ? '/teacher' : formData.role === 'parent' ? '/parent' : '/student');
       }
     } catch (err) {
-      setError('회원가입 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '회원가입 중 오류가 발생했습니다.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -123,10 +153,23 @@ export default function SignupPage() {
               <option value="student">학생</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              학부모 계정은 선생님의 초대를 통해 학생과 연결됩니다. 
-              학생 계정은 선생님이 발급한 연결 코드가 필요할 수 있습니다.
+              학부모 계정은 선생님의 초대를 통해 학생과 연결됩니다.
+              학생 계정은 선생님이 발급한 연결 코드를 입력하여 자신의 데이터와 연동할 수 있습니다.
             </p>
           </div>
+
+          {formData.role === 'student' && (
+            <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 space-y-3">
+              <p className="text-xs text-indigo-700 leading-relaxed font-medium">
+                👋 반가워요! 수학을 더 쉽고 재미있게 배울 준비가 되었나요? 선생님께 받은 연결 코드(예: STU-XXXXXX)가 있다면 입력해 주세요. 코드가 없어도 가입할 수 있지만, 리포트를 보려면 나중에라도 코드를 꼭 등록해야 해요.
+              </p>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">연결 코드 (선택)</label>
+                <input name="connectionCode" type="text" value={formData.connectionCode} onChange={handleChange} placeholder="예: STU-12AB34"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white font-mono" />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">비밀번호 <span className="text-red-500">*</span></label>

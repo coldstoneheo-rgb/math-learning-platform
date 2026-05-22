@@ -160,24 +160,42 @@ function ConfidenceBadge({
         <div className="mt-4 pt-3 border-t border-slate-200/30">
           <div className="flex items-center gap-2 mb-1.5">
             <BarChart3 className={`w-3.5 h-3.5 ${config.textColor} opacity-60`} />
-            <span className={`text-xs ${config.textColor} opacity-70`}>신뢰도 수준</span>
+            <span className={`text-xs ${config.textColor}`}>신뢰도 수준</span>
           </div>
           <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <motion.div
-                key={i}
-                className={`h-1.5 flex-1 rounded-full ${
-                  (level === 'high' && i <= 5) ||
-                  (level === 'medium' && i <= 3) ||
-                  (level === 'low' && i <= 1)
-                    ? `bg-gradient-to-r ${config.gradient}`
-                    : 'bg-slate-200'
-                }`}
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ delay: i * 0.05 }}
-              />
-            ))}
+            {[1, 2, 3, 4, 5].map((i) => {
+              const segmentColors = ['bg-red-400', 'bg-orange-400', 'bg-amber-400', 'bg-lime-400', 'bg-emerald-400'];
+              const filled = (level === 'high' && i <= 5) ||
+                (level === 'medium' && i <= 3) ||
+                (level === 'low' && i <= 1);
+              const isIndicator = (level === 'high' && i === 5) ||
+                (level === 'medium' && i === 3) ||
+                (level === 'low' && i === 1);
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center relative group cursor-pointer">
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full mb-1 hidden group-hover:block z-10 w-max px-2 py-1 text-[10px] text-white bg-gray-800 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    {i === 1 ? '매우 낮음' : i === 2 ? '낮음' : i === 3 ? '보통' : i === 4 ? '높음' : '매우 높음'}
+                  </div>
+                  {isIndicator && (
+                    <span className={`text-[10px] mb-0.5 ${config.textColor}`}>▼</span>
+                  )}
+                  {!isIndicator && <div className="h-[14px]" />}
+                  <motion.div
+                    className={`h-2 w-full rounded-full transition-transform duration-300 group-hover:scale-y-150 ${
+                      filled ? segmentColors[i - 1] : 'bg-slate-200'
+                    }`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between mt-1">
+            <span className="text-[10px] text-gray-400">낮음</span>
+            <span className="text-[10px] text-gray-400">높음</span>
           </div>
         </div>
       )}

@@ -263,7 +263,7 @@ All type definitions are in `src/types/index.ts`. Key interfaces:
 
 ### User & Authentication
 ```typescript
-type UserRole = 'teacher' | 'parent' | 'student';
+type UserRole = 'super_admin' | 'teacher' | 'parent' | 'student';
 
 interface User {
   id: string;              // UUID from Supabase Auth
@@ -284,6 +284,8 @@ interface Student {
   school?: string;
   start_date?: string;
   parent_id?: string;      // References users.id
+  user_id?: string;        // References auth.users.id (link to login account)
+  connection_code?: string;// Unique student connection code (STU-XXXXXX)
   learning_style?: 'visual' | 'verbal' | 'logical';
   personality_traits?: string[];
   created_at: string;

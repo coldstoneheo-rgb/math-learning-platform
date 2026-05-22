@@ -6,11 +6,23 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MetaHeader, VisionFooter } from '@/components/report';
 import {
+  FivePerspectiveAnalysis,
+  ConfidenceBadge,
+  getConfidenceLevel,
+  EvidenceBadge,
+  ReportGrowthHero,
+} from '@/components/report/premium';
+import ProblemAnalysisSection from '@/components/report/ProblemAnalysisSection';
+import dynamic from 'next/dynamic';
+import ChartSkeleton from '@/components/common/ChartSkeleton';
+const GrowthProjectionChart = dynamic(() => import('@/components/report/premium').then(mod => mod.GrowthProjectionChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
+import {
   canShowStudentDerivedNarrative,
   getDisplayableDerivedGuidance,
   getStudentGrowthTruthNotice,
 } from '@/lib/teacher-verified-analysis';
 import { exportReportToPdf } from '@/lib/pdf-export';
+import { FormatAIText } from '@/lib/format-ai-text';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -159,6 +171,32 @@ export default function StudentReportDetailPage() {
   const selfAnalysis = isSelfAnalysis ? report.analysis_data as SelfAnalysisReport : null;
   const config = REPORT_TYPE_CONFIG[reportType];
 
+  // 프리미엄 컴포넌트용 데이터
+  const isTestAnalysis = reportType === 'test' || reportType === 'consolidated';
+  const confidenceDataCount = [
+    report.students?.meta_profile?.baseline?.assessmentDate,
+    ...(report.students?.meta_profile?.errorSignature?.signaturePatterns || []),
+    ...(report.students?.meta_profile?.legacySignals || []),
+    ...(analysisData?.detailedAnalysis || []),
+    ...displayableGuidance.growthPredictions,
+  ].filter(Boolean).length;
+  const evidenceSources = [
+    {
+      type: 'ai_analysis' as const,
+      label: 'AI 분석 결과',
+      date: report.test_date || report.created_at,
+      description: report.test_name || config?.name || '리포트',
+    },
+    ...(analysisData?.detailedAnalysis?.length
+      ? [{
+          type: 'test_paper' as const,
+          label: '문항별 분석',
+          date: report.test_date || undefined,
+          description: `${analysisData.detailedAnalysis.length}개 문항 근거`,
+        }]
+      : []),
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toast toasts={toasts} onRemove={removeToast} />
@@ -221,28 +259,64 @@ export default function StudentReportDetailPage() {
 
           {/* 메타 헤더 */}
           <MetaHeader
+            metaProfile={report.students?.meta_profile}
             studentName={report.students?.name || '학생'}
             studentGrade={report.students?.grade || 1}
             compact
           />
 
           {growthTruthNotice && (
-            <div className="px-6 pb-6">
-              <div className={`rounded-lg border p-4 ${STUDENT_NOTICE_TONE_CLASS[growthTruthNotice.tone]}`}>
-                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STUDENT_NOTICE_BADGE_CLASS[growthTruthNotice.tone]}`}>
-                      {growthTruthNotice.label}
-                    </span>
-                    <h2 className="mt-3 text-base font-bold">{growthTruthNotice.headline}</h2>
-                    <p className="mt-2 text-sm leading-relaxed opacity-85">{growthTruthNotice.description}</p>
+            <div className="px-6 pb-6 mt-4">
+              <div className={`relative overflow-hidden rounded-2xl border p-5 shadow-sm transition-all ${
+                growthTruthNotice.tone === 'warning'
+                  ? 'border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50/30'
+                  : growthTruthNotice.tone === 'success'
+                  ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50/30'
+                  : 'border-slate-300 bg-gradient-to-br from-slate-50 to-gray-50/30'
+              }`}>
+                <div className={`absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full blur-2xl opacity-50 pointer-events-none mix-blend-multiply ${
+                  growthTruthNotice.tone === 'warning' ? 'bg-amber-300' : growthTruthNotice.tone === 'success' ? 'bg-emerald-300' : 'bg-slate-300'
+                }`} />
+                <div className="relative z-10 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`shrink-0 mt-1 flex items-center justify-center w-8 h-8 rounded-full shadow-sm ${
+                      growthTruthNotice.tone === 'warning' ? 'bg-amber-200 text-amber-700' : growthTruthNotice.tone === 'success' ? 'bg-emerald-200 text-emerald-700' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {growthTruthNotice.tone === 'warning' ? '⚠️' : growthTruthNotice.tone === 'success' ? '✨' : 'ℹ️'}
+                    </div>
+                    <div>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold shadow-sm ${STUDENT_NOTICE_BADGE_CLASS[growthTruthNotice.tone]}`}>
+                        {growthTruthNotice.label}
+                      </span>
+                      <h2 className={`mt-3 text-base font-bold ${
+                        growthTruthNotice.tone === 'warning' ? 'text-amber-900' : growthTruthNotice.tone === 'success' ? 'text-emerald-900' : 'text-slate-900'
+                      }`}>{growthTruthNotice.headline}</h2>
+                      <p className={`mt-2 text-sm leading-relaxed ${
+                        growthTruthNotice.tone === 'warning' ? 'text-amber-800' : growthTruthNotice.tone === 'success' ? 'text-emerald-800' : 'text-slate-800'
+                      }`}>{growthTruthNotice.description}</p>
+                    </div>
                   </div>
                   {growthTruthNotice.guidanceState === 'withheld' && (
-                    <span className="shrink-0 rounded-full bg-white/70 px-3 py-1 text-xs font-semibold">
-                      성장 안내 보완 중
+                    <span className="shrink-0 rounded-full bg-white/80 px-4 py-1.5 text-xs font-bold shadow-sm text-slate-700 border border-slate-200 animate-pulse">
+                      선생님 확인 중 ⏳
                     </span>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 프리미엄: 분석 신뢰도 + 근거 배지 */}
+          {isTestAnalysis && (
+            <div className="px-6 pb-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <ConfidenceBadge
+                  level={getConfidenceLevel(confidenceDataCount)}
+                  dataCount={confidenceDataCount}
+                  dataPeriod={report.test_date || report.created_at?.slice(0, 10)}
+                  description="누적 데이터와 선생님 피드백을 반영한 분석 신뢰도예요."
+                />
+                <EvidenceBadge sources={evidenceSources} />
               </div>
             </div>
           )}
@@ -257,7 +331,7 @@ export default function StudentReportDetailPage() {
                     <span className="text-2xl">💡</span>
                     <div>
                       <h3 className="font-bold text-indigo-800 mb-1">핵심 메시지</h3>
-                      <p className="text-indigo-700">{analysisData.macroAnalysis.analysisMessage}</p>
+                      <FormatAIText text={analysisData.macroAnalysis.analysisMessage} className="text-indigo-700 text-sm" />
                     </div>
                   </div>
                 </div>
@@ -270,7 +344,7 @@ export default function StudentReportDetailPage() {
                     <h4 className="font-bold text-green-800 mb-2 flex items-center gap-2">
                       <span>💪</span> 잘하는 점
                     </h4>
-                    <p className="text-green-700 text-sm">{analysisData.macroAnalysis.strengths}</p>
+                    <FormatAIText text={analysisData.macroAnalysis.strengths} className="text-green-700 text-sm" />
                   </div>
                 )}
                 {analysisData.macroAnalysis.weaknesses && (
@@ -278,10 +352,55 @@ export default function StudentReportDetailPage() {
                     <h4 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
                       <span>🎯</span> 더 연습하면 좋을 점
                     </h4>
-                    <p className="text-orange-700 text-sm">{analysisData.macroAnalysis.weaknesses}</p>
+                    <FormatAIText text={analysisData.macroAnalysis.weaknesses} className="text-orange-700 text-sm" />
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* 프리미엄: 5관점 분석 */}
+          {analysisData?.macroAnalysis && canShowMacroNarrative && (
+            <div className="px-6 pb-4">
+              <FivePerspectiveAnalysis
+                perspectives={[
+                  {
+                    type: 'thinking_start',
+                    title: '사고의 출발점',
+                    summary: analysisData.macroAnalysis.strengths || '문제 접근 방식을 분석 중입니다.',
+                    status: 'good',
+                  },
+                  {
+                    type: 'solving_process',
+                    title: '풀이 진행 과정',
+                    summary: analysisData.macroAnalysis.summary || '풀이 과정을 분석 중입니다.',
+                    status: analysisData.macroAnalysis.errorPattern ? 'warning' : 'good',
+                  },
+                  {
+                    type: 'calculation_pattern',
+                    title: '계산 및 실수 패턴',
+                    summary: analysisData.macroAnalysis.errorPattern || '계산 패턴을 분석 중입니다.',
+                    status: 'warning',
+                  },
+                  {
+                    type: 'problem_interpretation',
+                    title: '문제 해석 능력',
+                    summary: analysisData.macroAnalysis.weaknesses || '문제 해석 능력을 분석 중입니다.',
+                    status: analysisData.macroAnalysis.weaknesses ? 'warning' : 'good',
+                  },
+                  {
+                    type: 'solving_habit',
+                    title: '풀이 습관 관찰',
+                    summary: displayableGuidance.learningHabits.length > 0
+                      ? displayableGuidance.learningHabits[0].description +
+                        (displayableGuidance.learningHabits.length > 1 ? ` 외 ${displayableGuidance.learningHabits.length - 1}건` : '')
+                      : '풀이 습관을 분석 중입니다.',
+                    status: displayableGuidance.learningHabits.some(h => h.type === 'bad') ? 'warning' : 'good',
+                  },
+                ]}
+                studentName={report.students?.name}
+                testName={report.test_name || undefined}
+              />
             </div>
           )}
 
@@ -350,6 +469,32 @@ export default function StudentReportDetailPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* 프리미엄: 문항별 분석 아코디언 */}
+          {analysisData?.detailedAnalysis && analysisData.detailedAnalysis.length > 0 && (
+            <div className="px-6 pb-4">
+              <ProblemAnalysisSection items={analysisData.detailedAnalysis} />
+            </div>
+          )}
+
+          {/* 프리미엄: 성장 예측 차트 */}
+          {displayableGuidance.growthPredictions.length > 0 && (
+            <div className="px-6 pb-4">
+              <GrowthProjectionChart
+                historicalData={[
+                  { date: report.test_date || '현재', score: report.total_score ?? 0 },
+                ]}
+                projectedData={displayableGuidance.growthPredictions.map(p => ({
+                  date: p.timeframe,
+                  score: p.predictedScore,
+                  label: `${p.timeframe} 예상`,
+                  isProjection: true,
+                }))}
+                targetScore={displayableGuidance.growthPredictions[displayableGuidance.growthPredictions.length - 1]?.predictedScore || 90}
+                studentName={report.students?.name}
+              />
             </div>
           )}
 

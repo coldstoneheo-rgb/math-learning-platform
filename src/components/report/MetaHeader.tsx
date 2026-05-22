@@ -53,7 +53,7 @@ function getLearningTypeLabel(type: string): string {
     'slow-but-deep': '깊은 이해형',
     'steady-grower': '꾸준한 성장형',
   };
-  return labels[type] || type;
+  return labels[type] || (type.includes('_') ? '복합 성장형' : type);
 }
 
 // 피로 패턴 한글 설명
@@ -62,8 +62,9 @@ function getFatiguePatternLabel(pattern: string): string {
     'consistent': '일정 유지형',
     'early-fatigue': '초반 집중형',
     'late-fatigue': '후반 피로형',
+    'improved_mental_resilience_and_bold_skipping_strategy_but_time_pressure_due_to_calculation_delays_remains': '개선된 회복력 (시간 압박)',
   };
-  return labels[pattern] || pattern;
+  return labels[pattern] || (pattern.includes('_') ? '복합 피로 패턴' : pattern);
 }
 
 // 발달 단계 한글 설명
@@ -74,7 +75,7 @@ function getDevelopmentStageLabel(stage: string): string {
     'proficient': '숙달 단계',
     'advanced': '고급 단계',
   };
-  return labels[stage] || stage;
+  return labels[stage] || (stage.includes('_') ? '분석 중' : stage);
 }
 
 function MetaHeader({
@@ -148,7 +149,7 @@ function MetaHeader({
       Icon: Target,
       color: 'orange',
       description: metaProfile.errorSignature?.primaryErrorTypes?.length
-        ? metaProfile.errorSignature.primaryErrorTypes.map(e => e.type).slice(0, 2).join(', ')
+        ? metaProfile.errorSignature.primaryErrorTypes.map(e => e.type).join(', ')
         : '분석 대기',
       tooltip: '반복적으로 나타나는 실수 유형 (개념 오류, 계산 오류 등)',
       isCount: true,
@@ -337,10 +338,10 @@ function IndicatorCard({
   const colors = colorClasses[color] || colorClasses.indigo;
 
   const getValueColor = (val: number): string => {
-    if (isCount) return 'text-gray-700';
-    if (val >= 70) return 'text-green-600';
-    if (val >= 50) return 'text-yellow-600';
-    return 'text-red-600';
+    if (isCount) return colors.text;
+    if (val >= 70) return 'text-green-700';
+    if (val >= 50) return 'text-amber-700';
+    return 'text-red-700';
   };
 
   const getValueLabel = (val: number): string => {
@@ -352,13 +353,15 @@ function IndicatorCard({
   };
 
   return (
-    <div className={`${colors.bg} rounded-lg p-3`} title={tooltip}>
+    <div className={`${colors.bg} rounded-lg p-3 group hover:shadow-md transition-all duration-300 relative cursor-default`} title={tooltip}>
       <div className="flex items-center justify-between mb-2">
         <Icon className={`w-5 h-5 ${colors.text}`} />
         <div className="text-right">
           <span className={`text-2xl font-bold ${getValueColor(value)}`}>
             {isCount ? value : `${value}`}
-            {!isCount && <span className="text-sm font-normal text-gray-400">%</span>}
+            {isCount
+              ? <span className="text-xs font-normal text-gray-400 ml-0.5">종류</span>
+              : <span className="text-sm font-normal text-gray-400">%</span>}
           </span>
           {!isCount && (
             <span className={`block text-xs ${getValueColor(value)}`}>
@@ -368,7 +371,7 @@ function IndicatorCard({
         </div>
       </div>
       <p className={`text-sm font-medium ${colors.text}`}>{label}</p>
-      <p className="text-xs text-gray-500 mt-1">{description}</p>
+      <p className="text-xs text-gray-600 mt-1 line-clamp-1 group-hover:line-clamp-none transition-all duration-300">{description}</p>
       {!isCount && (
         <div className="mt-2 h-1.5 bg-white/50 rounded-full overflow-hidden">
           <div

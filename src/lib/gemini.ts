@@ -6,7 +6,6 @@ import type {
   AnalysisContextData,
   StudentMetaProfile,
   LevelTestAnalysis,
-  TestReportAnalysis,
   WeeklyReportAnalysis,
   MonthlyReportAnalysis,
   SemiAnnualReportAnalysis,
@@ -62,7 +61,20 @@ const BASE_SYSTEM_PROMPT = `당신은 학생의 수학 학습을 종합적으로
 - 모든 분석은 "현재 → 목표 → 달성 경로"의 연속적 스토리로 구성
 - 이전 리포트의 예측과 현재 결과를 비교하여 피드백 제공
 - 학생 고유의 오류 패턴(Error Signature)을 추적하고 변화 분석
-- 단기(1개월), 중기(3개월), 장기(6개월~1년) 비전을 항상 포함`;
+- 단기(1개월), 중기(3개월), 장기(6개월~1년) 비전을 항상 포함
+
+## 수식 표기 규칙 (필수!)
+분석 텍스트에 수학 수식을 포함할 때 반드시 LaTeX 문법으로 래핑하세요:
+- 인라인 수식: $수식$ (예: $x^2 + 3x - 5$)
+- 분수: $\\frac{분자}{분모}$ (예: $\\frac{8x^2+20x^2y}{-4x}$)
+- 지수: $a^{n}$ (예: $5^{2} \\times 7$)
+- 곱하기: $\\times$ (절대 * 사용 금지)
+- 나누기: $\\div$
+- 루트: $\\sqrt{x}$
+- 절대값: $|x+3|$
+- 순환소수: $0.8\\dot{3}$
+- 괄호 강조: $2x(-3y-5)$
+수식이 아닌 일반 텍스트(예: "3명", "4단계")에는 $ 기호를 사용하지 마세요.`;
 
 const LEVEL_TEST_PROMPT = `${BASE_SYSTEM_PROMPT}
 
@@ -305,12 +317,12 @@ export function buildContextPrompt(context?: AnalysisContextData): string {
 - 메타인지 수준: ${mp.metaCognitionLevel.overallScore}/100 (${mp.metaCognitionLevel.developmentStage})
 
 ### 오류 서명 (Error Signature)
-${mp.errorSignature.signaturePatterns.length > 0
+${mp.errorSignature?.signaturePatterns && mp.errorSignature.signaturePatterns.length > 0
       ? mp.errorSignature.signaturePatterns.map((p, i) => `${i + 1}. ${p}`).join('\n')
       : '- 아직 식별된 고유 패턴 없음'}
 
 ### 영역별 취약도
-${mp.errorSignature.domainVulnerability.length > 0
+${mp.errorSignature?.domainVulnerability && mp.errorSignature.domainVulnerability.length > 0
       ? mp.errorSignature.domainVulnerability.map(d => `- ${d.domain}: ${d.vulnerabilityScore}/100`).join('\n')
       : '- 데이터 부족'}
 
@@ -324,84 +336,21 @@ ${mp.legacySignals && mp.legacySignals.length > 0
   if (context.recentReports && context.recentReports.length > 0) {
     sections.push(`
 ## 최근 리포트 요약 (최근 ${context.recentReports.length}개)
-${context.recentReports.map((r, i) => `
-### ${i + 1}. ${r.reportType} (${r.reportDate})
-- 요약: ${r.summary}
-- 주요 발견: ${r.keyFindings.join(', ')}
-- 미해결 이슈: ${r.unresolvedIssues.join(', ')}`).join('\n')}`);
-  }
-
-  // 3. 활성 취약점
-  if (context.activeWeaknesses && context.activeWeaknesses.length > 0) {
-    sections.push(`
-## 현재 활성 취약점 (주의 필요)
-${context.activeWeaknesses.map((w, i) =>
-      `${i + 1}. **${w.concept}** - 심각도: ${w.severity}/5, 지속 기간: ${w.duration}, 개선 시도: ${w.attempts}회`
+${context.recentReports.map((r, i) =>
+      `${i + 1}. [${r.reportType}] ${r.reportDate}\n   - 주요 메시지: ${r.summary}\n   - 핵심 성취: ${r.keyFindings?.join(', ') || '없음'}\n   - 미해결 과제: ${r.unresolvedIssues?.join(', ') || '없음'}`
     ).join('\n')}`);
   }
 
-  // 4. 활성 강점
-  if (context.activeStrengths && context.activeStrengths.length > 0) {
-    sections.push(`
-## 현재 활성 강점 (활용 권장)
-${context.activeStrengths.map((s, i) =>
-      `${i + 1}. **${s.concept}** - 수준: ${s.level}/5, 일관성: ${s.consistency}`
-    ).join('\n')}`);
-  }
-
-  // 5. 마이크로 루프 상태
-  if (context.currentMicroLoop) {
-    const ml = context.currentMicroLoop;
-    sections.push(`
-## 현재 Micro Loop 상태 (${ml.loopType})
-- 사이클 번호: ${ml.cycleNumber}
-- 연속성 점수: ${ml.continuityScore}/100
-- 모멘텀: ${ml.momentum}
-
-### 이전 사이클 목표 달성 현황
-${ml.previousGoals.map(g =>
-      `- ${g.goal}: ${g.achieved ? '✅ 달성' : '❌ 미달성'} (${g.achievementRate}%)`
-    ).join('\n')}`);
-  }
-
-  // 6. 매크로 루프 상태
-  if (context.currentMacroLoop) {
-    const macroL = context.currentMacroLoop;
-    sections.push(`
-## 현재 Macro Loop 상태 (${macroL.loopType})
-### 장기 목표 진척
-${macroL.longTermGoalProgress.map(g =>
-      `- ${g.goal}: ${g.currentProgress}% (${g.onTrack ? '정상 진행' : '조정 필요'})`
-    ).join('\n')}
-
-### Baseline 대비 성장
-${macroL.baselineGrowth.map(b =>
-      `- ${b.metric}: ${b.baseline} → ${b.current} (${b.growthPercentage > 0 ? '+' : ''}${b.growthPercentage}%)`
-    ).join('\n')}`);
-  }
-
-  // 7. 이전 비전 검증
-  if (context.previousVision) {
-    const pv = context.previousVision;
-    sections.push(`
-## 이전 리포트 예측 검증 (Report #${pv.reportId})
-- 예측 정확도: ${pv.accuracy}%
-
-### 예측 vs 실제
-${pv.predictions.map((pred, i) =>
-      `- 예측: "${pred}" → 실제: "${pv.actualOutcomes[i] || '미확인'}"`
-    ).join('\n')}`);
-  }
-
-  // 8. 전략 피드백 (Phase 2: 피드백 루프)
+  // 3. 성장 루프 시스템 피드백
   if (context.strategyFeedback) {
     const sf = context.strategyFeedback;
-    const feedbackParts: string[] = [];
+    const feedbackParts = [];
 
-    // 효과적이었던 전략
+    // 효과적인 전략
     if (sf.effectiveStrategies && sf.effectiveStrategies.length > 0) {
-      feedbackParts.push(`### 효과적이었던 전략 (유사한 방식 권장)
-${sf.effectiveStrategies.slice(0, 5).map((s, i) =>
+      const es = sf.effectiveStrategies;
+      feedbackParts.push(`### 가장 효과적이었던 전략 (유지 권장)
+${es.slice(0, 5).map((s, i) =>
         `${i + 1}. **${s.type}**: ${s.title}
    - 평균 개선율: ${s.avgImprovement}%, 성공률: ${s.successRate}%
    - 적용 횟수: ${s.usageCount}회${s.concept ? `, 관련 개념: ${s.concept}` : ''}`
@@ -1145,10 +1094,6 @@ ${JSON.stringify(verifiedPayload, null, 2)}
  * 레벨 테스트 분석 (신규 학생 Baseline 설정)
  * High-Stakes: Pro 모델 사용
  */
-interface FileData {
-  data: string;
-  mimeType: string;
-}
 
 export async function analyzeLevelTest(
   studentName: string,
@@ -2595,8 +2540,7 @@ function cleanAndParseJSON<T>(text: string): T {
   try {
     return JSON.parse(cleanText) as T;
   } catch (error) {
-    // Log detailed info for debugging truncation issues
-    console.error('[Gemini Parse Error] Failed to parse JSON.');
+    console.error('[Gemini Parse Error] Failed to parse JSON. Error:', String(error));
     console.error('[Gemini Parse Error] Text length:', cleanText.length);
     console.error('[Gemini Parse Error] Last 100 chars:', cleanText.slice(-100));
     throw new GeminiParseError(

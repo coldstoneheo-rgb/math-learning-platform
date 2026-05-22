@@ -177,8 +177,17 @@ export async function processMigrationTask(
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `API 요청 실패 (청크 ${i / CHUNK_SIZE + 1})`);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `API 요청 실패 (청크 ${i / CHUNK_SIZE + 1})`);
+        } else {
+          // 504 Gateway Timeout 등 HTML 에러 응답 처리
+          if (response.status === 504) {
+            throw new Error('서버 응답 시간이 초과되었습니다 (504). 데이터가 너무 크거나 서버 부하가 높습니다.');
+          }
+          throw new Error(`API 응답 오류 (${response.status})`);
+        }
       }
 
       const data = await response.json();

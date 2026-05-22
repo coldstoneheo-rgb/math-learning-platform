@@ -259,10 +259,10 @@ function VisionTimelineItem({
           </div>
           {predictedScore && (
             <div className="flex items-center gap-1">
-              <span className="text-sm text-gray-500">예상 점수:</span>
+              <span className="text-sm text-gray-600">예상 점수:</span>
               <span className="font-bold text-gray-700">{predictedScore}점</span>
               {confidenceLevel && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-500">
                   (신뢰도 {confidenceLevel}%)
                 </span>
               )}
@@ -272,7 +272,7 @@ function VisionTimelineItem({
 
         {goals.length > 0 && (
           <div className="mb-2">
-            <p className="text-xs text-gray-500 mb-1">목표</p>
+            <p className="text-xs text-gray-600 mb-1">목표</p>
             <ul className="text-sm text-gray-700 space-y-1">
               {goals.slice(0, 3).map((goal, idx) => (
                 <li key={idx} className="flex items-start gap-1">
@@ -286,7 +286,7 @@ function VisionTimelineItem({
 
         {milestones.length > 0 && (
           <div>
-            <p className="text-xs text-gray-500 mb-1">마일스톤</p>
+            <p className="text-xs text-gray-600 mb-1">마일스톤</p>
             <div className="flex flex-wrap gap-1">
               {milestones.slice(0, 4).map((milestone, idx) => (
                 <span
