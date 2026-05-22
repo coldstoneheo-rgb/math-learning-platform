@@ -21,13 +21,18 @@ interface ScheduleWithStudent extends Schedule {
   students: Student;
 }
 
+type DashboardLastSession = Pick<ClassSession, 'id' | 'student_id' | 'session_date' | 'learning_keywords'>;
+type DashboardAssignment = Pick<Assignment, 'id' | 'student_id' | 'status'>;
+type DashboardWeakness = Pick<StudentWeakness, 'id' | 'student_id' | 'concept' | 'severity'>;
+type DashboardRecentReport = Pick<Report, 'id' | 'student_id' | 'report_type' | 'analysis_data' | 'total_score' | 'max_score' | 'created_at'>;
+
 interface TodayStudentInfo {
   student: Student;
   schedule: ScheduleWithStudent;
-  lastSession?: ClassSession;
-  pendingAssignments: Assignment[];
-  activeWeaknesses: StudentWeakness[];
-  recentReport?: Report;
+  lastSession?: DashboardLastSession;
+  pendingAssignments: DashboardAssignment[];
+  activeWeaknesses: DashboardWeakness[];
+  recentReport?: DashboardRecentReport;
 }
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -99,37 +104,23 @@ export default function AdminDashboard() {
       .select('*', { count: 'exact', head: true })
       .gte('created_at', weekStart.toISOString());
 
-    let needsAttentionReports = 0;
-    let from = 0;
-    const pageSize = 1000;
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    while (true) {
-      const { data: growthStatusReports, error: growthStatusError } = await supabase
-        .from('reports')
-        .select('report_type, analysis_data')
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .range(from, from + pageSize - 1);
+    const { data: needsAttentionCount, error: needsAttentionError } = await supabase
+      .rpc('count_reports_needing_attention_since', {
+        since_at: thirtyDaysAgo.toISOString(),
+      });
 
-      if (growthStatusError) {
-        console.error('성장 분석 보완 필요 건수 조회 오류:', growthStatusError);
-        break;
-      }
-
-      needsAttentionReports += (growthStatusReports || []).filter((report) =>
-        summarizeGrowthReadiness(report.analysis_data as AnalysisData | null, report.report_type).needsAttention
-      ).length;
-
-      if (!growthStatusReports || growthStatusReports.length < pageSize) break;
-      from += pageSize;
+    if (needsAttentionError) {
+      console.error('성장 분석 보완 필요 건수 조회 오류:', needsAttentionError);
     }
 
     setStats({
       students: studentCount || 0,
       reports: reportCount || 0,
       weeklyReports: weeklyCount || 0,
-      needsAttentionReports,
+      needsAttentionReports: typeof needsAttentionCount === 'number' ? needsAttentionCount : 0,
     });
 
     // 최근 리포트 로드
@@ -165,28 +156,77 @@ export default function AdminDashboard() {
       return;
     }
 
-    // 각 학생별 쿼리 병렬 처리
-    const todayInfoPromises = schedules.map(async (schedule) => {
-      const studentId = schedule.student_id;
+    const studentIds = Array.from(new Set(schedules.map((schedule) => schedule.student_id)));
 
-      const [lastSessionsRes, assignmentsRes, weaknessesRes, recentReportsRes] = await Promise.all([
-        supabase.from('class_sessions').select('*').eq('student_id', studentId).order('session_date', { ascending: false }).limit(1),
-        supabase.from('assignments').select('*').eq('student_id', studentId).in('status', ['assigned', 'in_progress', 'overdue']),
-        supabase.from('student_weaknesses').select('*').eq('student_id', studentId).in('status', ['active', 'recurring']).order('severity', { ascending: false }).limit(3),
-        supabase.from('reports').select('*').eq('student_id', studentId).order('created_at', { ascending: false }).limit(1)
-      ]);
+    const [lastSessionsRes, assignmentsRes, weaknessesRes, reportsRes] = await Promise.all([
+      supabase
+        .rpc('get_latest_class_sessions_for_students', {
+          student_ids: studentIds,
+        }),
+      supabase
+        .from('assignments')
+        .select('id, student_id, status')
+        .in('student_id', studentIds)
+        .in('status', ['assigned', 'in_progress', 'overdue']),
+      supabase
+        .from('student_weaknesses')
+        .select('id, student_id, concept, severity')
+        .in('student_id', studentIds)
+        .in('status', ['active', 'recurring'])
+        .order('severity', { ascending: false }),
+      supabase
+        .rpc('get_latest_reports_for_students', {
+          student_ids: studentIds,
+        }),
+    ]);
+
+    if (lastSessionsRes.error) console.error('최근 수업 조회 오류:', lastSessionsRes.error);
+    if (assignmentsRes.error) console.error('숙제 조회 오류:', assignmentsRes.error);
+    if (weaknessesRes.error) console.error('취약점 조회 오류:', weaknessesRes.error);
+    if (reportsRes.error) console.error('최근 리포트 조회 오류:', reportsRes.error);
+
+    const lastSessionByStudent = new Map<number, DashboardLastSession>();
+    ((lastSessionsRes.data || []) as DashboardLastSession[]).forEach((session) => {
+      if (!lastSessionByStudent.has(session.student_id)) {
+        lastSessionByStudent.set(session.student_id, session);
+      }
+    });
+
+    const assignmentsByStudent = new Map<number, DashboardAssignment[]>();
+    ((assignmentsRes.data || []) as DashboardAssignment[]).forEach((assignment) => {
+      const items = assignmentsByStudent.get(assignment.student_id) || [];
+      items.push(assignment);
+      assignmentsByStudent.set(assignment.student_id, items);
+    });
+
+    const weaknessesByStudent = new Map<number, DashboardWeakness[]>();
+    ((weaknessesRes.data || []) as DashboardWeakness[]).forEach((weakness) => {
+      const items = weaknessesByStudent.get(weakness.student_id) || [];
+      if (items.length < 3) {
+        items.push(weakness);
+        weaknessesByStudent.set(weakness.student_id, items);
+      }
+    });
+
+    const recentReportByStudent = new Map<number, DashboardRecentReport>();
+    ((reportsRes.data || []) as DashboardRecentReport[]).forEach((report) => {
+      if (!recentReportByStudent.has(report.student_id)) {
+        recentReportByStudent.set(report.student_id, report);
+      }
+    });
+
+    const todayInfo = schedules.map((schedule) => {
+      const studentId = schedule.student_id;
 
       return {
         student: schedule.students,
-        schedule: schedule,
-        lastSession: lastSessionsRes.data?.[0] || undefined,
-        pendingAssignments: assignmentsRes.data || [],
-        activeWeaknesses: weaknessesRes.data || [],
-        recentReport: recentReportsRes.data?.[0] || undefined,
+        schedule,
+        lastSession: lastSessionByStudent.get(studentId),
+        pendingAssignments: assignmentsByStudent.get(studentId) || [],
+        activeWeaknesses: weaknessesByStudent.get(studentId) || [],
+        recentReport: recentReportByStudent.get(studentId),
       };
     });
-
-    const todayInfo = await Promise.all(todayInfoPromises);
 
     setTodayStudents(todayInfo);
   };
