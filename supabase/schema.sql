@@ -67,12 +67,15 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.current_user_role() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated, anon;
 
 -- users 정책
 CREATE POLICY "users_select_own" ON users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "users_select_teacher" ON users FOR SELECT USING (public.current_user_role() IN ('teacher', 'super_admin'));
-CREATE POLICY "users_insert_teacher" ON users FOR INSERT WITH CHECK (public.current_user_role() IN ('teacher', 'super_admin'));
+CREATE POLICY "users_insert_teacher" ON users FOR INSERT WITH CHECK (
+  (public.current_user_role() = 'teacher' AND role IN ('teacher', 'parent', 'student'))
+  OR public.current_user_role() = 'super_admin'
+);
 CREATE POLICY "users_all_super_admin" ON users FOR ALL USING (public.current_user_role() = 'super_admin') WITH CHECK (public.current_user_role() = 'super_admin');
 
 -- students 정책
