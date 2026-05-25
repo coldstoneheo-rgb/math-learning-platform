@@ -105,8 +105,8 @@ instead of only the intended new one.
 Mitigation:
 
 - Do not use `supabase db push` until migration history is reconciled.
-- Prefer explicit `supabase db query --linked -f <single-file.sql>` for urgent
-  reviewed hotfixes.
+- Prefer standard migration files; use `supabase migration repair` if the
+  production migration history needs manual reconciliation.
 - Keep structural baseline work in a separate PR and apply manually only after
   review.
 
@@ -151,6 +151,7 @@ Suggested scope:
 - `public.users`
 - `public.students`
 - `public.reports`
+- RLS helper functions and base policies for core tables
 - minimal indexes required by existing queries and later migrations
 - no data changes
 - no destructive DDL
@@ -165,4 +166,3 @@ the migration stack.
 - Do not rename existing migrations.
 - Do not apply SQL to the linked production database.
 - Do not treat Supabase Preview failure as caused by the latest RLS hotfixes.
-
