@@ -24,6 +24,18 @@ CREATE POLICY "users_all_super_admin" ON public.users
   USING (public.current_user_role() = 'super_admin')
   WITH CHECK (public.current_user_role() = 'super_admin');
 
+DROP POLICY IF EXISTS "users_select_teacher" ON public.users;
+CREATE POLICY "users_select_teacher" ON public.users
+  FOR SELECT
+  TO authenticated
+  USING (public.current_user_role() IN ('teacher', 'super_admin'));
+
+DROP POLICY IF EXISTS "users_insert_teacher" ON public.users;
+CREATE POLICY "users_insert_teacher" ON public.users
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (public.current_user_role() IN ('teacher', 'super_admin'));
+
 DROP POLICY IF EXISTS "students_all_super_admin" ON public.students;
 CREATE POLICY "students_all_super_admin" ON public.students
   FOR ALL
@@ -31,9 +43,23 @@ CREATE POLICY "students_all_super_admin" ON public.students
   USING (public.current_user_role() = 'super_admin')
   WITH CHECK (public.current_user_role() = 'super_admin');
 
+DROP POLICY IF EXISTS "students_all_teacher" ON public.students;
+CREATE POLICY "students_all_teacher" ON public.students
+  FOR ALL
+  TO authenticated
+  USING (public.current_user_role() IN ('teacher', 'super_admin'))
+  WITH CHECK (public.current_user_role() IN ('teacher', 'super_admin'));
+
 DROP POLICY IF EXISTS "reports_all_super_admin" ON public.reports;
 CREATE POLICY "reports_all_super_admin" ON public.reports
   FOR ALL
   TO authenticated
   USING (public.current_user_role() = 'super_admin')
   WITH CHECK (public.current_user_role() = 'super_admin');
+
+DROP POLICY IF EXISTS "reports_all_teacher" ON public.reports;
+CREATE POLICY "reports_all_teacher" ON public.reports
+  FOR ALL
+  TO authenticated
+  USING (public.current_user_role() IN ('teacher', 'super_admin'))
+  WITH CHECK (public.current_user_role() IN ('teacher', 'super_admin'));
