@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('teacher', 'parent', 'student')),
+  role TEXT NOT NULL CHECK (role IN ('super_admin', 'teacher', 'parent', 'student')),
   name TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -53,17 +53,36 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 
+-- RLS helper: avoid recursively reading users from policies on users.
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT users.role
+  FROM public.users AS users
+  WHERE users.id = auth.uid();
+$$;
+
+REVOKE ALL ON FUNCTION public.current_user_role() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;
+
 -- users 정책
 CREATE POLICY "users_select_own" ON users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "users_select_teacher" ON users FOR SELECT USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'teacher'));
-CREATE POLICY "users_insert_teacher" ON users FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'teacher'));
+CREATE POLICY "users_select_teacher" ON users FOR SELECT USING (public.current_user_role() IN ('teacher', 'super_admin'));
+CREATE POLICY "users_insert_teacher" ON users FOR INSERT WITH CHECK (public.current_user_role() IN ('teacher', 'super_admin'));
+CREATE POLICY "users_all_super_admin" ON users FOR ALL USING (public.current_user_role() = 'super_admin') WITH CHECK (public.current_user_role() = 'super_admin');
 
 -- students 정책
-CREATE POLICY "students_all_teacher" ON students FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'teacher'));
+CREATE POLICY "students_all_teacher" ON students FOR ALL USING (public.current_user_role() IN ('teacher', 'super_admin')) WITH CHECK (public.current_user_role() IN ('teacher', 'super_admin'));
+CREATE POLICY "students_all_super_admin" ON students FOR ALL USING (public.current_user_role() = 'super_admin') WITH CHECK (public.current_user_role() = 'super_admin');
 CREATE POLICY "students_select_parent" ON students FOR SELECT USING (parent_id = auth.uid());
 
 -- reports 정책
-CREATE POLICY "reports_all_teacher" ON reports FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'teacher'));
+CREATE POLICY "reports_all_teacher" ON reports FOR ALL USING (public.current_user_role() IN ('teacher', 'super_admin')) WITH CHECK (public.current_user_role() IN ('teacher', 'super_admin'));
+CREATE POLICY "reports_all_super_admin" ON reports FOR ALL USING (public.current_user_role() = 'super_admin') WITH CHECK (public.current_user_role() = 'super_admin');
 CREATE POLICY "reports_select_parent" ON reports FOR SELECT USING (EXISTS (SELECT 1 FROM students WHERE students.id = reports.student_id AND students.parent_id = auth.uid()));
 
 -- 5. 자동 사용자 생성 함수
