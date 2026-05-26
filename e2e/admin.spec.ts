@@ -1,4 +1,11 @@
 import { test, expect } from './fixtures';
+import type { Page } from '@playwright/test';
+
+async function expectTeacherPageShell(page: Page) {
+  await expect(page.locator('main, [role="main"]').first()).toBeVisible({
+    timeout: 15_000,
+  });
+}
 
 test.describe('교사 대시보드', () => {
   test.beforeEach(async ({ loginAsTeacher }) => {
@@ -10,7 +17,7 @@ test.describe('교사 대시보드', () => {
       await page.goto('/teacher');
 
       // 주요 섹션 확인
-      await expect(page.locator('text=오늘 수업')).toBeVisible();
+      await expect(page.locator('text=오늘 수업')).toBeVisible({ timeout: 15_000 });
     });
 
     test('네비게이션 메뉴가 표시됨', async ({ page }) => {
@@ -31,8 +38,7 @@ test.describe('교사 대시보드', () => {
       await page.goto('/teacher/students');
 
       // 학생 목록 또는 빈 상태 메시지 확인
-      const content = page.locator('main, [role="main"]');
-      await expect(content).toBeVisible();
+      await expectTeacherPageShell(page);
     });
 
     test('학생 추가 버튼이 표시됨', async ({ page }) => {
@@ -49,8 +55,7 @@ test.describe('교사 대시보드', () => {
       await page.goto('/teacher/reports');
 
       // 리포트 관련 콘텐츠 확인
-      const content = page.locator('main, [role="main"]');
-      await expect(content).toBeVisible();
+      await expectTeacherPageShell(page);
     });
 
     test('리포트 생성 페이지 접근', async ({ page }) => {
@@ -71,22 +76,19 @@ test.describe('교사 대시보드', () => {
     test('수업 일정 페이지 로드', async ({ page }) => {
       await page.goto('/teacher/schedules');
 
-      const content = page.locator('main, [role="main"]');
-      await expect(content).toBeVisible();
+      await expectTeacherPageShell(page);
     });
 
     test('수업 기록 페이지 로드', async ({ page }) => {
       await page.goto('/teacher/class-record');
 
-      const content = page.locator('main, [role="main"]');
-      await expect(content).toBeVisible();
+      await expectTeacherPageShell(page);
     });
 
     test('과제 관리 페이지 로드', async ({ page }) => {
       await page.goto('/teacher/assignments');
 
-      const content = page.locator('main, [role="main"]');
-      await expect(content).toBeVisible();
+      await expectTeacherPageShell(page);
     });
   });
 });

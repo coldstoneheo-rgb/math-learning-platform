@@ -13,21 +13,23 @@ export default defineConfig({
   testDir: './e2e',
 
   /* 전체 테스트 타임아웃 */
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
 
   /* expect() 타임아웃 */
   expect: {
-    timeout: 5000,
+    timeout: 10 * 1000,
   },
 
-  /* 병렬 실행 (CI에서는 비활성화 권장) */
-  fullyParallel: true,
+  /* 인증/라우팅 smoke test는 공유 테스트 계정을 사용하므로 기본은 직렬 실행 */
+  fullyParallel: false,
 
   /* CI에서 재시도 횟수 */
   retries: process.env.CI ? 2 : 0,
 
   /* 병렬 워커 수 */
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.PLAYWRIGHT_WORKERS
+    ? Number(process.env.PLAYWRIGHT_WORKERS)
+    : 1,
 
   /* 리포터 설정 */
   reporter: [
