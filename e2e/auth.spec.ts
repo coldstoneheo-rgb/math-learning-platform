@@ -5,10 +5,8 @@ test.describe('인증 플로우', () => {
     test('로그인 페이지가 올바르게 로드됨', async ({ page }) => {
       await page.goto('/login');
 
-      // 페이지 제목 확인
-      await expect(page).toHaveTitle(/로그인|Login/i);
-
       // 로그인 폼 요소 확인
+      await expect(page.getByText('계정에 로그인하세요')).toBeVisible();
       await expect(page.locator('input[type="email"]')).toBeVisible();
       await expect(page.locator('input[type="password"]')).toBeVisible();
       await expect(page.locator('button[type="submit"]')).toBeVisible();

@@ -9,14 +9,59 @@ import type { Page } from '@playwright/test';
 // 테스트 계정 정보 (환경변수로 설정 권장)
 export const TEST_ACCOUNTS = {
   teacher: {
-    email: process.env.TEST_TEACHER_EMAIL || 'teacher@test.com',
-    password: process.env.TEST_TEACHER_PASSWORD || 'test1234',
+    email: process.env.TEST_TEACHER_EMAIL,
+    password: process.env.TEST_TEACHER_PASSWORD,
   },
   parent: {
-    email: process.env.TEST_PARENT_EMAIL || 'parent@test.com',
-    password: process.env.TEST_PARENT_PASSWORD || 'test1234',
+    email: process.env.TEST_PARENT_EMAIL,
+    password: process.env.TEST_PARENT_PASSWORD,
   },
 };
+
+function requireTestAccount(
+  role: keyof typeof TEST_ACCOUNTS,
+): { email: string; password: string } {
+  const account = TEST_ACCOUNTS[role];
+
+  if (!account.email || !account.password) {
+    throw new Error(
+      `Missing ${role} E2E credentials. Set TEST_${role.toUpperCase()}_EMAIL and TEST_${role.toUpperCase()}_PASSWORD before running authenticated E2E tests.`,
+    );
+  }
+
+  return { email: account.email, password: account.password };
+}
+
+async function readVisibleAuthError(page: Page): Promise<string | null> {
+  const errorMessage = page.locator('[role="alert"], .bg-red-50, .text-red-600').first();
+
+  if (await errorMessage.isVisible().catch(() => false)) {
+    const text = await errorMessage.textContent();
+    return text?.trim() || null;
+  }
+
+  return null;
+}
+
+async function submitLoginAndWaitForURL(
+  page: Page,
+  expectedURL: string | RegExp,
+  role: keyof typeof TEST_ACCOUNTS,
+) {
+  try {
+    await Promise.all([
+      page.waitForURL(expectedURL, { timeout: 15_000, waitUntil: 'commit' }),
+      page.click('button[type="submit"]'),
+    ]);
+  } catch (error) {
+    const authError = await readVisibleAuthError(page);
+    const detail = authError ? ` Auth error: ${authError}` : '';
+    throw new Error(
+      `Login as ${role} did not reach ${String(expectedURL)}. Current URL: ${page.url()}.${detail}`,
+      { cause: error },
+    );
+  }
+}
 
 // 확장된 테스트 fixture
 export const test = base.extend<{
@@ -26,11 +71,12 @@ export const test = base.extend<{
   // 교사로 로그인
   loginAsTeacher: async ({ page }, use) => {
     const login = async () => {
+      const account = requireTestAccount('teacher');
+
       await page.goto('/login');
-      await page.fill('input[type="email"]', TEST_ACCOUNTS.teacher.email);
-      await page.fill('input[type="password"]', TEST_ACCOUNTS.teacher.password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL(/\/(teacher|super-admin)\/?$/);
+      await page.fill('input[type="email"]', account.email);
+      await page.fill('input[type="password"]', account.password);
+      await submitLoginAndWaitForURL(page, /\/(teacher|super-admin)\/?$/, 'teacher');
 
       const pathname = new URL(page.url()).pathname.replace(/\/$/, '');
       if (pathname === '/super-admin') {
@@ -44,11 +90,12 @@ export const test = base.extend<{
   // 학부모로 로그인
   loginAsParent: async ({ page }, use) => {
     const login = async () => {
+      const account = requireTestAccount('parent');
+
       await page.goto('/login');
-      await page.fill('input[type="email"]', TEST_ACCOUNTS.parent.email);
-      await page.fill('input[type="password"]', TEST_ACCOUNTS.parent.password);
-      await page.click('button[type="submit"]');
-      await page.waitForURL('/parent');
+      await page.fill('input[type="email"]', account.email);
+      await page.fill('input[type="password"]', account.password);
+      await submitLoginAndWaitForURL(page, /\/parent\/?$/, 'parent');
     };
     await use(login);
   },
