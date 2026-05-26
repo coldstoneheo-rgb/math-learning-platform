@@ -6,17 +6,18 @@ async function expectParentShell(page: Page) {
   await expect(page.getByRole('button', { name: '로그아웃' })).toBeVisible();
 }
 
-async function hasNoConnectedChild(page: Page) {
-  return page.getByRole('heading', { name: '연결된 자녀가 없습니다' }).isVisible().catch(() => false);
-}
-
 async function expectChildOrEmptyState(page: Page) {
-  if (await hasNoConnectedChild(page)) {
+  const emptyStateHeading = page.getByRole('heading', { name: '연결된 자녀가 없습니다' });
+  const childStateIndicator = page.getByText('성장 판단').first();
+
+  await expect(emptyStateHeading.or(childStateIndicator).first()).toBeVisible({ timeout: 15_000 });
+
+  if (await emptyStateHeading.isVisible()) {
     await expect(page.getByText('선생님에게 자녀 연결을 요청해주세요.')).toBeVisible();
     return 'empty' as const;
   }
 
-  await expect(page.getByText('성장 판단')).toBeVisible({ timeout: 15_000 });
+  await expect(childStateIndicator).toBeVisible();
   await expect(page.getByText('총 리포트')).toBeVisible();
   await expect(page.getByText('성장 여정 (Growth Loop)')).toBeVisible();
   await expect(page.getByRole('heading', { name: /리포트 목록/ })).toBeVisible();
@@ -56,13 +57,17 @@ test.describe('학부모 대시보드', () => {
       if (state === 'empty') return;
 
       const firstReportLink = page.locator('a[href^="/parent/reports/"]').first();
+      const emptyStateMessage = page.getByText('아직 생성된 리포트가 없습니다.');
+
+      await expect(firstReportLink.or(emptyStateMessage).first()).toBeVisible({ timeout: 15_000 });
+
       if (await firstReportLink.isVisible()) {
         const href = await firstReportLink.getAttribute('href');
         expect(href).toMatch(/^\/parent\/reports\/\d+$/);
         return;
       }
 
-      await expect(page.getByText('아직 생성된 리포트가 없습니다.')).toBeVisible();
+      await expect(emptyStateMessage).toBeVisible();
     });
   });
 
