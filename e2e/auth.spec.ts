@@ -6,7 +6,7 @@ test.describe('인증 플로우', () => {
       await page.goto('/login');
 
       // 로그인 폼 요소 확인
-      await expect(page.locator('text=계정에 로그인하세요')).toBeVisible();
+      await expect(page.getByText('계정에 로그인하세요')).toBeVisible();
       await expect(page.locator('input[type="email"]')).toBeVisible();
       await expect(page.locator('input[type="password"]')).toBeVisible();
       await expect(page.locator('button[type="submit"]')).toBeVisible();

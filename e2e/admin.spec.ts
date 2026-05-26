@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
 
 async function expectTeacherPageShell(page: Page) {
-  await expect(page.locator('main, [role="main"]').first()).toBeVisible({
+  await expect(page.getByRole('main').first()).toBeVisible({
     timeout: 15_000,
   });
 }
@@ -17,7 +17,7 @@ test.describe('교사 대시보드', () => {
       await page.goto('/teacher');
 
       // 주요 섹션 확인
-      await expect(page.locator('text=오늘 수업')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText('오늘 수업')).toBeVisible({ timeout: 15_000 });
     });
 
     test('네비게이션 메뉴가 표시됨', async ({ page }) => {
