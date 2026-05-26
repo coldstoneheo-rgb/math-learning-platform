@@ -32,7 +32,8 @@ export const test = base.extend<{
       await page.click('button[type="submit"]');
       await page.waitForURL(/\/(teacher|super-admin)\/?$/);
 
-      if (new URL(page.url()).pathname === '/super-admin') {
+      const pathname = new URL(page.url()).pathname.replace(/\/$/, '');
+      if (pathname === '/super-admin') {
         await page.goto('/teacher');
         await page.waitForURL('/teacher');
       }
