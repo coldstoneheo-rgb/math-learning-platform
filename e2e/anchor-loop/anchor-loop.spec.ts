@@ -14,7 +14,7 @@ test.describe('Anchor Loop E2E 테스트', () => {
 
   test.describe('TC-01~06: 기본 플로우', () => {
     test('TC-01: 테스트 분석 페이지 로드', async ({ page }) => {
-      await page.goto('/admin/reports/new');
+      await page.goto('/teacher/reports/new');
 
       const content = page.locator('main, [role="main"]');
       await expect(content).toBeVisible();
@@ -28,7 +28,7 @@ test.describe('Anchor Loop E2E 테스트', () => {
       // 이 테스트는 API 레벨에서 problemRange 계산이 올바른지 검증
       // 4개 문항일 때: "1-2", "3-4" (2개 청크만 생성, "5-4" 같은 잘못된 범위 없음)
 
-      await page.goto('/admin/reports/new');
+      await page.goto('/teacher/reports/new');
 
       // API 응답 모니터링
       const responsePromise = page.waitForResponse(
@@ -52,7 +52,7 @@ test.describe('Anchor Loop E2E 테스트', () => {
     });
 
     test('TC-03: 빈 detailedAnalysis 처리', async ({ page }) => {
-      await page.goto('/admin/reports/new');
+      await page.goto('/teacher/reports/new');
 
       // 기본 페이지 로드 확인 (빈 분석 데이터 시 크래시 없음)
       const content = page.locator('main, [role="main"]');
@@ -61,7 +61,7 @@ test.describe('Anchor Loop E2E 테스트', () => {
 
     test('TC-05: errorSignature 업데이트 확인', async ({ page }) => {
       // 리포트 상세 페이지에서 오류 패턴 표시 확인
-      await page.goto('/admin/reports');
+      await page.goto('/teacher/reports');
 
       const reportLink = page.locator('a[href*="/reports/"]').first();
       if (await reportLink.isVisible()) {
@@ -76,7 +76,7 @@ test.describe('Anchor Loop E2E 테스트', () => {
     });
 
     test('TC-06: solvingStamina fatiguePattern 확인', async ({ page }) => {
-      await page.goto('/admin/reports');
+      await page.goto('/teacher/reports');
 
       const reportLink = page.locator('a[href*="/reports/"]').first();
       if (await reportLink.isVisible()) {
@@ -93,7 +93,7 @@ test.describe('Anchor Loop E2E 테스트', () => {
 
   test.describe('TC-07~10: 데이터 지속성', () => {
     test('TC-07: 리포트 저장 후 메타프로필 조회', async ({ page }) => {
-      await page.goto('/admin/students');
+      await page.goto('/teacher/students');
 
       // 학생 카드/행 클릭하여 상세 정보 확인
       const studentRow = page.locator('tr, [data-testid="student-card"]').first();
@@ -108,7 +108,7 @@ test.describe('Anchor Loop E2E 테스트', () => {
     });
 
     test('TC-08: 여러 리포트 누적 업데이트', async ({ page }) => {
-      await page.goto('/admin/reports');
+      await page.goto('/teacher/reports');
 
       // 리포트 목록 로드 확인
       const content = page.locator('main, [role="main"]');
@@ -122,7 +122,7 @@ test.describe('Anchor Loop E2E 테스트', () => {
 
   test.describe('TC-11~13: 에러 처리', () => {
     test('TC-11: API 오류 시 사용자 알림', async ({ page }) => {
-      await page.goto('/admin/reports/new');
+      await page.goto('/teacher/reports/new');
 
       // 오류 토스트/알림 영역 존재 확인
       const toastContainer = page.locator('[role="alert"], .toast, [data-testid="toast"]');
@@ -182,7 +182,7 @@ test.describe('TC-15: Gemini 응답 처리', () => {
   });
 
   test('분석 페이지 렌더링 안정성', async ({ page }) => {
-    await page.goto('/admin/reports/new');
+    await page.goto('/teacher/reports/new');
 
     // 페이지가 크래시 없이 로드되는지 확인
     const content = page.locator('main, [role="main"]');
@@ -206,7 +206,7 @@ test.describe('TC-15: Gemini 응답 처리', () => {
   });
 
   test('리포트 상세 페이지 안정성', async ({ page }) => {
-    await page.goto('/admin/reports');
+    await page.goto('/teacher/reports');
 
     const reportLink = page.locator('a[href*="/reports/"]').first();
     if (await reportLink.isVisible()) {
