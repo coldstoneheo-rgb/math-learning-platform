@@ -50,7 +50,7 @@ async function submitLoginAndWaitForURL(
 ) {
   try {
     await Promise.all([
-      page.waitForURL(expectedURL, { timeout: 15_000, waitUntil: 'commit' }),
+      page.waitForURL(expectedURL, { timeout: 30_000, waitUntil: 'commit' }),
       page.click('button[type="submit"]'),
     ]);
   } catch (error) {

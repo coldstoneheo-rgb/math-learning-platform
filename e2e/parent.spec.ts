@@ -24,6 +24,19 @@ async function expectChildOrEmptyState(page: Page) {
   return 'child' as const;
 }
 
+function collectRechartsDimensionWarnings(page: Page) {
+  const warnings: string[] = [];
+
+  page.on('console', (message) => {
+    const text = message.text();
+    if (text.includes('width(-1)') || text.includes('height(-1)')) {
+      warnings.push(text);
+    }
+  });
+
+  return warnings;
+}
+
 test.describe('학부모 대시보드', () => {
   test.beforeEach(async ({ loginAsParent }) => {
     await loginAsParent();
@@ -68,6 +81,39 @@ test.describe('학부모 대시보드', () => {
       }
 
       await expect(emptyStateMessage).toBeVisible();
+    });
+
+    test('상세 리포트가 성장 판단 화면으로 안정적으로 열림', async ({ page }) => {
+      test.setTimeout(180_000);
+      const chartWarnings = collectRechartsDimensionWarnings(page);
+
+      await page.goto('/parent');
+
+      const state = await expectChildOrEmptyState(page);
+      if (state === 'empty') return;
+
+      const firstReportLink = page.locator('a[href^="/parent/reports/"]').first();
+      const emptyStateMessage = page.getByText('아직 생성된 리포트가 없습니다.');
+
+      await expect(firstReportLink.or(emptyStateMessage).first()).toBeVisible({ timeout: 15_000 });
+
+      if (!(await firstReportLink.isVisible())) {
+        await expect(emptyStateMessage).toBeVisible();
+        return;
+      }
+
+      const href = await firstReportLink.getAttribute('href');
+      expect(href).toMatch(/^\/parent\/reports\/\d+$/);
+
+      await page.goto(href!, { waitUntil: 'commit' });
+      await expect(page).toHaveURL(/\/parent\/reports\/\d+/);
+      await expect(page.getByRole('main')).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page.getByText(/성장 판단 기준|이번 리포트의 핵심 분석 결과|성장 예측 그래프|월간 역량 분석/).first(),
+      ).toBeVisible({ timeout: 30_000 });
+
+      await page.waitForTimeout(1_000);
+      expect(chartWarnings).toEqual([]);
     });
   });
 

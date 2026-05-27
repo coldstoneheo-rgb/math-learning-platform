@@ -25,6 +25,7 @@ import {
   Legend,
 } from 'recharts';
 import { TrendingUp, Target, Calendar, Info, Rocket } from 'lucide-react';
+import StableChartFrame from '@/components/common/StableChartFrame';
 
 interface DataPoint {
   date: string;
@@ -235,8 +236,8 @@ function GrowthProjectionChart({
       )}
 
       {/* Chart */}
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
+      <StableChartFrame height={256}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 256 }}>
           <ComposedChart data={allData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="actualGradient" x1="0" y1="0" x2="0" y2="1">
@@ -326,7 +327,7 @@ function GrowthProjectionChart({
             />
           </ComposedChart>
         </ResponsiveContainer>
-      </div>
+      </StableChartFrame>
 
       {/* Footer Note */}
       <div className="mt-4 pt-4 border-t border-slate-100">
