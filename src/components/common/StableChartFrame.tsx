@@ -20,14 +20,13 @@ export default function StableChartFrame({
     const frame = frameRef.current;
     if (!frame) return;
 
-    const updateReadyState = () => {
-      const rect = frame.getBoundingClientRect();
-      setIsReady(rect.width > 0 && rect.height > 0);
-    };
-
-    updateReadyState();
-
-    const observer = new ResizeObserver(updateReadyState);
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0]?.contentRect ?? { width: 0, height: 0 };
+      if (width > 0 && height > 0) {
+        setIsReady(true);
+        observer.disconnect();
+      }
+    });
     observer.observe(frame);
 
     return () => observer.disconnect();

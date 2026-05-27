@@ -112,7 +112,7 @@ test.describe('학부모 대시보드', () => {
         page.getByText(/성장 판단 기준|이번 리포트의 핵심 분석 결과|성장 예측 그래프|월간 역량 분석/).first(),
       ).toBeVisible({ timeout: 30_000 });
 
-      await page.waitForTimeout(1_000);
+      await expect(page.locator('.recharts-surface').first()).toBeVisible();
       expect(chartWarnings).toEqual([]);
     });
   });
