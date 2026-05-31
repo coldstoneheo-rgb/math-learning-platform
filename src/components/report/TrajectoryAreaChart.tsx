@@ -17,6 +17,7 @@ import {
 import { motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
 import StableChartFrame from '@/components/common/StableChartFrame';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 export interface TrajectoryPoint {
   month: string;
@@ -49,10 +50,10 @@ interface CustomDotProps {
 
 function CustomDot({ cx, cy, payload }: CustomDotProps) {
   if (!cx || !cy) return null;
-  if (!payload?.milestone) return <circle cx={cx} cy={cy} r={4} fill="#6366f1" stroke="white" strokeWidth={2} />;
+  if (!payload?.milestone) return <circle cx={cx} cy={cy} r={4} fill="#6366f1" stroke={CHART_THEME.surfaceCard} strokeWidth={2} />;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={7} fill="#f59e0b" stroke="white" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={7} fill="#f59e0b" stroke={CHART_THEME.surfaceCard} strokeWidth={2} />
       <text x={cx} y={cy - 14} textAnchor="middle" fontSize={10} fill="#92400e">
         ★
       </text>
@@ -142,11 +143,18 @@ function TrajectoryAreaChart({
               <stop offset="95%" stopColor={cfg.color} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-          <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} />
-          <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} vertical={false} />
+          <XAxis dataKey="month" tick={{ fontSize: 11, fill: CHART_THEME.axis }} tickLine={false} axisLine={false} />
+          <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: CHART_THEME.axis }} tickLine={false} axisLine={false} />
           <Tooltip
-            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '13px' }}
+            contentStyle={{
+              borderRadius: '8px',
+              border: `1px solid ${CHART_THEME.tooltipBorder}`,
+              backgroundColor: CHART_THEME.tooltipBg,
+              color: CHART_THEME.textPrimary,
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+              fontSize: '13px',
+            }}
             formatter={(value) => [`${value}점`, '점수']}
             labelFormatter={(label) => {
               const point = data.find((d) => d.month === label);
@@ -155,8 +163,8 @@ function TrajectoryAreaChart({
           />
           {/* 시작점 참조선 */}
           {startScore !== undefined && (
-            <ReferenceLine y={startScore} stroke="#d1d5db" strokeDasharray="5 5"
-              label={{ value: `시작 ${startScore}`, position: 'left', fontSize: 10, fill: '#9ca3af' }} />
+            <ReferenceLine y={startScore} stroke={CHART_THEME.muted} strokeDasharray="5 5"
+              label={{ value: `시작 ${startScore}`, position: 'left', fontSize: 10, fill: CHART_THEME.muted }} />
           )}
           <Area
             type="monotone" dataKey="score"

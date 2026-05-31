@@ -22,6 +22,7 @@ import {
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
 import StableChartFrame from '@/components/common/StableChartFrame';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 export interface RadarCapabilityData {
   subject: string;
@@ -93,10 +94,10 @@ function GrowthRadarChart({
       <StableChartFrame height={chartHeight}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: chartHeight }}>
           <RadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-            <PolarGrid stroke="#e5e7eb" />
+            <PolarGrid stroke={CHART_THEME.grid} />
             <PolarAngleAxis
               dataKey="subjectLabel"
-              tick={{ fontSize: compact ? 11 : 13, fill: '#4b5563' }}
+              tick={{ fontSize: compact ? 11 : 13, fill: CHART_THEME.axis }}
             />
             <Tooltip
               formatter={(value, name) => {
@@ -107,7 +108,9 @@ function GrowthRadarChart({
               }}
               contentStyle={{
                 borderRadius: '8px',
-                border: 'none',
+                border: `1px solid ${CHART_THEME.tooltipBorder}`,
+                backgroundColor: CHART_THEME.tooltipBg,
+                color: CHART_THEME.textPrimary,
                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                 fontSize: '13px',
               }}

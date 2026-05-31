@@ -25,6 +25,7 @@ import {
   Pie,
 } from 'recharts';
 import StableChartFrame from '@/components/common/StableChartFrame';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 // Animation variants
 const containerVariants = {
@@ -202,13 +203,20 @@ function ErrorPatternTrend({
                       <Cell
                         key={`cell-${index}`}
                         fill={entry.color}
-                        stroke="#fff"
+                        stroke={CHART_THEME.surfaceCard}
                         strokeWidth={2}
                         className="transition-all duration-300 hover:opacity-80 cursor-pointer"
                       />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: `1px solid ${CHART_THEME.tooltipBorder}`,
+                      backgroundColor: CHART_THEME.tooltipBg,
+                      color: CHART_THEME.textPrimary,
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </StableChartFrame>
@@ -263,10 +271,30 @@ function ErrorPatternTrend({
                 layout="vertical"
                 margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                <YAxis dataKey="domain" type="category" width={60} tick={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={CHART_THEME.grid} />
+                <XAxis
+                  type="number"
+                  domain={[0, 100]}
+                  tickFormatter={(v) => `${v}%`}
+                  tick={{ fill: CHART_THEME.axis }}
+                  axisLine={{ stroke: CHART_THEME.grid }}
+                  tickLine={{ stroke: CHART_THEME.grid }}
+                />
+                <YAxis
+                  dataKey="domain"
+                  type="category"
+                  width={60}
+                  tick={{ fontSize: 12, fill: CHART_THEME.axis }}
+                  axisLine={{ stroke: CHART_THEME.grid }}
+                  tickLine={{ stroke: CHART_THEME.grid }}
+                />
                 <Tooltip
+                  contentStyle={{
+                    borderRadius: '8px',
+                    border: `1px solid ${CHART_THEME.tooltipBorder}`,
+                    backgroundColor: CHART_THEME.tooltipBg,
+                    color: CHART_THEME.textPrimary,
+                  }}
                   formatter={(value) => [`${value ?? 0}% (${getVulnerabilityLabel(Number(value ?? 0))})`, '취약도']}
                 />
                 <Bar dataKey="vulnerabilityScore" radius={[0, 4, 4, 0]}>
