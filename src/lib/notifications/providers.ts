@@ -93,11 +93,12 @@ export class KakaoAlimtalkProvider implements NotificationProvider {
   async send(payload: NotificationPayload): Promise<NotificationProviderResult> {
     return {
       success: false,
-      error: 'Kakao alimtalk is not implemented. Required before enabling: business channel, approved templateId, parent phone, consent, webhook.',
+      error: '카카오 알림톡은 아직 실제 발송이 연결되지 않았습니다. 비즈니스 채널, 승인 템플릿, 학부모 전화번호, 수신 동의, 발송 결과 웹훅을 먼저 준비해야 합니다.',
       providerResponse: {
         error: 'Kakao alimtalk not yet implemented',
         template_id: payload.templateId ?? null,
-        required: ['business_channel', 'approved_template', 'parent_phone', 'consent', 'delivery_webhook'],
+        status: 'not_implemented',
+        required: ['business_channel', 'approved_template', 'parent_phone', 'recipient_consent', 'delivery_webhook'],
       },
     };
   }
