@@ -24,6 +24,7 @@
   --chart-muted: #a39d97;
   --tooltip-bg: rgba(255, 255, 255, 0.96);
   --tooltip-border: rgba(17, 16, 15, 0.12);
+  --gradient-subtle-end: #f5f1ff;
 
   /* Semantic Colors - Slate palette for sophistication */
   --slate-50: #f8fafc;
@@ -125,6 +126,7 @@ html.dark {
   --chart-muted: #8f867e;
   --tooltip-bg: rgba(32, 31, 29, 0.96);
   --tooltip-border: rgba(247, 245, 242, 0.16);
+  --gradient-subtle-end: rgba(124, 58, 237, 0.08);
   --glass-bg: rgba(30, 41, 59, 0.7);
   --glass-border: rgba(71, 85, 105, 0.3);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -167,7 +169,7 @@ html.dark .glass-subtle {
 }
 
 .gradient-subtle {
-  background: linear-gradient(135deg, var(--surface-page) 0%, var(--accent-blue-muted) 50%, #f5f1ff 100%);
+  background: linear-gradient(135deg, var(--surface-page) 0%, var(--accent-blue-muted) 50%, var(--gradient-subtle-end) 100%);
 }
 
 .gradient-card {
@@ -416,36 +418,84 @@ html.dark .bg-white {
   background-color: var(--surface-card) !important;
 }
 
-html.dark .bg-white\/95,
-html.dark .bg-white\/90,
-html.dark .bg-white\/80,
-html.dark .bg-white\/70,
-html.dark .bg-white\/60,
-html.dark .bg-white\/50,
-html.dark .bg-white\/40,
-html.dark .bg-white\/30,
+html.dark .bg-white\/95 {
+  background-color: color-mix(in srgb, var(--surface-card) 95%, transparent) !important;
+}
+
+html.dark .bg-white\/90 {
+  background-color: color-mix(in srgb, var(--surface-card) 90%, transparent) !important;
+}
+
+html.dark .bg-white\/80 {
+  background-color: color-mix(in srgb, var(--surface-card) 80%, transparent) !important;
+}
+
+html.dark .bg-white\/70 {
+  background-color: color-mix(in srgb, var(--surface-card) 70%, transparent) !important;
+}
+
+html.dark .bg-white\/60 {
+  background-color: color-mix(in srgb, var(--surface-card) 60%, transparent) !important;
+}
+
+html.dark .bg-white\/50 {
+  background-color: color-mix(in srgb, var(--surface-card) 50%, transparent) !important;
+}
+
+html.dark .bg-white\/40 {
+  background-color: color-mix(in srgb, var(--surface-card) 40%, transparent) !important;
+}
+
+html.dark .bg-white\/30 {
+  background-color: color-mix(in srgb, var(--surface-card) 30%, transparent) !important;
+}
+
 html.dark .bg-white\/20 {
-  background-color: color-mix(in srgb, var(--surface-card) 82%, transparent) !important;
+  background-color: color-mix(in srgb, var(--surface-card) 20%, transparent) !important;
 }
 
 html.dark .bg-gradient-to-r .bg-white\/50,
-html.dark .bg-gradient-to-r .bg-white\/40,
-html.dark .bg-gradient-to-r .bg-white\/30,
-html.dark .bg-gradient-to-r .bg-white\/20,
+html.dark .bg-gradient-to-r.bg-white\/50,
 html.dark .bg-gradient-to-br .bg-white\/50,
-html.dark .bg-gradient-to-br .bg-white\/40,
-html.dark .bg-gradient-to-br .bg-white\/30,
-html.dark .bg-gradient-to-br .bg-white\/20,
+html.dark .bg-gradient-to-br.bg-white\/50,
 html.dark .bg-gradient-to-b .bg-white\/50,
+html.dark .bg-gradient-to-b.bg-white\/50 {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html.dark .bg-gradient-to-r .bg-white\/40,
+html.dark .bg-gradient-to-r.bg-white\/40,
+html.dark .bg-gradient-to-br .bg-white\/40,
+html.dark .bg-gradient-to-br.bg-white\/40,
 html.dark .bg-gradient-to-b .bg-white\/40,
+html.dark .bg-gradient-to-b.bg-white\/40 {
+  background-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+html.dark .bg-gradient-to-r .bg-white\/30,
+html.dark .bg-gradient-to-r.bg-white\/30,
+html.dark .bg-gradient-to-br .bg-white\/30,
+html.dark .bg-gradient-to-br.bg-white\/30,
 html.dark .bg-gradient-to-b .bg-white\/30,
-html.dark .bg-gradient-to-b .bg-white\/20 {
-  background-color: rgba(255, 255, 255, 0.28) !important;
+html.dark .bg-gradient-to-b.bg-white\/30 {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+html.dark .bg-gradient-to-r .bg-white\/20,
+html.dark .bg-gradient-to-r.bg-white\/20,
+html.dark .bg-gradient-to-br .bg-white\/20,
+html.dark .bg-gradient-to-br.bg-white\/20,
+html.dark .bg-gradient-to-b .bg-white\/20,
+html.dark .bg-gradient-to-b.bg-white\/20 {
+  background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 html.dark .bg-gradient-to-r .h-full.bg-white,
+html.dark .bg-gradient-to-r.h-full.bg-white,
 html.dark .bg-gradient-to-br .h-full.bg-white,
-html.dark .bg-gradient-to-b .h-full.bg-white {
+html.dark .bg-gradient-to-br.h-full.bg-white,
+html.dark .bg-gradient-to-b .h-full.bg-white,
+html.dark .bg-gradient-to-b.h-full.bg-white {
   background-color: rgba(255, 255, 255, 0.92) !important;
 }
 
