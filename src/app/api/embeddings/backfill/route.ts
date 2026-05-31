@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { generateEmbeddingsBatch } from '@/lib/embedding-service';
 import { extractEmbeddableTextsFromAny } from '@/lib/embedding-extractor';
 import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 const CHUNK_SIZE = 50;
 
 async function markIndexStatus(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof createAdminClient>,
   params: {
     reportId: number;
     studentId: number;
@@ -44,12 +44,13 @@ export async function POST(req: Request) {
 
   const auth = await requireTeacherOrSuperAdmin(supabase);
   if (!auth.ok) return auth.response;
+  const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
 
   const body = await req.json().catch(() => ({}));
   const { studentId } = body as { studentId?: number };
 
   // 임베딩 없는 리포트 조회 (LEFT JOIN)
-  let query = supabase
+  let query = db
     .from('reports')
     .select('id, student_id, report_type, test_date, analysis_data')
     .limit(CHUNK_SIZE);
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
 
   // 이미 인덱싱된 report_id 목록
   const reportIds = allReports.map((r) => r.id);
-  const { data: existingEmbeds } = await supabase
+  const { data: existingEmbeds } = await db
     .from('report_embeddings')
     .select('report_id')
     .in('report_id', reportIds);
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
   for (const report of toProcess) {
     const analysisData = report.analysis_data as Record<string, unknown>;
     if (!analysisData) {
-      await markIndexStatus(supabase, {
+      await markIndexStatus(db, {
         reportId: report.id,
         studentId: report.student_id,
         status: 'skipped',
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
 
     const chunks = extractEmbeddableTextsFromAny(analysisData);
     if (chunks.length === 0) {
-      await markIndexStatus(supabase, {
+      await markIndexStatus(db, {
         reportId: report.id,
         studentId: report.student_id,
         status: 'skipped',
@@ -121,10 +122,10 @@ export async function POST(req: Request) {
         test_date: report.test_date ?? null,
       }));
 
-      const { error } = await supabase.from('report_embeddings').insert(rows);
+      const { error } = await db.from('report_embeddings').insert(rows);
       if (error) {
         console.error(`[Backfill] report ${report.id} 저장 실패:`, error.message);
-        await markIndexStatus(supabase, {
+        await markIndexStatus(db, {
           reportId: report.id,
           studentId: report.student_id,
           status: 'failed',
@@ -132,7 +133,7 @@ export async function POST(req: Request) {
         });
         errorCount++;
       } else {
-        await markIndexStatus(supabase, {
+        await markIndexStatus(db, {
           reportId: report.id,
           studentId: report.student_id,
           status: 'indexed',
@@ -142,7 +143,7 @@ export async function POST(req: Request) {
       }
     } catch (err) {
       console.error(`[Backfill] report ${report.id} 임베딩 실패:`, err);
-      await markIndexStatus(supabase, {
+      await markIndexStatus(db, {
         reportId: report.id,
         studentId: report.student_id,
         status: 'failed',

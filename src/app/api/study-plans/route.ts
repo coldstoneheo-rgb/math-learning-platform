@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 import type { StudyPlanInput, StudyTaskInput } from '@/types';
 
@@ -58,12 +58,21 @@ export async function POST(request: NextRequest) {
 
   const auth = await requireTeacherOrSuperAdmin(supabase);
   if (!auth.ok) return auth.response;
+  const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
 
   const body = await request.json();
   const { plan, tasks }: { plan: StudyPlanInput; tasks?: Omit<StudyTaskInput, 'study_plan_id'>[] } = body;
 
+  if (!plan || !plan.student_id || !plan.title) {
+    return NextResponse.json(
+      { error: '필수 입력 정보(plan, student_id, title)가 누락되었습니다.' },
+      { status: 400 }
+    );
+  }
+  const studentId = Number(plan.student_id);
+
   if (plan.report_id) {
-    const { data: report, error: reportError } = await supabase
+    const { data: report, error: reportError } = await db
       .from('reports')
       .select('id, student_id')
       .eq('id', plan.report_id)
@@ -73,7 +82,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '리포트를 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    if (report.student_id !== plan.student_id) {
+    if (report.student_id !== studentId) {
       return NextResponse.json(
         { error: '리포트와 학생 정보가 일치하지 않습니다.' },
         { status: 400 }
@@ -82,10 +91,10 @@ export async function POST(request: NextRequest) {
   }
 
   // 학습 계획 생성
-  const { data: createdPlan, error: planError } = await supabase
+  const { data: createdPlan, error: planError } = await db
     .from('study_plans')
     .insert({
-      student_id: plan.student_id,
+      student_id: studentId,
       title: plan.title,
       description: plan.description,
       period_type: plan.period_type,
@@ -113,7 +122,7 @@ export async function POST(request: NextRequest) {
   if (tasks && tasks.length > 0) {
     const tasksToInsert = tasks.map((task, index) => ({
       study_plan_id: createdPlan.id,
-      student_id: plan.student_id,
+      student_id: studentId,
       title: task.title,
       description: task.description,
       category: task.category,
@@ -126,7 +135,7 @@ export async function POST(request: NextRequest) {
       order_index: index,
     }));
 
-    const { error: tasksError } = await supabase
+    const { error: tasksError } = await db
       .from('study_tasks')
       .insert(tasksToInsert);
 

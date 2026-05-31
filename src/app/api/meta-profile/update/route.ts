@@ -82,7 +82,7 @@ export async function POST(
       );
     }
 
-    if (report.student_id !== studentId) {
+    if (report.student_id !== Number(studentId)) {
       return NextResponse.json(
         { success: false, error: '리포트와 학생 정보가 일치하지 않습니다.' },
         { status: 400 }

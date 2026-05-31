@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 
 async function assertReportBelongsToStudent(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof createAdminClient>,
   reportId: number,
   studentId: number
 ): Promise<NextResponse | null> {
@@ -33,13 +33,14 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const auth = await requireTeacherOrSuperAdmin(supabase);
     if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
 
     const { searchParams } = new URL(request.url);
 
     const studentId = searchParams.get('studentId');
     const verified = searchParams.get('verified');
 
-    let query = supabase
+    let query = db
       .from('prediction_verification')
       .select(`
         *,
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const auth = await requireTeacherOrSuperAdmin(supabase);
     if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
 
     const body = await request.json();
 
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ownershipError = await assertReportBelongsToStudent(supabase, Number(reportId), Number(studentId));
+    const ownershipError = await assertReportBelongsToStudent(db, Number(reportId), Number(studentId));
     if (ownershipError) return ownershipError;
 
     const predictionDate = new Date();
@@ -137,7 +139,7 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    const { data: insertedPredictions, error } = await supabase
+    const { data: insertedPredictions, error } = await db
       .from('prediction_verification')
       .insert(predictionRecords)
       .select();

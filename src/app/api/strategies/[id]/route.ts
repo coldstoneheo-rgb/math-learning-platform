@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 
 interface RouteParams {
@@ -12,10 +12,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const supabase = await createClient();
     const auth = await requireTeacherOrSuperAdmin(supabase);
     if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
 
     const { id } = await params;
 
-    const { data: strategy, error } = await supabase
+    const { data: strategy, error } = await db
       .from('strategy_tracking')
       .select(`
         *,
@@ -49,6 +50,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const supabase = await createClient();
     const auth = await requireTeacherOrSuperAdmin(supabase);
     if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
 
     const { id } = await params;
     const body = await request.json();
@@ -94,7 +96,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       updateData.improvement_rate = post_score - pre_score;
     }
 
-    const { data: strategy, error } = await supabase
+    const { data: strategy, error } = await db
       .from('strategy_tracking')
       .update(updateData)
       .eq('id', parseInt(id))
@@ -133,10 +135,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const supabase = await createClient();
     const auth = await requireTeacherOrSuperAdmin(supabase);
     if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
 
     const { id } = await params;
 
-    const { error } = await supabase
+    const { error } = await db
       .from('strategy_tracking')
       .delete()
       .eq('id', parseInt(id));
