@@ -551,6 +551,113 @@ html.dark .bg-rose-50 {
   background-color: rgba(244, 63, 94, 0.16) !important;
 }
 
+/* 리포트 배지/상태 필: 밝은 100/200/300 배경은 다크모드에서 텍스트와 충돌하므로
+   같은 의미의 저채도 다크 패널로 낮춥니다. */
+html.dark .bg-indigo-100,
+html.dark .bg-indigo-100\/80,
+html.dark .bg-blue-100,
+html.dark .bg-blue-100\/80,
+html.dark .bg-cyan-100,
+html.dark .bg-cyan-100\/80 {
+  background-color: rgba(37, 99, 235, 0.24) !important;
+}
+
+html.dark .bg-violet-100,
+html.dark .bg-violet-100\/80,
+html.dark .bg-purple-100,
+html.dark .bg-purple-100\/80,
+html.dark .bg-fuchsia-100,
+html.dark .bg-fuchsia-100\/80 {
+  background-color: rgba(124, 58, 237, 0.25) !important;
+}
+
+html.dark .bg-emerald-100,
+html.dark .bg-emerald-100\/80,
+html.dark .bg-green-100,
+html.dark .bg-green-100\/80,
+html.dark .bg-teal-100,
+html.dark .bg-teal-100\/80 {
+  background-color: rgba(16, 185, 129, 0.23) !important;
+}
+
+html.dark .bg-amber-100,
+html.dark .bg-amber-100\/80,
+html.dark .bg-yellow-100,
+html.dark .bg-yellow-100\/80,
+html.dark .bg-orange-100,
+html.dark .bg-orange-100\/80 {
+  background-color: rgba(245, 158, 11, 0.24) !important;
+}
+
+html.dark .bg-red-100,
+html.dark .bg-red-100\/80,
+html.dark .bg-rose-100,
+html.dark .bg-rose-100\/80,
+html.dark .bg-pink-100,
+html.dark .bg-pink-100\/80 {
+  background-color: rgba(244, 63, 94, 0.24) !important;
+}
+
+html.dark .bg-indigo-200,
+html.dark .bg-blue-200,
+html.dark .bg-cyan-200 {
+  background-color: rgba(37, 99, 235, 0.34) !important;
+}
+
+html.dark .bg-violet-200,
+html.dark .bg-purple-200,
+html.dark .bg-fuchsia-200 {
+  background-color: rgba(124, 58, 237, 0.34) !important;
+}
+
+html.dark .bg-emerald-200,
+html.dark .bg-green-200,
+html.dark .bg-teal-200 {
+  background-color: rgba(16, 185, 129, 0.32) !important;
+}
+
+html.dark .bg-amber-200,
+html.dark .bg-yellow-200,
+html.dark .bg-orange-200 {
+  background-color: rgba(245, 158, 11, 0.34) !important;
+}
+
+html.dark .bg-red-200,
+html.dark .bg-rose-200,
+html.dark .bg-pink-200 {
+  background-color: rgba(244, 63, 94, 0.34) !important;
+}
+
+html.dark .bg-indigo-300,
+html.dark .bg-blue-300,
+html.dark .bg-cyan-300 {
+  background-color: rgba(96, 165, 250, 0.48) !important;
+}
+
+html.dark .bg-violet-300,
+html.dark .bg-purple-300,
+html.dark .bg-fuchsia-300 {
+  background-color: rgba(167, 139, 250, 0.48) !important;
+}
+
+html.dark .bg-emerald-300,
+html.dark .bg-green-300,
+html.dark .bg-teal-300 {
+  background-color: rgba(52, 211, 153, 0.44) !important;
+}
+
+html.dark .bg-amber-300,
+html.dark .bg-yellow-300,
+html.dark .bg-orange-300 {
+  background-color: rgba(251, 191, 36, 0.46) !important;
+}
+
+html.dark .bg-red-300,
+html.dark .bg-rose-300,
+html.dark .bg-pink-300 {
+  background-color: rgba(251, 113, 133, 0.46) !important;
+}
+
 html.dark .from-blue-50,
 html.dark .from-indigo-50 {
   --tw-gradient-from: rgba(37, 99, 235, 0.18) var(--tw-gradient-from-position) !important;
@@ -569,6 +676,71 @@ html.dark .from-green-50 {
   --tw-gradient-to: rgba(16, 185, 129, 0) var(--tw-gradient-to-position) !important;
 }
 
+html.dark .from-teal-50,
+html.dark .from-cyan-50 {
+  --tw-gradient-from: rgba(20, 184, 166, 0.17) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(20, 184, 166, 0) var(--tw-gradient-to-position) !important;
+}
+
+html.dark .from-amber-50,
+html.dark .from-yellow-50,
+html.dark .from-orange-50 {
+  --tw-gradient-from: rgba(245, 158, 11, 0.18) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(245, 158, 11, 0) var(--tw-gradient-to-position) !important;
+}
+
+html.dark .from-red-50,
+html.dark .from-rose-50,
+html.dark .from-pink-50 {
+  --tw-gradient-from: rgba(244, 63, 94, 0.18) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(244, 63, 94, 0) var(--tw-gradient-to-position) !important;
+}
+
+html.dark .from-slate-50,
+html.dark .from-gray-50,
+html.dark .from-zinc-50 {
+  --tw-gradient-from: color-mix(in srgb, var(--surface-muted) 82%, transparent) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: transparent var(--tw-gradient-to-position) !important;
+}
+
+html.dark .via-indigo-50,
+html.dark .via-blue-50 {
+  --tw-gradient-via: rgba(37, 99, 235, 0.14) var(--tw-gradient-via-position) !important;
+}
+
+html.dark .via-violet-50,
+html.dark .via-purple-50 {
+  --tw-gradient-via: rgba(124, 58, 237, 0.15) var(--tw-gradient-via-position) !important;
+}
+
+html.dark .via-emerald-50,
+html.dark .via-green-50 {
+  --tw-gradient-via: rgba(16, 185, 129, 0.14) var(--tw-gradient-via-position) !important;
+}
+
+html.dark .via-teal-50,
+html.dark .via-cyan-50 {
+  --tw-gradient-via: rgba(20, 184, 166, 0.14) var(--tw-gradient-via-position) !important;
+}
+
+html.dark .via-amber-50,
+html.dark .via-yellow-50,
+html.dark .via-orange-50 {
+  --tw-gradient-via: rgba(245, 158, 11, 0.14) var(--tw-gradient-via-position) !important;
+}
+
+html.dark .via-red-50,
+html.dark .via-rose-50,
+html.dark .via-pink-50 {
+  --tw-gradient-via: rgba(244, 63, 94, 0.14) var(--tw-gradient-via-position) !important;
+}
+
+html.dark .via-slate-50,
+html.dark .via-gray-50,
+html.dark .via-zinc-50 {
+  --tw-gradient-via: color-mix(in srgb, var(--surface-muted) 70%, transparent) var(--tw-gradient-via-position) !important;
+}
+
 html.dark .to-indigo-50,
 html.dark .to-blue-50 {
   --tw-gradient-to: rgba(37, 99, 235, 0.1) var(--tw-gradient-to-position) !important;
@@ -583,6 +755,34 @@ html.dark .to-teal-50,
 html.dark .to-emerald-50,
 html.dark .to-green-50 {
   --tw-gradient-to: rgba(20, 184, 166, 0.12) var(--tw-gradient-to-position) !important;
+}
+
+html.dark .to-cyan-50 {
+  --tw-gradient-to: rgba(6, 182, 212, 0.12) var(--tw-gradient-to-position) !important;
+}
+
+html.dark .to-amber-50,
+html.dark .to-yellow-50,
+html.dark .to-orange-50,
+html.dark .to-amber-50\/30,
+html.dark .to-yellow-50\/30,
+html.dark .to-orange-50\/30 {
+  --tw-gradient-to: rgba(245, 158, 11, 0.12) var(--tw-gradient-to-position) !important;
+}
+
+html.dark .to-red-50,
+html.dark .to-rose-50,
+html.dark .to-pink-50 {
+  --tw-gradient-to: rgba(244, 63, 94, 0.12) var(--tw-gradient-to-position) !important;
+}
+
+html.dark .to-slate-50,
+html.dark .to-gray-50,
+html.dark .to-zinc-50,
+html.dark .to-slate-50\/30,
+html.dark .to-gray-50\/30,
+html.dark .to-zinc-50\/30 {
+  --tw-gradient-to: color-mix(in srgb, var(--surface-muted) 46%, transparent) var(--tw-gradient-to-position) !important;
 }
 
 /* 텍스트 색상 */
@@ -615,26 +815,66 @@ html.dark .text-slate-500 {
   color: var(--text-secondary) !important;
 }
 
+html.dark .text-indigo-900,
+html.dark .text-indigo-800,
 html.dark .text-indigo-700,
 html.dark .text-indigo-600,
+html.dark .text-indigo-500,
+html.dark .text-indigo-400,
+html.dark .text-blue-900,
+html.dark .text-blue-800,
 html.dark .text-blue-700,
-html.dark .text-blue-600 {
+html.dark .text-blue-600,
+html.dark .text-blue-500,
+html.dark .text-blue-400,
+html.dark .text-cyan-900,
+html.dark .text-cyan-800,
+html.dark .text-cyan-700,
+html.dark .text-cyan-600,
+html.dark .text-cyan-500,
+html.dark .text-cyan-400 {
   color: #8fc7ff !important;
 }
 
+html.dark .text-violet-900,
+html.dark .text-violet-800,
 html.dark .text-violet-700,
 html.dark .text-violet-600,
+html.dark .text-violet-500,
+html.dark .text-violet-400,
+html.dark .text-purple-900,
+html.dark .text-purple-800,
 html.dark .text-purple-700,
-html.dark .text-purple-600 {
+html.dark .text-purple-600,
+html.dark .text-purple-500,
+html.dark .text-purple-400,
+html.dark .text-fuchsia-900,
+html.dark .text-fuchsia-800,
+html.dark .text-fuchsia-700,
+html.dark .text-fuchsia-600,
+html.dark .text-fuchsia-500,
+html.dark .text-fuchsia-400 {
   color: #c4b5fd !important;
 }
 
+html.dark .text-emerald-900,
 html.dark .text-emerald-800,
 html.dark .text-emerald-700,
 html.dark .text-emerald-600,
+html.dark .text-emerald-500,
+html.dark .text-emerald-400,
+html.dark .text-green-900,
 html.dark .text-green-800,
 html.dark .text-green-700,
-html.dark .text-green-600 {
+html.dark .text-green-600,
+html.dark .text-green-500,
+html.dark .text-green-400,
+html.dark .text-teal-900,
+html.dark .text-teal-800,
+html.dark .text-teal-700,
+html.dark .text-teal-600,
+html.dark .text-teal-500,
+html.dark .text-teal-400 {
   color: #86efac !important;
 }
 
@@ -642,18 +882,39 @@ html.dark .text-amber-900,
 html.dark .text-amber-800,
 html.dark .text-amber-700,
 html.dark .text-amber-600,
+html.dark .text-amber-500,
+html.dark .text-amber-400,
 html.dark .text-yellow-700,
+html.dark .text-yellow-600,
+html.dark .text-yellow-500,
+html.dark .text-yellow-400,
+html.dark .text-orange-900,
 html.dark .text-orange-800,
 html.dark .text-orange-700,
-html.dark .text-orange-600 {
+html.dark .text-orange-600,
+html.dark .text-orange-500,
+html.dark .text-orange-400 {
   color: #fcd34d !important;
 }
 
+html.dark .text-red-900,
+html.dark .text-red-800,
 html.dark .text-red-700,
 html.dark .text-red-600,
 html.dark .text-red-500,
+html.dark .text-red-400,
+html.dark .text-rose-900,
+html.dark .text-rose-800,
 html.dark .text-rose-700,
-html.dark .text-rose-600 {
+html.dark .text-rose-600,
+html.dark .text-rose-500,
+html.dark .text-rose-400,
+html.dark .text-pink-900,
+html.dark .text-pink-800,
+html.dark .text-pink-700,
+html.dark .text-pink-600,
+html.dark .text-pink-500,
+html.dark .text-pink-400 {
   color: #fda4af !important;
 }
 
@@ -674,12 +935,45 @@ html.dark .border-violet-200,
 html.dark .border-purple-200,
 html.dark .border-emerald-200,
 html.dark .border-green-200,
+html.dark .border-teal-200,
+html.dark .border-cyan-200,
 html.dark .border-amber-200,
 html.dark .border-yellow-200,
 html.dark .border-orange-200,
 html.dark .border-red-200,
 html.dark .border-rose-200 {
   border-color: var(--border-subtle) !important;
+}
+
+html.dark .border-indigo-300,
+html.dark .border-blue-300,
+html.dark .border-cyan-300,
+html.dark .border-violet-300,
+html.dark .border-purple-300,
+html.dark .border-emerald-300,
+html.dark .border-green-300,
+html.dark .border-teal-300,
+html.dark .border-amber-300,
+html.dark .border-yellow-300,
+html.dark .border-orange-300,
+html.dark .border-red-300,
+html.dark .border-rose-300,
+html.dark .border-pink-300,
+html.dark .border-indigo-400,
+html.dark .border-blue-400,
+html.dark .border-cyan-400,
+html.dark .border-violet-400,
+html.dark .border-purple-400,
+html.dark .border-emerald-400,
+html.dark .border-green-400,
+html.dark .border-teal-400,
+html.dark .border-amber-400,
+html.dark .border-yellow-400,
+html.dark .border-orange-400,
+html.dark .border-red-400,
+html.dark .border-rose-400,
+html.dark .border-pink-400 {
+  border-color: var(--border-strong) !important;
 }
 
 /* 입력 필드 */
