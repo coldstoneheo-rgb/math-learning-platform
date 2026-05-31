@@ -13,10 +13,10 @@ import { memo } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine,
-  Dot,
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
+import StableChartFrame from '@/components/common/StableChartFrame';
 
 export interface TrajectoryPoint {
   month: string;
@@ -133,8 +133,9 @@ function TrajectoryAreaChart({
       )}
 
       {/* Area Chart */}
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <AreaChart data={data} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
+      <StableChartFrame height={chartHeight}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: chartHeight }}>
+          <AreaChart data={data} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
           <defs>
             <linearGradient id="trajectoryGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={cfg.color} stopOpacity={0.4} />
@@ -164,8 +165,9 @@ function TrajectoryAreaChart({
             dot={hasMilestones ? <CustomDot /> : { fill: cfg.color, strokeWidth: 2, r: 4 }}
             activeDot={{ r: 6, fill: cfg.color }}
           />
-        </AreaChart>
-      </ResponsiveContainer>
+          </AreaChart>
+        </ResponsiveContainer>
+      </StableChartFrame>
 
       {/* 마일스톤 목록 */}
       {hasMilestones && !compact && (

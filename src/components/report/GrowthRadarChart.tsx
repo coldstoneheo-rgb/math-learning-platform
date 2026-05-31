@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
+import StableChartFrame from '@/components/common/StableChartFrame';
 
 export interface RadarCapabilityData {
   subject: string;
@@ -48,7 +49,6 @@ const CAPABILITY_DESCRIPTIONS: Record<string, string> = {
 
 function GrowthRadarChart({
   data,
-  studentName,
   currentMonth,
   previousMonth,
   compact = false,
@@ -90,58 +90,60 @@ function GrowthRadarChart({
       </div>
 
       {/* Radar Chart */}
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <RadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-          <PolarGrid stroke="#e5e7eb" />
-          <PolarAngleAxis
-            dataKey="subjectLabel"
-            tick={{ fontSize: compact ? 11 : 13, fill: '#4b5563' }}
-          />
-          <Tooltip
-            formatter={(value, name) => {
-              const label = name === 'current'
-                ? (currentMonth || '이번 달')
-                : (previousMonth || '지난달');
-              return [`${value}점`, label];
-            }}
-            contentStyle={{
-              borderRadius: '8px',
-              border: 'none',
-              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-              fontSize: '13px',
-            }}
-          />
-          {hasPrevious && (
-            <Radar
-              name="previous"
-              dataKey="previous"
-              stroke="#d1d5db"
-              fill="#d1d5db"
-              fillOpacity={0.3}
-              strokeWidth={1.5}
-              strokeDasharray="4 2"
+      <StableChartFrame height={chartHeight}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: chartHeight }}>
+          <RadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+            <PolarGrid stroke="#e5e7eb" />
+            <PolarAngleAxis
+              dataKey="subjectLabel"
+              tick={{ fontSize: compact ? 11 : 13, fill: '#4b5563' }}
             />
-          )}
-          <Radar
-            name="current"
-            dataKey="current"
-            stroke="#7c3aed"
-            fill="#7c3aed"
-            fillOpacity={0.35}
-            strokeWidth={2.5}
-          />
-          {hasPrevious && !compact && (
-            <Legend
-              wrapperStyle={{ fontSize: '12px' }}
-              formatter={(value) =>
-                value === 'current'
+            <Tooltip
+              formatter={(value, name) => {
+                const label = name === 'current'
                   ? (currentMonth || '이번 달')
-                  : (previousMonth || '지난달')
-              }
+                  : (previousMonth || '지난달');
+                return [`${value}점`, label];
+              }}
+              contentStyle={{
+                borderRadius: '8px',
+                border: 'none',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                fontSize: '13px',
+              }}
             />
-          )}
-        </RadarChart>
-      </ResponsiveContainer>
+            {hasPrevious && (
+              <Radar
+                name="previous"
+                dataKey="previous"
+                stroke="#d1d5db"
+                fill="#d1d5db"
+                fillOpacity={0.3}
+                strokeWidth={1.5}
+                strokeDasharray="4 2"
+              />
+            )}
+            <Radar
+              name="current"
+              dataKey="current"
+              stroke="#7c3aed"
+              fill="#7c3aed"
+              fillOpacity={0.35}
+              strokeWidth={2.5}
+            />
+            {hasPrevious && !compact && (
+              <Legend
+                wrapperStyle={{ fontSize: '12px' }}
+                formatter={(value) =>
+                  value === 'current'
+                    ? (currentMonth || '이번 달')
+                    : (previousMonth || '지난달')
+                }
+              />
+            )}
+          </RadarChart>
+        </ResponsiveContainer>
+      </StableChartFrame>
 
       {/* Capability Cards */}
       {!compact && (

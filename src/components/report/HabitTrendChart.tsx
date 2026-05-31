@@ -11,7 +11,6 @@
 
 import { memo } from 'react';
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -25,6 +24,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, BookOpen } from 'lucide-react';
+import StableChartFrame from '@/components/common/StableChartFrame';
 
 interface WeeklyHabitData {
   weekNumber: number;
@@ -44,7 +44,6 @@ interface HabitTrendChartProps {
 
 function HabitTrendChart({
   data,
-  currentWeek,
   showBreakdown = false,
   compact = false,
 }: HabitTrendChartProps) {
@@ -119,8 +118,9 @@ function HabitTrendChart({
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <ComposedChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+      <StableChartFrame height={chartHeight}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: chartHeight }}>
+          <ComposedChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
           <defs>
             <linearGradient id="habitGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -234,8 +234,9 @@ function HabitTrendChart({
               />
             </>
           )}
-        </ComposedChart>
-      </ResponsiveContainer>
+          </ComposedChart>
+        </ResponsiveContainer>
+      </StableChartFrame>
 
       {/* Summary */}
       {!compact && (

@@ -19,13 +19,12 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ReferenceLine,
-  Area,
   ComposedChart,
 } from 'recharts';
 import type { GrowthPrediction } from '@/types';
+import StableChartFrame from '@/components/common/StableChartFrame';
 
 // Animation variants
 const containerVariants = {
@@ -236,8 +235,8 @@ function GrowthTrajectoryChart({
     return (
       <div className="bg-white rounded-lg p-4">
         <h4 className="text-sm font-medium text-gray-700 mb-3">{title}</h4>
-        <div className="h-32">
-          <ResponsiveContainer width="100%" height="100%">
+        <StableChartFrame height={128}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 128 }}>
             <LineChart data={chartData}>
               <Line
                 type="monotone"
@@ -256,7 +255,7 @@ function GrowthTrajectoryChart({
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </StableChartFrame>
       </div>
     );
   }
@@ -285,8 +284,8 @@ function GrowthTrajectoryChart({
         </div>
       </div>
 
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
+      <StableChartFrame height={256}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 256 }}>
           <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
@@ -343,7 +342,7 @@ function GrowthTrajectoryChart({
             />
           </ComposedChart>
         </ResponsiveContainer>
-      </div>
+      </StableChartFrame>
 
       {/* 예측 요약 */}
       {predictions && predictions.length > 0 && (

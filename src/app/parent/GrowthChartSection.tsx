@@ -14,6 +14,7 @@ import {
   Radar,
   Legend,
 } from 'recharts';
+import StableChartFrame from '@/components/common/StableChartFrame';
 
 export interface ScoreTrendItem {
   date: string;
@@ -98,8 +99,8 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
 
       {/* 성적 추이 차트 */}
       {visibleTab === 'trend' && scoreTrend.length > 0 && (
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <StableChartFrame height={288}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 288 }}>
             <AreaChart
               data={scoreTrend}
               margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
@@ -155,7 +156,7 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </StableChartFrame>
       )}
 
       {/* 수학 역량 레이더 차트 */}
@@ -169,8 +170,8 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
       )}
 
       {visibleTab === 'capability' && mathCapabilityData && (
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <StableChartFrame height={288}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 288 }}>
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={mathCapabilityData}>
               <PolarGrid stroke="#e5e7eb" />
               <PolarAngleAxis
@@ -208,7 +209,7 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
               />
             </RadarChart>
           </ResponsiveContainer>
-        </div>
+        </StableChartFrame>
       )}
 
       {/* 추이 요약 */}

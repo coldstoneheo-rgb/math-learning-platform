@@ -24,6 +24,7 @@ import {
   PieChart,
   Pie,
 } from 'recharts';
+import StableChartFrame from '@/components/common/StableChartFrame';
 
 // Animation variants
 const containerVariants = {
@@ -109,32 +110,6 @@ function getVulnerabilityLabel(score: number): string {
   return '양호';
 }
 
-// 커스텀 툴팁
-function CustomTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<{ value: number; payload: ErrorTypeData }>;
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-
-  const data = payload[0].payload;
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-      <p className="text-sm font-medium text-gray-900">{data.type}</p>
-      <p className="text-lg font-bold" style={{ color: ERROR_TYPE_COLORS[data.type] }}>
-        {data.frequency}%
-      </p>
-      {data.recentTrend && (
-        <p className="text-xs mt-1">
-          <TrendIcon trend={data.recentTrend} />
-        </p>
-      )}
-    </div>
-  );
-}
-
 function ErrorPatternTrend({
   primaryErrorTypes = [],
   signaturePatterns = [],
@@ -209,8 +184,8 @@ function ErrorPatternTrend({
           <h4 className="text-sm font-medium text-gray-700 mb-3">오류 유형 분포</h4>
           <div className="flex flex-col md:flex-row gap-4">
             {/* 파이 차트 */}
-            <div className="h-48 w-full md:w-1/2 mx-auto max-w-[250px] md:max-w-none">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <StableChartFrame height={192} className="mx-auto max-w-[250px] md:max-w-none md:w-1/2">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 192 }}>
                 <PieChart>
                   <Pie
                     data={pieData}
@@ -236,7 +211,7 @@ function ErrorPatternTrend({
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-            </div>
+            </StableChartFrame>
 
             {/* 오류 유형 리스트 */}
             <div className="space-y-2 w-full md:w-1/2">
@@ -281,8 +256,8 @@ function ErrorPatternTrend({
       {sortedVulnerabilities.length > 0 && (
         <div className="mb-6">
           <h4 className="text-sm font-medium text-gray-700 mb-3">영역별 취약도</h4>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
+          <StableChartFrame height={192}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 192 }}>
               <BarChart
                 data={sortedVulnerabilities}
                 layout="vertical"
@@ -304,7 +279,7 @@ function ErrorPatternTrend({
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </StableChartFrame>
 
           {/* 취약도 범례 */}
           <div className="flex justify-center gap-4 mt-3 text-xs">
