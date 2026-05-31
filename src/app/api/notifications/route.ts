@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 import {
   sendReportNotification,
   sendStudyPlanNotification,
@@ -19,11 +20,9 @@ import type { ReportType } from '@/types';
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
-  // 인증 확인
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireTeacherOrSuperAdmin(supabase);
+  if (!auth.ok) return auth.response;
+  const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
 
   const body = await request.json();
   const { type, data } = body;
@@ -38,13 +37,13 @@ export async function POST(request: NextRequest) {
   try {
     switch (type) {
       case 'report':
-        return await handleReportNotification(supabase, data);
+        return await handleReportNotification(db, data);
 
       case 'study_plan':
-        return await handleStudyPlanNotification(supabase, data);
+        return await handleStudyPlanNotification(db, data);
 
       case 'weekly_reminder':
-        return await handleWeeklyReminder(supabase, data);
+        return await handleWeeklyReminder(db, data);
 
       default:
         return NextResponse.json(
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
  * 리포트 알림 처리
  */
 async function handleReportNotification(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof createAdminClient>,
   data: { reportId: number; studentId: number }
 ) {
   const { reportId, studentId } = data;
@@ -81,6 +80,13 @@ async function handleReportNotification(
     return NextResponse.json(
       { error: '리포트를 찾을 수 없습니다.' },
       { status: 404 }
+    );
+  }
+
+  if (report.student_id !== Number(studentId)) {
+    return NextResponse.json(
+      { error: '리포트와 학생 정보가 일치하지 않습니다.' },
+      { status: 400 }
     );
   }
 
@@ -199,7 +205,7 @@ async function handleReportNotification(
  * 학습 계획 알림 처리
  */
 async function handleStudyPlanNotification(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof createAdminClient>,
   data: { planId: number; studentId: number }
 ) {
   const { planId, studentId } = data;
@@ -292,7 +298,7 @@ async function handleStudyPlanNotification(
  * 주간 리마인더 처리
  */
 async function handleWeeklyReminder(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof createAdminClient>,
   data: { studentId: number }
 ) {
   const { studentId } = data;

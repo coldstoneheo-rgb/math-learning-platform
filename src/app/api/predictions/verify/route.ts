@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 
 // 예측 검증 실행 (자동 또는 수동)
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
+
     const body = await request.json();
 
     const { studentId } = body;
     const today = new Date().toISOString().split('T')[0];
 
     // 검증 대상 예측 조회 (target_date가 지났고 아직 검증 안 된 것)
-    let query = supabase
+    let query = db
       .from('prediction_verification')
       .select(`
         *,
@@ -47,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     for (const prediction of pendingPredictions) {
       // 해당 학생의 target_date 이후 가장 가까운 시험 결과 찾기
-      const { data: nearbyTests, error: testError } = await supabase
+      const { data: nearbyTests, error: testError } = await db
         .from('reports')
         .select('id, test_date, total_score, max_score, test_name')
         .eq('student_id', prediction.student_id)
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
         const isAccurate = errorPercentage <= 10;
 
         // 예측 검증 결과 업데이트
-        const { error: updateError } = await supabase
+        const { error: updateError } = await db
           .from('prediction_verification')
           .update({
             actual_score: actualScore,
@@ -137,19 +142,23 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
+
     const { searchParams } = new URL(request.url);
 
     const studentId = searchParams.get('studentId');
 
     // RPC 함수 호출 (마이그레이션에서 생성)
-    const { data: stats, error } = await supabase.rpc(
+    const { data: stats, error } = await db.rpc(
       'get_prediction_accuracy_stats',
       studentId ? { p_student_id: parseInt(studentId) } : {}
     );
 
     if (error) {
       // RPC 함수가 없는 경우 직접 계산
-      let query = supabase
+      let query = db
         .from('prediction_verification')
         .select('*')
         .not('actual_score', 'is', null);

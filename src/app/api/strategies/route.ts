@@ -1,17 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
+
+async function assertReportBelongsToStudent(
+  supabase: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof createAdminClient>,
+  reportId: number,
+  studentId: number
+): Promise<NextResponse | null> {
+  const { data: report, error } = await supabase
+    .from('reports')
+    .select('id, student_id')
+    .eq('id', reportId)
+    .single();
+
+  if (error || !report) {
+    return NextResponse.json({ success: false, error: 'Report not found' }, { status: 404 });
+  }
+
+  if (report.student_id !== studentId) {
+    return NextResponse.json(
+      { success: false, error: 'reportId does not belong to studentId' },
+      { status: 400 }
+    );
+  }
+
+  return null;
+}
 
 // 전략 추적 데이터 조회
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
+
     const { searchParams } = new URL(request.url);
 
     const studentId = searchParams.get('studentId');
     const reportId = searchParams.get('reportId');
     const status = searchParams.get('status');
 
-    let query = supabase
+    let query = db
       .from('strategy_tracking')
       .select(`
         *,
@@ -66,6 +96,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+    const db = auth.user.role === 'super_admin' ? createAdminClient() : supabase;
+
     const body = await request.json();
 
     const { reportId, studentId, strategies } = body;
@@ -77,8 +111,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const ownershipError = await assertReportBelongsToStudent(db, Number(reportId), Number(studentId));
+    if (ownershipError) return ownershipError;
+
     // 기존 전략 데이터가 있는지 확인
-    const { data: existingStrategies } = await supabase
+    const { data: existingStrategies } = await db
       .from('strategy_tracking')
       .select('id')
       .eq('report_id', reportId);
@@ -100,7 +137,7 @@ export async function POST(request: NextRequest) {
       execution_status: 'pending',
     }));
 
-    const { data: insertedStrategies, error } = await supabase
+    const { data: insertedStrategies, error } = await db
       .from('strategy_tracking')
       .insert(strategyRecords)
       .select();
