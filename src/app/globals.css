@@ -714,7 +714,10 @@ html.dark .via-purple-50 {
 }
 
 html.dark .via-emerald-50,
-html.dark .via-green-50,
+html.dark .via-green-50 {
+  --tw-gradient-via: rgba(16, 185, 129, 0.14) var(--tw-gradient-via-position) !important;
+}
+
 html.dark .via-teal-50,
 html.dark .via-cyan-50 {
   --tw-gradient-via: rgba(20, 184, 166, 0.14) var(--tw-gradient-via-position) !important;
@@ -812,14 +815,20 @@ html.dark .text-slate-500 {
   color: var(--text-secondary) !important;
 }
 
+html.dark .text-indigo-900,
+html.dark .text-indigo-800,
 html.dark .text-indigo-700,
 html.dark .text-indigo-600,
 html.dark .text-indigo-500,
 html.dark .text-indigo-400,
+html.dark .text-blue-900,
+html.dark .text-blue-800,
 html.dark .text-blue-700,
 html.dark .text-blue-600,
 html.dark .text-blue-500,
 html.dark .text-blue-400,
+html.dark .text-cyan-900,
+html.dark .text-cyan-800,
 html.dark .text-cyan-700,
 html.dark .text-cyan-600,
 html.dark .text-cyan-500,
@@ -827,14 +836,20 @@ html.dark .text-cyan-400 {
   color: #8fc7ff !important;
 }
 
+html.dark .text-violet-900,
+html.dark .text-violet-800,
 html.dark .text-violet-700,
 html.dark .text-violet-600,
 html.dark .text-violet-500,
 html.dark .text-violet-400,
+html.dark .text-purple-900,
+html.dark .text-purple-800,
 html.dark .text-purple-700,
 html.dark .text-purple-600,
 html.dark .text-purple-500,
 html.dark .text-purple-400,
+html.dark .text-fuchsia-900,
+html.dark .text-fuchsia-800,
 html.dark .text-fuchsia-700,
 html.dark .text-fuchsia-600,
 html.dark .text-fuchsia-500,
@@ -842,16 +857,19 @@ html.dark .text-fuchsia-400 {
   color: #c4b5fd !important;
 }
 
+html.dark .text-emerald-900,
 html.dark .text-emerald-800,
 html.dark .text-emerald-700,
 html.dark .text-emerald-600,
 html.dark .text-emerald-500,
 html.dark .text-emerald-400,
+html.dark .text-green-900,
 html.dark .text-green-800,
 html.dark .text-green-700,
 html.dark .text-green-600,
 html.dark .text-green-500,
 html.dark .text-green-400,
+html.dark .text-teal-900,
 html.dark .text-teal-800,
 html.dark .text-teal-700,
 html.dark .text-teal-600,
@@ -870,6 +888,7 @@ html.dark .text-yellow-700,
 html.dark .text-yellow-600,
 html.dark .text-yellow-500,
 html.dark .text-yellow-400,
+html.dark .text-orange-900,
 html.dark .text-orange-800,
 html.dark .text-orange-700,
 html.dark .text-orange-600,
@@ -878,14 +897,20 @@ html.dark .text-orange-400 {
   color: #fcd34d !important;
 }
 
+html.dark .text-red-900,
+html.dark .text-red-800,
 html.dark .text-red-700,
 html.dark .text-red-600,
 html.dark .text-red-500,
 html.dark .text-red-400,
+html.dark .text-rose-900,
+html.dark .text-rose-800,
 html.dark .text-rose-700,
 html.dark .text-rose-600,
 html.dark .text-rose-500,
 html.dark .text-rose-400,
+html.dark .text-pink-900,
+html.dark .text-pink-800,
 html.dark .text-pink-700,
 html.dark .text-pink-600,
 html.dark .text-pink-500,
