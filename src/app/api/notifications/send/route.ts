@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { getNotificationProvider } from '@/lib/notifications/providers';
-import type { SendNotificationRequest } from '@/types';
+import type { NotificationChannel, SendNotificationRequest, SendNotificationResponse } from '@/types';
 import { NextResponse } from 'next/server';
 
 /**
@@ -11,13 +11,19 @@ import { NextResponse } from 'next/server';
  * - 현재 운영 지원: email, in_app
  * - 카카오 알림톡은 provider 확장 구조만 준비되어 있으며 실제 발송은 비활성 상태
  */
+const KNOWN_CHANNELS: NotificationChannel[] = ['email', 'in_app', 'kakao', 'push'];
+
+function jsonResponse(body: SendNotificationResponse, init?: ResponseInit) {
+  return NextResponse.json(body, init);
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return jsonResponse({ success: false, error: 'Unauthorized', status: 'failed' }, { status: 401 });
     }
 
     const { data: userData } = await supabase
@@ -27,7 +33,7 @@ export async function POST(request: Request) {
       .single();
 
     if (!userData || userData.role !== 'teacher') {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      return jsonResponse({ success: false, error: 'Forbidden', status: 'failed' }, { status: 403 });
     }
 
     const body: SendNotificationRequest = await request.json();
@@ -43,8 +49,15 @@ export async function POST(request: Request) {
     } = body;
 
     if (!recipientUserId || !title || !message || !channel) {
-      return NextResponse.json(
-        { success: false, error: 'recipientUserId, title, message, channel are required' },
+      return jsonResponse(
+        { success: false, channel, status: 'failed', error: 'recipientUserId, title, message, channel are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!KNOWN_CHANNELS.includes(channel)) {
+      return jsonResponse(
+        { success: false, channel, status: 'failed', error: `Unsupported channel: ${channel}` },
         { status: 400 }
       );
     }
@@ -67,8 +80,8 @@ export async function POST(request: Request) {
 
     if (insertError || !notificationRecord) {
       console.error('[notifications/send] DB insert error:', insertError);
-      return NextResponse.json(
-        { success: false, error: 'Failed to create notification record' },
+      return jsonResponse(
+        { success: false, channel, status: 'failed', error: 'Failed to create notification record' },
         { status: 500 }
       );
     }
@@ -98,12 +111,14 @@ export async function POST(request: Request) {
     }
 
     if (result.success) {
-      return NextResponse.json({ success: true, notificationId });
+      return jsonResponse({ success: true, notificationId, channel, status: 'sent' });
     }
 
-    return NextResponse.json(
+    return jsonResponse(
       {
         success: false,
+        channel,
+        status: 'failed',
         error: result.error ?? 'Notification sending failed',
         providerResponse: result.providerResponse,
         notificationId,
@@ -112,6 +127,6 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error('[notifications/send] Unexpected error:', error);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return jsonResponse({ success: false, error: 'Internal server error', status: 'failed' }, { status: 500 });
   }
 }

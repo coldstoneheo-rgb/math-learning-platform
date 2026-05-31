@@ -2159,3 +2159,18 @@ export interface SendNotificationRequest {
   };
 }
 
+/**
+ * SendNotificationResponse - 알림 발송 API 응답 타입
+ *
+ * provider 실패도 notification record에는 failed 상태로 남을 수 있으므로,
+ * 클라이언트는 HTTP status와 함께 이 응답의 status/error를 확인해야 한다.
+ */
+export interface SendNotificationResponse {
+  success: boolean;
+  notificationId?: number | null;
+  channel?: NotificationChannel | string;
+  status?: Extract<NotificationStatus, 'sent' | 'failed'>;
+  error?: string;
+  providerResponse?: Record<string, unknown>;
+}
+

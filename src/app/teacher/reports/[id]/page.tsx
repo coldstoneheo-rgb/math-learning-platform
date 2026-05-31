@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -29,7 +29,6 @@ import {
 
 const GrowthTrajectoryChart = dynamic(() => import('@/components/report').then(mod => mod.GrowthTrajectoryChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
 const ErrorPatternTrend = dynamic(() => import('@/components/report').then(mod => mod.ErrorPatternTrend), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
-const HabitTrendChart = dynamic(() => import('@/components/report').then(mod => mod.HabitTrendChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
 const GrowthProjectionChart = dynamic(() => import('@/components/report/premium').then(mod => mod.GrowthProjectionChart), { ssr: false, loading: () => <ChartSkeleton height={300} /> });
 import {
   calculateHabitScore,
@@ -42,12 +41,13 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import { FEATURE_FLAGS, isFeatureEnabledForUser } from '@/lib/feature-flags';
+import { summarizeNotificationSendResults } from '@/lib/notifications/results';
 import {
   getDisplayableDerivedGuidance,
   getVerifiedGuidanceDisplayStatus,
   summarizeProcessingTrace,
 } from '@/lib/teacher-verified-analysis';
-import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport, ReportProcessingStatus } from '@/types';
+import type { User, Report, Student, AnalysisData, LevelTestAnalysis, WeeklyReportAnalysis, MonthlyReportAnalysis, SemiAnnualReportAnalysis, AnnualReportAnalysis, SelfAnalysisReport, ReportProcessingStatus, NotificationChannel, SendNotificationResponse } from '@/types';
 
 interface ReportWithStudent extends Report {
   students: Student;
@@ -102,11 +102,7 @@ export default function ReportDetailPage() {
   const reportContentRef = useRef<HTMLDivElement>(null);
   const { toasts, addToast, removeToast } = useToast();
 
-  useEffect(() => {
-    checkAuthAndLoadReport();
-  }, [reportId]);
-
-  const checkAuthAndLoadReport = async () => {
+  const checkAuthAndLoadReport = useCallback(async () => {
     const supabase = createClient();
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
@@ -143,7 +139,11 @@ export default function ReportDetailPage() {
 
     setReport(reportData);
     setLoading(false);
-  };
+  }, [addToast, reportId, router]);
+
+  useEffect(() => {
+    checkAuthAndLoadReport();
+  }, [checkAuthAndLoadReport]);
 
   const getGradeLabel = (grade: number): string => {
     if (grade <= 6) return `초${grade}`;
@@ -168,8 +168,8 @@ export default function ReportDetailPage() {
       .eq('id', parentId)
       .single();
 
-    if (!parentData?.email) {
-      addToast('학부모 이메일 정보를 찾을 수 없습니다.', 'error');
+    if (!parentData) {
+      addToast('학부모 계정 정보를 찾을 수 없습니다.', 'error');
       return;
     }
 
@@ -179,53 +179,87 @@ export default function ReportDetailPage() {
       const title = `📊 ${studentName} 학생의 새 리포트가 도착했습니다`;
       const message = `${studentName} 학생의 "${report.test_name || '리포트'}" 분석이 완료되었습니다. 리포트를 확인하세요.`;
 
-      const responses = await Promise.all([
-        fetch('/api/notifications/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipientUserId: parentId,
-            title,
-            message,
-            channel: 'in_app',
-            relatedResourceType: 'report',
-            relatedResourceId: reportId,
+      const requests: Array<{
+        channel: NotificationChannel;
+        promise: Promise<Response>;
+      }> = [
+        {
+          channel: 'in_app',
+          promise: fetch('/api/notifications/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipientUserId: parentId,
+              title,
+              message,
+              channel: 'in_app',
+              relatedResourceType: 'report',
+              relatedResourceId: reportId,
+            }),
           }),
-        }),
-        fetch('/api/notifications/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipientUserId: parentId,
-            title,
-            message,
-            channel: 'email',
-            relatedResourceType: 'report',
-            relatedResourceId: reportId,
-            emailData: {
-              recipientEmail: parentData.email,
-              recipientName: parentData.name || '학부모',
-              studentName,
-              reportId: parseInt(reportId, 10),
-            },
+        },
+      ];
+      const skippedReasons: string[] = [];
+
+      if (parentData.email) {
+        requests.push({
+          channel: 'email',
+          promise: fetch('/api/notifications/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipientUserId: parentId,
+              title,
+              message,
+              channel: 'email',
+              relatedResourceType: 'report',
+              relatedResourceId: reportId,
+              emailData: {
+                recipientEmail: parentData.email,
+                recipientName: parentData.name || '학부모',
+                studentName,
+                reportId: parseInt(reportId, 10),
+              },
+            }),
           }),
-        }),
-      ]);
+        });
+      } else {
+        skippedReasons.push('학부모 이메일이 없어 이메일은 건너뛰었습니다.');
+      }
 
       const results = await Promise.all(
-        responses.map(async (response) => ({
-          ok: response.ok,
-          body: await response.json().catch(() => ({} as { error?: string })),
-        }))
+        requests.map(async ({ channel, promise }) => {
+          try {
+            const response = await promise;
+            const body = await response.json().catch(() => ({} as SendNotificationResponse));
+            return {
+              channel,
+              ok: response.ok && body.success === true && body.status === 'sent',
+              status: body.status,
+              error: body.error,
+            };
+          } catch (error) {
+            return {
+              channel,
+              ok: false,
+              status: 'failed' as const,
+              error: error instanceof Error ? error.message : 'Network error',
+            };
+          }
+        })
       );
-      const failed = results.filter(result => !result.ok || result.body?.error);
+      const summary = summarizeNotificationSendResults(
+        results,
+        parentData.name || '학부모',
+        skippedReasons
+      );
 
-      if (failed.length > 0) {
-        addToast(`알림 ${results.length - failed.length}건 성공, ${failed.length}건 실패했습니다.`, 'error');
+      if (summary.tone === 'failed') {
+        addToast(summary.message, 'error');
         return;
       }
 
-      addToast(`${parentData.name || '학부모'}님께 인앱/이메일 알림을 발송했습니다.`, 'success');
+      addToast(summary.message, summary.tone === 'partial' ? 'error' : 'success');
     } catch (error) {
       console.error('알림 발송 오류:', error);
       addToast('알림 발송 중 오류가 발생했습니다.', 'error');
@@ -254,7 +288,7 @@ export default function ReportDetailPage() {
     ? (report?.analysis_data as AnnualReportAnalysis)
     : null;
   const notificationsEnabled = user
-    ? isFeatureEnabledForUser(FEATURE_FLAGS.PARENT_NOTIFICATIONS, user.id, 'teacher')
+    ? user.role === 'teacher' && isFeatureEnabledForUser(FEATURE_FLAGS.PARENT_NOTIFICATIONS, user.id, 'teacher')
     : false;
   const verificationStatusInfo = getVerifiedGuidanceDisplayStatus(analysis);
   const processingTrace = analysis?.processingTrace;
