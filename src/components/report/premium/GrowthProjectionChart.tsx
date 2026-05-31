@@ -26,6 +26,7 @@ import {
 } from 'recharts';
 import { TrendingUp, Target, Calendar, Info, Rocket } from 'lucide-react';
 import StableChartFrame from '@/components/common/StableChartFrame';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 interface DataPoint {
   date: string;
@@ -250,21 +251,21 @@ function GrowthProjectionChart({
               </linearGradient>
             </defs>
 
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
 
             <XAxis
               dataKey="date"
               tickFormatter={formatChartMonth}
-              tick={{ fontSize: 11, fill: '#64748b' }}
-              axisLine={{ stroke: '#cbd5e1' }}
-              tickLine={{ stroke: '#cbd5e1' }}
+              tick={{ fontSize: 11, fill: CHART_THEME.axis }}
+              axisLine={{ stroke: CHART_THEME.grid }}
+              tickLine={{ stroke: CHART_THEME.grid }}
             />
 
             <YAxis
               domain={[50, 100]}
-              tick={{ fontSize: 11, fill: '#64748b' }}
-              axisLine={{ stroke: '#cbd5e1' }}
-              tickLine={{ stroke: '#cbd5e1' }}
+              tick={{ fontSize: 11, fill: CHART_THEME.axis }}
+              axisLine={{ stroke: CHART_THEME.grid }}
+              tickLine={{ stroke: CHART_THEME.grid }}
             />
 
             <Tooltip content={<GrowthProjectionTooltip />} />

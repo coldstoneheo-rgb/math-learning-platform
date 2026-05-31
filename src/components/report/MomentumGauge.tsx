@@ -12,6 +12,7 @@
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Rocket, TrendingUp, AlertCircle, Sparkles } from 'lucide-react';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 type MomentumStatus = 'rising' | 'steady' | 'needs_attention';
 
@@ -71,7 +72,7 @@ function MomentumGauge({
     }
   }, [status]);
 
-  const { Icon, emoji, angle, bgColor, textColor, borderColor, gaugeGradient } = config;
+  const { emoji, angle, bgColor, textColor, borderColor, gaugeGradient } = config;
 
   if (compact) {
     return (
@@ -128,7 +129,7 @@ function MomentumGauge({
             <path
               d="M 10 55 A 40 40 0 0 1 90 55"
               fill="none"
-              stroke="#e5e7eb"
+              stroke={CHART_THEME.grid}
               strokeWidth="8"
               strokeLinecap="round"
             />

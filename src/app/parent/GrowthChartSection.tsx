@@ -15,6 +15,7 @@ import {
   Legend,
 } from 'recharts';
 import StableChartFrame from '@/components/common/StableChartFrame';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 export interface ScoreTrendItem {
   date: string;
@@ -52,7 +53,7 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
       {/* 헤더 및 탭 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -111,21 +112,21 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
               <XAxis
                 dataKey="displayDate"
-                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tick={{ fontSize: 12, fill: CHART_THEME.axis }}
                 tickLine={false}
-                axisLine={{ stroke: '#e5e7eb' }}
+                axisLine={{ stroke: CHART_THEME.grid }}
                 angle={-45}
                 textAnchor="end"
                 height={60}
               />
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tick={{ fontSize: 12, fill: CHART_THEME.axis }}
                 tickLine={false}
-                axisLine={{ stroke: '#e5e7eb' }}
+                axisLine={{ stroke: CHART_THEME.grid }}
                 tickFormatter={(value) => `${value}%`}
               />
               <Tooltip
@@ -173,15 +174,15 @@ export default function GrowthChartSection({ scoreTrend, mathCapability, growthR
         <StableChartFrame height={288}>
           <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 288 }}>
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={mathCapabilityData}>
-              <PolarGrid stroke="#e5e7eb" />
+              <PolarGrid stroke={CHART_THEME.grid} />
               <PolarAngleAxis
                 dataKey="subject"
-                tick={{ fontSize: 12, fill: '#374151' }}
+                tick={{ fontSize: 12, fill: CHART_THEME.axis }}
               />
               <PolarRadiusAxis
                 angle={90}
                 domain={[0, 100]}
-                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tick={{ fontSize: 10, fill: CHART_THEME.muted }}
                 tickCount={5}
               />
               <Radar

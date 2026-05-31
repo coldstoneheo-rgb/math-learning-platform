@@ -25,6 +25,7 @@ import {
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, BookOpen } from 'lucide-react';
 import StableChartFrame from '@/components/common/StableChartFrame';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 interface WeeklyHabitData {
   weekNumber: number;
@@ -127,16 +128,16 @@ function HabitTrendChart({
               <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} vertical={false} />
           <XAxis
             dataKey="weekLabel"
-            tick={{ fontSize: 11, fill: '#6b7280' }}
+            tick={{ fontSize: 11, fill: CHART_THEME.axis }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
             domain={[0, 100]}
-            tick={{ fontSize: 11, fill: '#6b7280' }}
+            tick={{ fontSize: 11, fill: CHART_THEME.axis }}
             tickLine={false}
             axisLine={false}
             tickFormatter={(v) => `${v}`}
@@ -144,7 +145,9 @@ function HabitTrendChart({
           <Tooltip
             contentStyle={{
               borderRadius: '8px',
-              border: 'none',
+              border: `1px solid ${CHART_THEME.tooltipBorder}`,
+              backgroundColor: CHART_THEME.tooltipBg,
+              color: CHART_THEME.textPrimary,
               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
               fontSize: '13px',
             }}
@@ -177,13 +180,13 @@ function HabitTrendChart({
           {/* 평균선 */}
           <ReferenceLine
             y={avgScore}
-            stroke="#9ca3af"
+            stroke={CHART_THEME.muted}
             strokeDasharray="5 5"
             label={{
               value: `평균 ${avgScore}`,
               position: 'right',
               fontSize: 10,
-              fill: '#9ca3af',
+              fill: CHART_THEME.muted,
             }}
           />
 

@@ -11,6 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 interface StrategyEffectiveness {
   type: string;
@@ -61,9 +62,9 @@ export default function TeacherAnalyticsCharts({
           {scoresTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={scoresTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis domain={[0, 100]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+                <XAxis dataKey="month" tick={{ fill: CHART_THEME.axis }} axisLine={{ stroke: CHART_THEME.grid }} tickLine={{ stroke: CHART_THEME.grid }} />
+                <YAxis domain={[0, 100]} tick={{ fill: CHART_THEME.axis }} axisLine={{ stroke: CHART_THEME.grid }} tickLine={{ stroke: CHART_THEME.grid }} />
                 <Tooltip />
                 <Legend />
                 <Line
@@ -89,9 +90,9 @@ export default function TeacherAnalyticsCharts({
           {strategyEffectiveness.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={strategyEffectiveness}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="type" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+                <XAxis dataKey="type" tick={{ fill: CHART_THEME.axis }} axisLine={{ stroke: CHART_THEME.grid }} tickLine={{ stroke: CHART_THEME.grid }} />
+                <YAxis tick={{ fill: CHART_THEME.axis }} axisLine={{ stroke: CHART_THEME.grid }} tickLine={{ stroke: CHART_THEME.grid }} />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="avgImprovement" name="평균 개선율(%)" fill="#6366f1" />
@@ -114,9 +115,9 @@ export default function TeacherAnalyticsCharts({
           {predictionStats.length > 0 && predictionStats.some(s => s.verified_count > 0) ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={predictionStats.filter(s => s.verified_count > 0)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="timeframe" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+                <XAxis dataKey="timeframe" tick={{ fill: CHART_THEME.axis }} axisLine={{ stroke: CHART_THEME.grid }} tickLine={{ stroke: CHART_THEME.grid }} />
+                <YAxis tick={{ fill: CHART_THEME.axis }} axisLine={{ stroke: CHART_THEME.grid }} tickLine={{ stroke: CHART_THEME.grid }} />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="accuracy_rate" name="정확도(%)" fill="#8b5cf6" />
@@ -140,9 +141,9 @@ export default function TeacherAnalyticsCharts({
                 layout="vertical"
                 margin={{ left: 80 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="concept" type="category" width={80} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+                <XAxis type="number" tick={{ fill: CHART_THEME.axis }} axisLine={{ stroke: CHART_THEME.grid }} tickLine={{ stroke: CHART_THEME.grid }} />
+                <YAxis dataKey="concept" type="category" width={80} tick={{ fill: CHART_THEME.axis }} axisLine={{ stroke: CHART_THEME.grid }} tickLine={{ stroke: CHART_THEME.grid }} />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="totalImprovement" name="총 개선율(%)" fill="#06b6d4" />

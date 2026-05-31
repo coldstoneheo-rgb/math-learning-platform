@@ -25,6 +25,7 @@ import {
 } from 'recharts';
 import type { GrowthPrediction } from '@/types';
 import StableChartFrame from '@/components/common/StableChartFrame';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 // Animation variants
 const containerVariants = {
@@ -287,17 +288,17 @@ function GrowthTrajectoryChart({
       <StableChartFrame height={256}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 256 }}>
           <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
             <XAxis
               dataKey="date"
               tickFormatter={(value) => formatDate(value)}
-              tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              tick={{ fontSize: 12, fill: CHART_THEME.axis }}
+              stroke={CHART_THEME.grid}
             />
             <YAxis
               domain={[minScore, maxScore]}
-              tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              tick={{ fontSize: 12, fill: CHART_THEME.axis }}
+              stroke={CHART_THEME.grid}
               tickFormatter={(value) => `${value}점`}
             />
             <Tooltip content={<CustomTooltip />} />

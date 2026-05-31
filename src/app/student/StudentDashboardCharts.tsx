@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis,
   PolarRadiusAxis, Radar,
 } from 'recharts';
+import { CHART_THEME } from '@/lib/chart-theme';
 
 interface ScoreTrendItem {
   name: string;
@@ -33,11 +34,27 @@ export default function StudentDashboardCharts({ scoreTrendData, capabilityView 
         {scoreTrendData.length > 0 ? (
           <ResponsiveContainer width="100%" height={240} minWidth={0}>
             <LineChart data={scoreTrendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: CHART_THEME.axis }}
+                axisLine={{ stroke: CHART_THEME.grid }}
+                tickLine={{ stroke: CHART_THEME.grid }}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={{ fontSize: 11, fill: CHART_THEME.axis }}
+                axisLine={{ stroke: CHART_THEME.grid }}
+                tickLine={{ stroke: CHART_THEME.grid }}
+              />
               <Tooltip
-                contentStyle={{ borderRadius: '8px', fontSize: '13px' }}
+                contentStyle={{
+                  borderRadius: '8px',
+                  border: `1px solid ${CHART_THEME.tooltipBorder}`,
+                  backgroundColor: CHART_THEME.tooltipBg,
+                  color: CHART_THEME.textPrimary,
+                  fontSize: '13px',
+                }}
                 formatter={(value) => [`${value ?? 0}점`, '점수']}
               />
               <Line
@@ -59,9 +76,9 @@ export default function StudentDashboardCharts({ scoreTrendData, capabilityView 
         {capabilityView?.status === 'available' ? (
           <ResponsiveContainer width="100%" height={240} minWidth={0}>
             <RadarChart data={capabilityView.data}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} />
+              <PolarGrid stroke={CHART_THEME.grid} />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: CHART_THEME.axis }} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10, fill: CHART_THEME.muted }} />
               <Radar name="역량" dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.5} />
             </RadarChart>
           </ResponsiveContainer>
