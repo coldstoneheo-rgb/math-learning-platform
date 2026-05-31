@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 import {
   sendReportNotification,
   sendStudyPlanNotification,
@@ -19,11 +20,8 @@ import type { ReportType } from '@/types';
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
-  // 인증 확인
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireTeacherOrSuperAdmin(supabase);
+  if (!auth.ok) return auth.response;
 
   const body = await request.json();
   const { type, data } = body;
@@ -81,6 +79,13 @@ async function handleReportNotification(
     return NextResponse.json(
       { error: '리포트를 찾을 수 없습니다.' },
       { status: 404 }
+    );
+  }
+
+  if (report.student_id !== studentId) {
+    return NextResponse.json(
+      { error: '리포트와 학생 정보가 일치하지 않습니다.' },
+      { status: 400 }
     );
   }
 

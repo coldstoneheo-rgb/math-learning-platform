@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -9,6 +10,9 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+
     const { id } = await params;
 
     const { data: strategy, error } = await supabase
@@ -43,6 +47,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+
     const { id } = await params;
     const body = await request.json();
 
@@ -124,6 +131,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+
     const { id } = await params;
 
     const { error } = await supabase

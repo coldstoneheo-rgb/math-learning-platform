@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 import type { StudyPlanInput, StudyTaskInput } from '@/types';
 
 /**
@@ -55,14 +56,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
-  // 인증 확인
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireTeacherOrSuperAdmin(supabase);
+  if (!auth.ok) return auth.response;
 
   const body = await request.json();
   const { plan, tasks }: { plan: StudyPlanInput; tasks?: Omit<StudyTaskInput, 'study_plan_id'>[] } = body;
+
+  if (plan.report_id) {
+    const { data: report, error: reportError } = await supabase
+      .from('reports')
+      .select('id, student_id')
+      .eq('id', plan.report_id)
+      .single();
+
+    if (reportError || !report) {
+      return NextResponse.json({ error: '리포트를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    if (report.student_id !== plan.student_id) {
+      return NextResponse.json(
+        { error: '리포트와 학생 정보가 일치하지 않습니다.' },
+        { status: 400 }
+      );
+    }
+  }
 
   // 학습 계획 생성
   const { data: createdPlan, error: planError } = await supabase

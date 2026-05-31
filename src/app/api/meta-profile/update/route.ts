@@ -51,7 +51,7 @@ export async function POST(
       .eq('id', user.id)
       .single();
 
-    if (!userData || userData.role !== 'teacher') {
+    if (!userData || !['teacher', 'super_admin'].includes(userData.role)) {
       return NextResponse.json(
         { success: false, error: '권한이 없습니다.' },
         { status: 403 }
@@ -65,6 +65,26 @@ export async function POST(
     if (!studentId || !reportId || !analysisData) {
       return NextResponse.json(
         { success: false, error: '필수 정보가 누락되었습니다.' },
+        { status: 400 }
+      );
+    }
+
+    const { data: report, error: reportError } = await supabase
+      .from('reports')
+      .select('id, student_id')
+      .eq('id', reportId)
+      .single();
+
+    if (reportError || !report) {
+      return NextResponse.json(
+        { success: false, error: '리포트를 찾을 수 없습니다.' },
+        { status: 404 }
+      );
+    }
+
+    if (report.student_id !== studentId) {
+      return NextResponse.json(
+        { success: false, error: '리포트와 학생 정보가 일치하지 않습니다.' },
         { status: 400 }
       );
     }

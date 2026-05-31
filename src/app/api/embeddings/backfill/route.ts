@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateEmbeddingsBatch } from '@/lib/embedding-service';
 import { extractEmbeddableTextsFromAny } from '@/lib/embedding-extractor';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,21 +42,8 @@ async function markIndexStatus(
 export async function POST(req: Request) {
   const supabase = await createClient();
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // teacher 권한 확인
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!userData || userData.role !== 'teacher') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const auth = await requireTeacherOrSuperAdmin(supabase);
+  if (!auth.ok) return auth.response;
 
   const body = await req.json().catch(() => ({}));
   const { studentId } = body as { studentId?: number };

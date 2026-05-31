@@ -115,7 +115,7 @@ export default function ParentReportDetailPage() {
       .eq('id', reportId)
       .single();
 
-    if (error || !reportData) {
+    if (error || !reportData || reportData.students?.parent_id !== authUser.id) {
       addToast('리포트를 찾을 수 없거나 접근 권한이 없습니다.', 'error');
       router.push('/parent');
       return;

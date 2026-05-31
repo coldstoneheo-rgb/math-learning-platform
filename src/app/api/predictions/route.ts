@@ -1,10 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
+
+async function assertReportBelongsToStudent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  reportId: number,
+  studentId: number
+): Promise<NextResponse | null> {
+  const { data: report, error } = await supabase
+    .from('reports')
+    .select('id, student_id')
+    .eq('id', reportId)
+    .single();
+
+  if (error || !report) {
+    return NextResponse.json({ success: false, error: 'Report not found' }, { status: 404 });
+  }
+
+  if (report.student_id !== studentId) {
+    return NextResponse.json(
+      { success: false, error: 'reportId does not belong to studentId' },
+      { status: 400 }
+    );
+  }
+
+  return null;
+}
 
 // 예측 데이터 조회
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+
     const { searchParams } = new URL(request.url);
 
     const studentId = searchParams.get('studentId');
@@ -63,6 +92,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
+
     const body = await request.json();
 
     const { reportId, studentId, predictions } = body;
@@ -73,6 +105,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const ownershipError = await assertReportBelongsToStudent(supabase, Number(reportId), Number(studentId));
+    if (ownershipError) return ownershipError;
 
     const predictionDate = new Date();
 
