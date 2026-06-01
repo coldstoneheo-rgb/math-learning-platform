@@ -6,8 +6,14 @@
  */
 
 import { createAdminClient, createClient } from '@/lib/supabase/server';
+import {
+  buildRagDiagnostics,
+  getRagFailureReason,
+  normalizeRagQueryText,
+} from '@/lib/rag-diagnostics';
 import type {
   AnalysisContextData,
+  RagDiagnostics,
   RelevantMemory,
   StudentMetaProfile,
   MicroLoopData,
@@ -57,26 +63,48 @@ export async function buildAnalysisContext(
 
   // RAG 기억 서랍: 의미적으로 유사한 과거 메모리 검색
   let relevantMemories: RelevantMemory[] | undefined;
+  let ragDiagnostics: RagDiagnostics;
+  const queryText = normalizeRagQueryText(options?.queryText);
   if (options?.relevantMemories) {
     relevantMemories = options.relevantMemories;
-  } else if (options?.queryText) {
+    ragDiagnostics = buildRagDiagnostics({
+      queryText,
+      relevantMemories,
+      retrievalSource: 'provided',
+      retrievalAttempted: false,
+    });
+  } else if (queryText) {
     try {
-      relevantMemories = await retrieveRelevantMemories(studentId, options.queryText);
+      relevantMemories = await retrieveRelevantMemories(studentId, queryText);
+      ragDiagnostics = buildRagDiagnostics({
+        queryText,
+        relevantMemories,
+        retrievalSource: 'retrieved',
+        retrievalAttempted: true,
+      });
     } catch (error) {
+      const failureReason = getRagFailureReason(error);
       // RAG 실패해도 분석은 계속 진행
       console.warn('[AnalysisContext] RAG memory retrieval failed:', {
         studentId,
         reportType,
-        error: error instanceof Error ? error.message : 'unknown error',
+        error: failureReason,
+      });
+      ragDiagnostics = buildRagDiagnostics({
+        queryText,
+        retrievalSource: 'failed',
+        retrievalAttempted: true,
+        failureReason,
       });
     }
+  } else {
+    ragDiagnostics = buildRagDiagnostics({ queryText });
   }
 
   console.info('[AnalysisContext] built', {
     studentId,
     reportType,
-    hasQueryText: Boolean(options?.queryText),
-    memoryCount: relevantMemories?.length ?? 0,
+    ragDiagnostics,
     failedSkillCount: failedMicroSkills.length,
     masteredSkillCount: masteredSkills.length,
     recentReportCount: recentReports?.length ?? 0,
@@ -96,6 +124,7 @@ export async function buildAnalysisContext(
     masteredSkills,
     // Phase 3: RAG 기억 서랍
     relevantMemories,
+    ragDiagnostics,
   };
 }
 

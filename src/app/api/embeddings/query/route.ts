@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { buildAnalysisContext, retrieveRelevantMemories } from '@/lib/context-builder';
 import { buildContextPrompt } from '@/lib/gemini';
 import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
+import { buildRagDiagnostics, hasRagMemoryDrawer } from '@/lib/rag-diagnostics';
 import type { ReportType } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,8 @@ export async function POST(req: Request) {
       memories: typeof memories;
       diagnostics: {
         memoryCount: number;
+        ragDiagnostics: ReturnType<typeof buildRagDiagnostics>;
+        contextRagDiagnostics?: ReturnType<typeof buildRagDiagnostics>;
         contextPreviewRequested: boolean;
         ragPromptInjected?: boolean;
         contextPromptExcerpt?: string;
@@ -65,6 +68,12 @@ export async function POST(req: Request) {
       memories,
       diagnostics: {
         memoryCount: memories.length,
+        ragDiagnostics: buildRagDiagnostics({
+          queryText: safeQueryText,
+          relevantMemories: memories,
+          retrievalSource: 'retrieved',
+          retrievalAttempted: true,
+        }),
         contextPreviewRequested: Boolean(includeContextPreview),
       },
     };
@@ -75,7 +84,17 @@ export async function POST(req: Request) {
         relevantMemories: memories,
       });
       const prompt = buildContextPrompt(context);
-      response.diagnostics.ragPromptInjected = prompt.includes('과거 기억 서랍');
+      response.diagnostics.ragPromptInjected = hasRagMemoryDrawer(prompt);
+      response.diagnostics.ragDiagnostics = {
+        ...response.diagnostics.ragDiagnostics,
+        promptInjected: response.diagnostics.ragPromptInjected,
+      };
+      response.diagnostics.contextRagDiagnostics = context.ragDiagnostics
+        ? {
+            ...context.ragDiagnostics,
+            promptInjected: response.diagnostics.ragPromptInjected,
+          }
+        : undefined;
       response.diagnostics.contextPromptExcerpt = prompt.slice(0, 1200);
     }
 
