@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllFlags } from '@/lib/feature-flags';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * 모든 Feature Flag 조회 API (관리자용)
@@ -7,12 +9,9 @@ import { getAllFlags } from '@/lib/feature-flags';
  * GET /api/feature-flags/all
  */
 export async function GET() {
-  // TODO: 관리자 인증 확인
-  // const supabase = await createClient();
-  // const { data: { user } } = await supabase.auth.getUser();
-  // if (!user || user.role !== 'teacher') {
-  //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  // }
+  const supabase = await createClient();
+  const auth = await requireTeacherOrSuperAdmin(supabase);
+  if (!auth.ok) return auth.response;
 
   const flags = getAllFlags();
 
