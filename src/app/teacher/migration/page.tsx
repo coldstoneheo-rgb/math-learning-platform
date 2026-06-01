@@ -31,15 +31,24 @@ function getCurrentYear() {
   return new Date().getFullYear().toString();
 }
 
+function getCurrentDateInputValue() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getCurrentMonthInputValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function toFirstDayOfMonth(month: string) {
-  return month ? `${month}-01` : new Date().toISOString().split('T')[0];
+  return `${month || getCurrentMonthInputValue()}-01`;
 }
 
 function buildBatchPeriod(
   sourceType: LegacySourceType,
   values: { day: string; month: string; year: string; week: string }
 ) {
-  const currentDate = new Date().toISOString().split('T')[0];
+  const currentDate = getCurrentDateInputValue();
   const year = values.year || getCurrentYear();
 
   if (sourceType === '시험지' || sourceType === '일일학습') {
@@ -114,8 +123,8 @@ export default function MigrationPage() {
 
   // 일괄 설정용 상태
   const [batchType, setBatchType] = useState<LegacySourceType>('시험지');
-  const [batchDay, setBatchDay] = useState('');
-  const [batchMonth, setBatchMonth] = useState('');
+  const [batchDay, setBatchDay] = useState(getCurrentDateInputValue);
+  const [batchMonth, setBatchMonth] = useState(getCurrentMonthInputValue);
   const [batchYear, setBatchYear] = useState(getCurrentYear());
   const [batchWeek, setBatchWeek] = useState('1');
 
