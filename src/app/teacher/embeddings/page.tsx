@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
-import type { Student } from '@/types';
+import {
+  getRagDiagnosticsDisplay,
+  type RagDiagnosticsTone,
+} from '@/lib/rag-diagnostics';
+import type { RagDiagnostics, Student } from '@/types';
 
 interface EmbeddingStats {
   studentId: number;
@@ -18,6 +22,42 @@ interface EmbeddingStats {
   lastAttemptedAt: string | null;
   lastError: string | null;
 }
+
+interface QueryDiagnostics {
+  memoryCount: number;
+  ragDiagnostics?: RagDiagnostics;
+  contextRagDiagnostics?: RagDiagnostics;
+  contextPreviewRequested: boolean;
+  ragPromptInjected?: boolean;
+  contextPromptExcerpt?: string;
+}
+
+const toneClasses: Record<RagDiagnosticsTone, {
+  panel: string;
+  badge: string;
+  text: string;
+}> = {
+  success: {
+    panel: 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/30',
+    badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200',
+    text: 'text-emerald-950 dark:text-emerald-100',
+  },
+  warning: {
+    panel: 'border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30',
+    badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200',
+    text: 'text-amber-950 dark:text-amber-100',
+  },
+  danger: {
+    panel: 'border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30',
+    badge: 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200',
+    text: 'text-red-950 dark:text-red-100',
+  },
+  neutral: {
+    panel: 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/50',
+    badge: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100',
+    text: 'text-slate-900 dark:text-slate-100',
+  },
+};
 
 export default function EmbeddingsAdminPage() {
   const router = useRouter();
@@ -31,35 +71,12 @@ export default function EmbeddingsAdminPage() {
     text: string; sourceType: string; reportType: string;
     testDate: string | null; similarity: number;
   }[]>([]);
-  const [queryDiagnostics, setQueryDiagnostics] = useState<{
-    memoryCount: number;
-    contextPreviewRequested: boolean;
-    ragPromptInjected?: boolean;
-    contextPromptExcerpt?: string;
-  } | null>(null);
+  const [queryDiagnostics, setQueryDiagnostics] = useState<QueryDiagnostics | null>(null);
   const [hasQueried, setHasQueried] = useState(false);
   const [queryLoading, setQueryLoading] = useState(false);
   const { toasts, addToast, removeToast } = useToast();
 
-  useEffect(() => {
-    checkAuthAndLoad();
-  }, []);
-
-  const checkAuthAndLoad = async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push('/login'); return; }
-
-    const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
-    if (!userData || !['teacher', 'super_admin'].includes(userData.role)) { router.push('/'); return; }
-
-    const { data: studentList } = await supabase.from('students').select('*').order('name');
-    setStudents(studentList ?? []);
-    await loadStats(studentList ?? []);
-    setLoading(false);
-  };
-
-  const loadStats = async (studentList: Student[]) => {
+  const loadStats = useCallback(async (studentList: Student[]) => {
     const supabase = createClient();
 
     const reportCounts = await supabase
@@ -122,7 +139,25 @@ export default function EmbeddingsAdminPage() {
     }
 
     setStats(Object.values(statsMap).sort((a, b) => a.studentName.localeCompare(b.studentName)));
-  };
+  }, []);
+
+  const checkAuthAndLoad = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push('/login'); return; }
+
+    const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
+    if (!userData || !['teacher', 'super_admin'].includes(userData.role)) { router.push('/'); return; }
+
+    const { data: studentList } = await supabase.from('students').select('*').order('name');
+    setStudents(studentList ?? []);
+    await loadStats(studentList ?? []);
+    setLoading(false);
+  }, [loadStats, router]);
+
+  useEffect(() => {
+    checkAuthAndLoad();
+  }, [checkAuthAndLoad]);
 
   const handleBackfill = async (studentId?: number) => {
     setBackfilling(studentId ?? -1);
@@ -186,49 +221,51 @@ export default function EmbeddingsAdminPage() {
   const totalReports = stats.reduce((s, r) => s + r.totalReports, 0);
   const totalFailed = stats.reduce((s, r) => s + r.failedReports, 0);
   const hasIndexedMemories = totalIndexed > 0;
+  const retrievalDisplay = getRagDiagnosticsDisplay(queryDiagnostics?.ragDiagnostics);
+  const contextDisplay = getRagDiagnosticsDisplay(queryDiagnostics?.contextRagDiagnostics);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
       <Toast toasts={toasts} onRemove={removeToast} />
 
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm dark:border-b dark:border-slate-800 dark:bg-slate-950">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <a href="/teacher" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
-          <h1 className="text-xl font-bold text-gray-900">🧠 RAG 기억 서랍 관리</h1>
+          <a href="/teacher" className="text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200">← 대시보드</a>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-slate-50">🧠 RAG 기억 서랍 관리</h1>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
         {/* 개요 */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl shadow-sm p-5 text-center">
-            <div className="text-3xl font-bold text-indigo-600">{totalIndexed}</div>
-            <div className="text-sm text-gray-500 mt-1">인덱싱된 리포트</div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl bg-white p-5 text-center shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
+            <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-300">{totalIndexed}</div>
+            <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">인덱싱된 리포트</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-5 text-center">
-            <div className="text-3xl font-bold text-gray-700">{totalReports}</div>
-            <div className="text-sm text-gray-500 mt-1">전체 리포트</div>
+          <div className="rounded-xl bg-white p-5 text-center shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
+            <div className="text-3xl font-bold text-gray-700 dark:text-slate-100">{totalReports}</div>
+            <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">전체 리포트</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-5 text-center">
-            <div className="text-3xl font-bold text-green-600">
+          <div className="rounded-xl bg-white p-5 text-center shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
+            <div className="text-3xl font-bold text-green-600 dark:text-emerald-300">
               {totalReports > 0 ? Math.round((totalIndexed / totalReports) * 100) : 0}%
             </div>
-            <div className="text-sm text-gray-500 mt-1">인덱싱 완료율</div>
+            <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">인덱싱 완료율</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-5 text-center">
-            <div className={`text-3xl font-bold ${totalFailed > 0 ? 'text-red-600' : 'text-gray-700'}`}>
+          <div className="rounded-xl bg-white p-5 text-center shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
+            <div className={`text-3xl font-bold ${totalFailed > 0 ? 'text-red-600 dark:text-red-300' : 'text-gray-700 dark:text-slate-100'}`}>
               {totalFailed}
             </div>
-            <div className="text-sm text-gray-500 mt-1">최근 실패</div>
+            <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">최근 실패</div>
           </div>
         </div>
 
         <div className={`rounded-lg border p-4 text-sm ${
           hasIndexedMemories
-            ? 'border-indigo-200 bg-indigo-50 text-indigo-900'
+            ? 'border-indigo-200 bg-indigo-50 text-indigo-900 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-100'
             : totalReports > 0
-              ? 'border-amber-200 bg-amber-50 text-amber-900'
-              : 'border-slate-200 bg-white text-slate-700'
+              ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100'
+              : 'border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
         }`}>
           <div className="font-semibold">
             {hasIndexedMemories
@@ -250,11 +287,11 @@ export default function EmbeddingsAdminPage() {
         </div>
 
         {/* 전체 Backfill */}
-        <div className="bg-white rounded-xl shadow-sm p-5">
+        <div className="rounded-xl bg-white p-5 shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-bold text-gray-900">전체 Backfill</h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="font-bold text-gray-900 dark:text-slate-50">전체 Backfill</h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
                 임베딩이 없는 리포트를 일괄 인덱싱합니다 (최대 50건).
               </p>
             </div>
@@ -269,12 +306,12 @@ export default function EmbeddingsAdminPage() {
         </div>
 
         {/* 학생별 상태 */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b bg-gray-50">
-            <h2 className="font-bold text-gray-900">학생별 인덱싱 현황</h2>
+        <div className="overflow-hidden rounded-xl bg-white shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
+          <div className="border-b bg-gray-50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/80">
+            <h2 className="font-bold text-gray-900 dark:text-slate-50">학생별 인덱싱 현황</h2>
           </div>
           <table className="w-full">
-            <thead className="bg-gray-50 border-b text-xs text-gray-500">
+            <thead className="border-b bg-gray-50 text-xs text-gray-500 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-400">
               <tr>
                 <th className="text-left px-6 py-3">학생</th>
                 <th className="text-center px-4 py-3">인덱싱</th>
@@ -284,21 +321,21 @@ export default function EmbeddingsAdminPage() {
                 <th className="text-right px-6 py-3">액션</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
               {stats.map((s) => {
                 const coverage = s.totalReports > 0
                   ? Math.round((s.indexedReports / s.totalReports) * 100)
                   : 0;
                 return (
-                  <tr key={s.studentId} className="hover:bg-gray-50">
-                    <td className="px-6 py-3 font-medium text-gray-900">{s.studentName}</td>
-                    <td className="px-4 py-3 text-center text-indigo-600 font-bold">{s.indexedReports}</td>
-                    <td className="px-4 py-3 text-center text-gray-600">{s.totalReports}</td>
+                  <tr key={s.studentId} className="hover:bg-gray-50 dark:hover:bg-slate-800/60">
+                    <td className="px-6 py-3 font-medium text-gray-900 dark:text-slate-100">{s.studentName}</td>
+                    <td className="px-4 py-3 text-center font-bold text-indigo-600 dark:text-indigo-300">{s.indexedReports}</td>
+                    <td className="px-4 py-3 text-center text-gray-600 dark:text-slate-300">{s.totalReports}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        coverage === 100 ? 'bg-green-100 text-green-700' :
-                        coverage >= 50 ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
+                        coverage === 100 ? 'bg-green-100 text-green-700 dark:bg-emerald-900/60 dark:text-emerald-200' :
+                        coverage >= 50 ? 'bg-yellow-100 text-yellow-700 dark:bg-amber-900/60 dark:text-amber-200' :
+                        'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-200'
                       }`}>
                         {coverage}%
                       </span>
@@ -306,21 +343,21 @@ export default function EmbeddingsAdminPage() {
                     <td className="px-4 py-3 text-left">
                       {s.failedReports > 0 ? (
                         <div>
-                          <div className="text-xs font-semibold text-red-600">
+                          <div className="text-xs font-semibold text-red-600 dark:text-red-300">
                             실패 {s.failedReports}건
                           </div>
                           {s.lastError && (
-                            <div className="text-xs text-gray-500 truncate max-w-[180px]" title={s.lastError}>
+                            <div className="max-w-[180px] truncate text-xs text-gray-500 dark:text-slate-400" title={s.lastError}>
                               {s.lastError}
                             </div>
                           )}
                         </div>
                       ) : s.lastAttemptedAt ? (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-slate-400">
                           마지막 시도 {new Date(s.lastAttemptedAt).toLocaleDateString('ko-KR')}
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-400">기록 없음</span>
+                        <span className="text-xs text-gray-400 dark:text-slate-500">기록 없음</span>
                       )}
                     </td>
                     <td className="px-6 py-3 text-right">
@@ -328,7 +365,7 @@ export default function EmbeddingsAdminPage() {
                         <button
                           onClick={() => handleBackfill(s.studentId)}
                           disabled={backfilling !== null}
-                          className="text-xs px-3 py-1 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100 disabled:opacity-50"
+                          className="rounded bg-indigo-50 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/70"
                         >
                           {backfilling === s.studentId ? '...' : 'Backfill'}
                         </button>
@@ -342,13 +379,13 @@ export default function EmbeddingsAdminPage() {
         </div>
 
         {/* 검색 테스트 */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="font-bold text-gray-900 mb-4">🔍 기억 검색 테스트</h2>
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="mb-4 font-bold text-gray-900 dark:text-slate-50">🔍 기억 검색 테스트</h2>
           <div className="space-y-3">
             <select
               value={queryStudentId}
               onChange={(e) => setQueryStudentId(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg bg-white text-sm"
+              className="w-full rounded-lg border px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             >
               <option value="">학생 선택</option>
               {students.map((s) => (
@@ -361,7 +398,7 @@ export default function EmbeddingsAdminPage() {
                 value={queryTest}
                 onChange={(e) => setQueryTest(e.target.value)}
                 placeholder="예: 일차방정식 이항 중간고사"
-                className="flex-1 px-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 rounded-lg border px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500"
                 onKeyDown={(e) => e.key === 'Enter' && handleQueryTest()}
               />
               <button
@@ -376,46 +413,83 @@ export default function EmbeddingsAdminPage() {
 
           {queryResults.length > 0 && (
             <div className="mt-4 space-y-2">
-              <p className="text-xs text-gray-500">{queryResults.length}개 결과</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">{queryResults.length}개 결과</p>
               {queryResults.map((r, i) => (
-                <div key={i} className="bg-gray-50 rounded-lg p-3 text-sm">
-                  <div className="flex items-center gap-2 mb-1 text-xs text-gray-500">
-                    <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium">{r.sourceType}</span>
+                <div key={i} className="rounded-lg bg-gray-50 p-3 text-sm dark:border dark:border-slate-800 dark:bg-slate-950">
+                  <div className="mb-1 flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
+                    <span className="rounded bg-indigo-100 px-1.5 py-0.5 font-medium text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-200">{r.sourceType}</span>
                     <span>{r.reportType}</span>
                     {r.testDate && <span>{r.testDate}</span>}
-                    <span className="ml-auto font-semibold text-green-600">
+                    <span className="ml-auto font-semibold text-green-600 dark:text-emerald-300">
                       유사도 {Math.round(r.similarity * 100)}%
                     </span>
                   </div>
-                  <p className="text-gray-700">{r.text}</p>
+                  <p className="text-gray-700 dark:text-slate-200">{r.text}</p>
                 </div>
               ))}
             </div>
           )}
 
           {queryDiagnostics && (
-            <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-900">
+            <div className="mt-4 space-y-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-900 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-100">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="font-semibold">분석 프롬프트 주입 검증</div>
                 <span className={`rounded-full px-2 py-0.5 font-semibold ${
                   queryDiagnostics.ragPromptInjected
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-amber-100 text-amber-700'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
                 }`}>
                   {queryDiagnostics.ragPromptInjected ? '주입 확인' : '주입 미확인'}
                 </span>
               </div>
-              <p className="mt-1 leading-relaxed">
+
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className={`rounded-lg border p-3 ${toneClasses[retrievalDisplay.tone].panel}`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 font-semibold ${toneClasses[retrievalDisplay.tone].badge}`}>
+                      {retrievalDisplay.sourceLabel}
+                    </span>
+                    <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                      {retrievalDisplay.attemptLabel}
+                    </span>
+                  </div>
+                  <div className={`mt-2 font-semibold ${toneClasses[retrievalDisplay.tone].text}`}>
+                    {retrievalDisplay.title}
+                  </div>
+                  <p className={`mt-1 leading-relaxed ${toneClasses[retrievalDisplay.tone].text}`}>
+                    {retrievalDisplay.detail}
+                  </p>
+                </div>
+
+                <div className={`rounded-lg border p-3 ${toneClasses[contextDisplay.tone].panel}`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 font-semibold ${toneClasses[contextDisplay.tone].badge}`}>
+                      {contextDisplay.sourceLabel}
+                    </span>
+                    <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                      {queryDiagnostics.contextPreviewRequested ? '미리보기 생성' : '미리보기 없음'}
+                    </span>
+                  </div>
+                  <div className={`mt-2 font-semibold ${toneClasses[contextDisplay.tone].text}`}>
+                    {contextDisplay.title}
+                  </div>
+                  <p className={`mt-1 leading-relaxed ${toneClasses[contextDisplay.tone].text}`}>
+                    {contextDisplay.detail}
+                  </p>
+                </div>
+              </div>
+
+              <p className="leading-relaxed text-indigo-800 dark:text-indigo-200">
                 검색된 RAG 기억 {queryDiagnostics.memoryCount}건
                 {queryDiagnostics.ragPromptInjected
                   ? '이 분석 컨텍스트 미리보기의 과거 기억 서랍 섹션에 포함되었습니다.'
                   : '입니다. 검색 결과가 없거나 미리보기 컨텍스트에 포함할 기억이 없어 과거 기억 서랍 섹션이 생성되지 않았습니다.'}
               </p>
-              <p className="mt-1 leading-relaxed text-indigo-800">
+              <p className="leading-relaxed text-indigo-800 dark:text-indigo-200">
                 실제 분석에서도 RAG는 현재 시험 증거를 대체하지 않고, 과거 반복 패턴과 성장 흐름을 판단하는 보조 기억으로만 사용됩니다.
               </p>
               {queryDiagnostics.contextPromptExcerpt && (
-                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-white p-2 text-[11px] text-gray-700">
+                <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-white p-2 text-[11px] text-gray-700 dark:bg-slate-950 dark:text-slate-200">
                   {queryDiagnostics.contextPromptExcerpt}
                 </pre>
               )}
@@ -423,7 +497,7 @@ export default function EmbeddingsAdminPage() {
           )}
 
           {queryResults.length === 0 && !queryLoading && hasQueried && (
-            <p className="mt-3 text-sm text-gray-400 text-center">
+            <p className="mt-3 text-center text-sm text-gray-400 dark:text-slate-500">
               검색 결과가 없습니다. 임베딩 인덱싱 여부를 확인해주세요.
             </p>
           )}

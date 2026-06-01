@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   buildRagDiagnostics,
   getRagFailureReason,
+  getRagDiagnosticsDisplay,
+  getRagRetrievalSourceLabel,
   hasRagMemoryDrawer,
   normalizeRagQueryText,
 } from '../src/lib/rag-diagnostics.js';
@@ -67,4 +69,35 @@ test('normalizes non-Error failure reasons for client and RPC errors', () => {
 test('detects whether the context prompt contains the RAG memory drawer', () => {
   assert.equal(hasRagMemoryDrawer('## 💭 과거 기억 서랍 (RAG Memory Drawer)'), true);
   assert.equal(hasRagMemoryDrawer('## 최근 리포트 요약'), false);
+});
+
+test('summarizes RAG diagnostics for teacher-facing operation checks', () => {
+  assert.equal(getRagRetrievalSourceLabel('retrieved'), '벡터 검색 수행');
+  assert.equal(getRagRetrievalSourceLabel('provided'), '검색 결과 제공');
+  assert.equal(getRagRetrievalSourceLabel('failed'), '검색 실패');
+  assert.equal(getRagRetrievalSourceLabel('none'), '검색 없음');
+
+  const retrieved = getRagDiagnosticsDisplay(buildRagDiagnostics({
+    queryText: '도형 약점',
+    relevantMemories: sampleMemories,
+    retrievalSource: 'retrieved',
+  }));
+  assert.equal(retrieved.tone, 'success');
+  assert.equal(retrieved.sourceLabel, '벡터 검색 수행');
+  assert.match(retrieved.detail, /1건/);
+
+  const empty = getRagDiagnosticsDisplay(buildRagDiagnostics({
+    queryText: '새로운 단원',
+    retrievalSource: 'retrieved',
+  }));
+  assert.equal(empty.tone, 'warning');
+  assert.match(empty.detail, /충분히 유사한 과거 기억이 없습니다/);
+
+  const failed = getRagDiagnosticsDisplay(buildRagDiagnostics({
+    queryText: '통계',
+    retrievalSource: 'failed',
+    failureReason: 'RPC unavailable',
+  }));
+  assert.equal(failed.tone, 'danger');
+  assert.match(failed.detail, /RPC unavailable/);
 });
