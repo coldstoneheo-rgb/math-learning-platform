@@ -39,9 +39,18 @@ test.describe('학생 대시보드', () => {
     const linkedMain = page.getByRole('main');
     await expect(unlinkedState.or(linkedMain).first()).toBeVisible({ timeout: 15_000 });
 
-    const hasHorizontalScroll = await page.evaluate(() => (
-      document.documentElement.scrollWidth > document.documentElement.clientWidth
-    ));
+    if (await linkedMain.isVisible()) {
+      await expect(page.getByRole('heading', { name: '점수 추이' })).toBeVisible({ timeout: 15_000 });
+    }
+
+    const hasHorizontalScroll = await page.evaluate(() => {
+      const scrollWidth = Math.max(
+        document.documentElement.scrollWidth,
+        document.body.scrollWidth,
+      );
+      const clientWidth = document.documentElement.clientWidth;
+      return scrollWidth > clientWidth;
+    });
     expect(hasHorizontalScroll).toBe(false);
   });
 });
