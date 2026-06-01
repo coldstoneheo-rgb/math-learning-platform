@@ -106,6 +106,7 @@ export interface MigrationTask {
   file: File;
   documentDate: string;
   documentType: string;
+  documentPeriodLabel?: string;
   status: 'pending' | 'processing' | 'success' | 'error';
   progress: number;
   extractedSignals?: {
@@ -165,7 +166,9 @@ export async function processMigrationTask(
         studentName,
         images: chunkedImages,
         documentDate: task.documentDate,
-        documentType: task.documentType,
+        documentType: task.documentPeriodLabel
+          ? `${task.documentType} (${task.documentPeriodLabel})`
+          : task.documentType,
       };
 
       const response = await fetch('/api/migration/ingest', {

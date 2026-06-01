@@ -155,7 +155,7 @@ export default function EmbeddingsAdminPage() {
       await loadStats(studentList ?? []);
     } catch (error) {
       console.error('[EmbeddingsAdminPage] failed to load initial data:', error);
-      addToast('RAG 기억 서랍 데이터를 불러오는 중 오류가 발생했습니다.', 'error');
+      addToast('AI 기억 서랍 데이터를 불러오는 중 오류가 발생했습니다.', 'error');
     } finally {
       setLoading(false);
     }
@@ -175,10 +175,10 @@ export default function EmbeddingsAdminPage() {
       });
       const data = await res.json();
       if (data.success) {
-        addToast(`인덱싱 완료: ${data.processed}건 처리`, 'success');
+        addToast(`기억 준비 완료: ${data.processed}건 처리`, 'success');
         await loadStats(students);
       } else {
-        addToast(data.error ?? '인덱싱 실패', 'error');
+        addToast(data.error ?? '기억 준비 실패', 'error');
       }
     } catch {
       addToast('네트워크 오류', 'error');
@@ -237,7 +237,7 @@ export default function EmbeddingsAdminPage() {
       <header className="bg-white shadow-sm dark:border-b dark:border-slate-800 dark:bg-slate-950">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <a href="/teacher" className="text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200">← 대시보드</a>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-slate-50">🧠 RAG 기억 서랍 관리</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-slate-50">🧠 AI 기억 서랍 관리</h1>
         </div>
       </header>
 
@@ -246,7 +246,7 @@ export default function EmbeddingsAdminPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-white p-5 text-center shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
             <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-300">{totalIndexed}</div>
-            <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">인덱싱된 리포트</div>
+            <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">AI가 읽어둔 리포트</div>
           </div>
           <div className="rounded-xl bg-white p-5 text-center shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
             <div className="text-3xl font-bold text-gray-700 dark:text-slate-100">{totalReports}</div>
@@ -256,7 +256,7 @@ export default function EmbeddingsAdminPage() {
             <div className="text-3xl font-bold text-green-600 dark:text-emerald-300">
               {totalReports > 0 ? Math.round((totalIndexed / totalReports) * 100) : 0}%
             </div>
-            <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">인덱싱 완료율</div>
+            <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">준비 완료율</div>
           </div>
           <div className="rounded-xl bg-white p-5 text-center shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
             <div className={`text-3xl font-bold ${totalFailed > 0 ? 'text-red-600 dark:text-red-300' : 'text-gray-700 dark:text-slate-100'}`}>
@@ -275,30 +275,30 @@ export default function EmbeddingsAdminPage() {
         }`}>
           <div className="font-semibold">
             {hasIndexedMemories
-              ? 'RAG 기억 서랍은 분석 컨텍스트에 주입될 준비가 되어 있습니다.'
+              ? 'AI가 참고할 과거 리포트가 준비되어 있습니다.'
               : totalReports > 0
-                ? '인덱싱된 기억이 없어 현재 검색과 프롬프트 주입 결과가 비어 있습니다.'
-                : '저장된 리포트가 생기면 RAG 기억 서랍을 준비할 수 있습니다.'}
+                ? '아직 AI가 참고할 과거 기억이 준비되지 않았습니다.'
+                : '저장된 리포트가 생기면 AI 기억 서랍을 준비할 수 있습니다.'}
           </div>
           <p className="mt-1 leading-relaxed">
-            시험 분석처럼 학생 ID와 검색 쿼리가 있는 분석 경로에서는 유사한 과거 기억을 찾고,
-            검색 결과가 있으면 AI 프롬프트의 과거 기억 서랍 섹션에 참고 자료로 넣습니다.
-            현재 시험 이미지와 교사 확정값이 우선이며, RAG는 반복 패턴과 성장 맥락을 보강하는 참고 근거입니다.
+            이 페이지는 저장된 과거 리포트를 AI가 다시 참고할 수 있는 기억으로 준비하는 곳입니다.
+            준비된 리포트가 있으면 시험 분석에서 비슷한 과거 사례를 찾아 반복 실수와 성장 흐름을 더 잘 연결합니다.
+            현재 시험 이미지와 교사 확정값이 항상 우선이며, AI 기억 서랍은 판단을 보강하는 참고 자료입니다.
           </p>
           {!hasIndexedMemories && totalReports > 0 && (
             <p className="mt-2">
-              전체 Backfill 또는 학생별 Backfill을 먼저 실행한 뒤 검색 테스트로 프롬프트 주입 여부를 확인하세요.
+              먼저 전체 리포트 또는 특정 학생의 리포트를 준비한 뒤, 아래 검색 테스트로 과거 기억이 잘 찾아지는지 확인하세요.
             </p>
           )}
         </div>
 
-        {/* 전체 Backfill */}
+        {/* 전체 기억 준비 */}
         <div className="rounded-xl bg-white p-5 shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-bold text-gray-900 dark:text-slate-50">전체 Backfill</h2>
+              <h2 className="font-bold text-gray-900 dark:text-slate-50">전체 리포트 기억 준비</h2>
               <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-                임베딩이 없는 리포트를 일괄 인덱싱합니다 (최대 50건).
+                아직 AI 참고자료로 준비되지 않은 리포트를 한 번에 읽어 둡니다 (최대 50건).
               </p>
             </div>
             <button
@@ -306,7 +306,7 @@ export default function EmbeddingsAdminPage() {
               disabled={backfilling !== null}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
             >
-              {backfilling === -1 ? '⏳ 처리 중...' : '🔄 전체 Backfill'}
+              {backfilling === -1 ? '⏳ 처리 중...' : '🔄 전체 기억 준비'}
             </button>
           </div>
         </div>
@@ -314,15 +314,15 @@ export default function EmbeddingsAdminPage() {
         {/* 학생별 상태 */}
         <div className="overflow-hidden rounded-xl bg-white shadow-sm dark:border dark:border-slate-800 dark:bg-slate-900">
           <div className="border-b bg-gray-50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/80">
-            <h2 className="font-bold text-gray-900 dark:text-slate-50">학생별 인덱싱 현황</h2>
+            <h2 className="font-bold text-gray-900 dark:text-slate-50">학생별 기억 준비 현황</h2>
           </div>
           <table className="w-full">
             <thead className="border-b bg-gray-50 text-xs text-gray-500 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-400">
               <tr>
                 <th className="text-left px-6 py-3">학생</th>
-                <th className="text-center px-4 py-3">인덱싱</th>
+                <th className="text-center px-4 py-3">준비됨</th>
                 <th className="text-center px-4 py-3">전체</th>
-                <th className="text-center px-4 py-3">커버리지</th>
+                <th className="text-center px-4 py-3">준비율</th>
                 <th className="text-left px-4 py-3">상태</th>
                 <th className="text-right px-6 py-3">액션</th>
               </tr>
@@ -373,7 +373,7 @@ export default function EmbeddingsAdminPage() {
                           disabled={backfilling !== null}
                           className="rounded bg-indigo-50 px-3 py-1 text-xs text-indigo-600 hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/70"
                         >
-                          {backfilling === s.studentId ? '...' : 'Backfill'}
+                          {backfilling === s.studentId ? '...' : '기억 준비'}
                         </button>
                       )}
                     </td>
@@ -439,13 +439,13 @@ export default function EmbeddingsAdminPage() {
           {queryDiagnostics && (
             <div className="mt-4 space-y-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-900 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-100">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="font-semibold">분석 프롬프트 주입 검증</div>
+                <div className="font-semibold">분석에 실제로 참고되는지 확인</div>
                 <span className={`rounded-full px-2 py-0.5 font-semibold ${
                   queryDiagnostics.ragPromptInjected
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
                     : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
                 }`}>
-                  {queryDiagnostics.ragPromptInjected ? '주입 확인' : '주입 미확인'}
+                  {queryDiagnostics.ragPromptInjected ? '참고 확인' : '참고 미확인'}
                 </span>
               </div>
 
@@ -486,13 +486,13 @@ export default function EmbeddingsAdminPage() {
               </div>
 
               <p className="leading-relaxed text-indigo-800 dark:text-indigo-200">
-                검색된 RAG 기억 {queryDiagnostics.memoryCount}건
+                AI가 찾은 과거 기억 {queryDiagnostics.memoryCount}건
                 {queryDiagnostics.ragPromptInjected
-                  ? '이 분석 컨텍스트 미리보기의 과거 기억 서랍 섹션에 포함되었습니다.'
-                  : '입니다. 검색 결과가 없거나 미리보기 컨텍스트에 포함할 기억이 없어 과거 기억 서랍 섹션이 생성되지 않았습니다.'}
+                  ? '이 분석 미리보기의 과거 기억 서랍 섹션에 포함되었습니다.'
+                  : '입니다. 검색 결과가 없거나 분석 미리보기에 포함할 기억이 없어 과거 기억 서랍 섹션이 생성되지 않았습니다.'}
               </p>
               <p className="leading-relaxed text-indigo-800 dark:text-indigo-200">
-                실제 분석에서도 RAG는 현재 시험 증거를 대체하지 않고, 과거 반복 패턴과 성장 흐름을 판단하는 보조 기억으로만 사용됩니다.
+                실제 분석에서도 AI 기억 서랍은 현재 시험 증거를 대체하지 않고, 과거 반복 패턴과 성장 흐름을 판단하는 보조 기억으로만 사용됩니다.
               </p>
               {queryDiagnostics.contextPromptExcerpt && (
                 <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-white p-2 text-[11px] text-gray-700 dark:bg-slate-950 dark:text-slate-200">
@@ -504,7 +504,7 @@ export default function EmbeddingsAdminPage() {
 
           {queryResults.length === 0 && !queryLoading && hasQueried && (
             <p className="mt-3 text-center text-sm text-gray-400 dark:text-slate-500">
-              검색 결과가 없습니다. 임베딩 인덱싱 여부를 확인해주세요.
+              검색 결과가 없습니다. 먼저 이 학생의 과거 리포트가 AI 기억으로 준비되어 있는지 확인해주세요.
             </p>
           )}
         </div>

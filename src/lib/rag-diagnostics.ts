@@ -69,14 +69,14 @@ export function getRagRetrievalSourceLabel(
 ): string {
   switch (source) {
     case 'retrieved':
-      return '벡터 검색 수행';
+      return '과거 기억 찾음';
     case 'provided':
-      return '검색 결과 제공';
+      return '참고 후보 전달';
     case 'failed':
-      return '검색 실패';
+      return '찾기 실패';
     case 'none':
     default:
-      return '검색 없음';
+      return '찾기 없음';
   }
 }
 
@@ -86,7 +86,7 @@ export function getRagDiagnosticsDisplay(
   if (!diagnostics) {
     return {
       title: '진단 정보 없음',
-      detail: '검색 테스트 응답에 RAG 진단 정보가 포함되지 않았습니다.',
+      detail: '검색 테스트 응답에 AI 기억 확인 정보가 포함되지 않았습니다.',
       sourceLabel: '미확인',
       attemptLabel: '미확인',
       tone: 'neutral',
@@ -98,7 +98,7 @@ export function getRagDiagnosticsDisplay(
 
   if (diagnostics.retrievalSource === 'failed') {
     return {
-      title: 'RAG 검색 실패',
+      title: '과거 기억 찾기 실패',
       detail: diagnostics.failureReason
         ? `검색 시도 중 오류가 발생했습니다: ${diagnostics.failureReason}`
         : '검색 시도 중 오류가 발생했습니다.',
@@ -110,10 +110,10 @@ export function getRagDiagnosticsDisplay(
 
   if (diagnostics.retrievalSource === 'retrieved') {
     return {
-      title: diagnostics.memoryCount > 0 ? 'RAG 검색 성공' : 'RAG 검색 결과 없음',
+      title: diagnostics.memoryCount > 0 ? '과거 기억 찾기 성공' : '과거 기억 찾기 결과 없음',
       detail: diagnostics.memoryCount > 0
-        ? `벡터 검색으로 과거 기억 ${diagnostics.memoryCount}건을 찾았습니다.`
-        : '벡터 검색은 실행됐지만 현재 쿼리와 충분히 유사한 과거 기억이 없습니다.',
+        ? `과거 기억 ${diagnostics.memoryCount}건을 찾았습니다.`
+        : '찾기는 실행됐지만 현재 검색어와 충분히 비슷한 과거 기억이 없습니다.',
       sourceLabel,
       attemptLabel,
       tone: diagnostics.memoryCount > 0 ? 'success' : 'warning',
@@ -122,10 +122,10 @@ export function getRagDiagnosticsDisplay(
 
   if (diagnostics.retrievalSource === 'provided') {
     return {
-      title: diagnostics.memoryCount > 0 ? '컨텍스트 주입 후보 확인' : '제공된 기억 없음',
+      title: diagnostics.memoryCount > 0 ? '분석 참고 후보 확인' : '제공된 기억 없음',
       detail: diagnostics.memoryCount > 0
-        ? `검색된 기억 ${diagnostics.memoryCount}건을 분석 컨텍스트 미리보기에 전달했습니다.`
-        : '분석 컨텍스트에 전달된 과거 기억이 없습니다.',
+        ? `검색된 기억 ${diagnostics.memoryCount}건을 분석 미리보기에 전달했습니다.`
+        : '분석 미리보기에 전달된 과거 기억이 없습니다.',
       sourceLabel,
       attemptLabel,
       tone: diagnostics.memoryCount > 0 ? 'success' : 'neutral',
@@ -133,10 +133,10 @@ export function getRagDiagnosticsDisplay(
   }
 
   return {
-    title: 'RAG 검색 미실행',
+    title: '과거 기억 찾기 미실행',
     detail: diagnostics.queryTextPresent
-      ? '검색 조건은 있지만 이 경로에서는 벡터 검색이 실행되지 않았습니다.'
-      : '검색 쿼리가 없어 RAG 검색을 실행하지 않았습니다.',
+      ? '검색 조건은 있지만 이 경로에서는 과거 기억 찾기가 실행되지 않았습니다.'
+      : '검색어가 없어 과거 기억 찾기를 실행하지 않았습니다.',
     sourceLabel,
     attemptLabel,
     tone: 'neutral',
