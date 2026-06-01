@@ -35,8 +35,6 @@ interface TodayStudentInfo {
   recentReport?: DashboardRecentReport;
 }
 
-const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
-
 const getGrowthReadinessClass = (tone: GrowthReadinessSummary['tone']): string => {
   switch (tone) {
     case 'success':
@@ -410,19 +408,19 @@ export default function AdminDashboard() {
 
         <div className="mb-10">
           <div className="flex flex-col gap-1.5 mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">데이터 고도화</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">과거 데이터와 AI 기억을 성장 분석에 연결합니다.</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">성장 기록 연결하기</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">예전 시험지, 리포트, 점수 기록을 현재 성장 분석에 이어 붙입니다.</p>
           </div>
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <DashboardCard
-              title="과거 데이터 가져오기"
-              description="이미지/PDF/CSV 복원"
+              title="과거 학습자료 가져오기"
+              description="이미지, PDF, CSV로 예전 기록 등록"
               icon="🗂️"
               href="/teacher/migration"
             />
             <DashboardCard
               title="AI 기억 서랍 관리"
-              description="RAG 인덱싱/검색"
+              description="과거 리포트를 AI 분석 참고자료로 연결"
               icon="🧠"
               href="/teacher/embeddings"
             />

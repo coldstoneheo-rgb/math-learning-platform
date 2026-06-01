@@ -72,10 +72,10 @@ test('detects whether the context prompt contains the RAG memory drawer', () => 
 });
 
 test('summarizes RAG diagnostics for teacher-facing operation checks', () => {
-  assert.equal(getRagRetrievalSourceLabel('retrieved'), '벡터 검색 수행');
-  assert.equal(getRagRetrievalSourceLabel('provided'), '검색 결과 제공');
-  assert.equal(getRagRetrievalSourceLabel('failed'), '검색 실패');
-  assert.equal(getRagRetrievalSourceLabel('none'), '검색 없음');
+  assert.equal(getRagRetrievalSourceLabel('retrieved'), '과거 기억 찾음');
+  assert.equal(getRagRetrievalSourceLabel('provided'), '참고 후보 전달');
+  assert.equal(getRagRetrievalSourceLabel('failed'), '찾기 실패');
+  assert.equal(getRagRetrievalSourceLabel('none'), '찾기 없음');
 
   const retrieved = getRagDiagnosticsDisplay(buildRagDiagnostics({
     queryText: '도형 약점',
@@ -83,7 +83,7 @@ test('summarizes RAG diagnostics for teacher-facing operation checks', () => {
     retrievalSource: 'retrieved',
   }));
   assert.equal(retrieved.tone, 'success');
-  assert.equal(retrieved.sourceLabel, '벡터 검색 수행');
+  assert.equal(retrieved.sourceLabel, '과거 기억 찾음');
   assert.match(retrieved.detail, /1건/);
 
   const empty = getRagDiagnosticsDisplay(buildRagDiagnostics({
@@ -91,7 +91,7 @@ test('summarizes RAG diagnostics for teacher-facing operation checks', () => {
     retrievalSource: 'retrieved',
   }));
   assert.equal(empty.tone, 'warning');
-  assert.match(empty.detail, /충분히 유사한 과거 기억이 없습니다/);
+  assert.match(empty.detail, /충분히 비슷한 과거 기억이 없습니다/);
 
   const failed = getRagDiagnosticsDisplay(buildRagDiagnostics({
     queryText: '통계',

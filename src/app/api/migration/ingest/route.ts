@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { ingestLegacyData } from '@/lib/gemini';
-import type { Student, StudentMetaProfile } from '@/types';
+import type { StudentMetaProfile } from '@/types';
 
 export const maxDuration = 60; // Vercel Pro 요금제 등에서 최대 실행 시간 60초 설정 (기본 10초~15초 우회)
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       .eq('id', user.id)
       .single();
 
-    if (!userData || userData.role !== 'teacher') {
+    if (!userData || !['teacher', 'super_admin'].includes(userData.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
