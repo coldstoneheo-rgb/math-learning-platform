@@ -1,6 +1,7 @@
 import type { RagDiagnostics, RelevantMemory } from '@/types';
 
 export function normalizeRagQueryText(queryText?: string): string | undefined {
+  if (typeof queryText !== 'string') return undefined;
   const normalized = queryText?.trim();
   if (!normalized) return undefined;
   return normalized.slice(0, 1000);
@@ -9,6 +10,16 @@ export function normalizeRagQueryText(queryText?: string): string | undefined {
 export function getRagFailureReason(error: unknown): string {
   if (error instanceof Error && error.message.trim()) {
     return error.message.slice(0, 300);
+  }
+  if (typeof error === 'string' && error.trim()) {
+    return error.trim().slice(0, 300);
+  }
+  if (error && typeof error === 'object') {
+    const maybeError = error as { message?: unknown; error?: unknown };
+    const message = maybeError.message ?? maybeError.error;
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim().slice(0, 300);
+    }
   }
   return 'unknown error';
 }
@@ -28,7 +39,8 @@ export function buildRagDiagnostics(args: {
   );
 
   return {
-    retrievalAttempted: args.retrievalAttempted ?? retrievalSource === 'retrieved',
+    retrievalAttempted:
+      args.retrievalAttempted ?? (retrievalSource === 'retrieved' || retrievalSource === 'failed'),
     retrievalSource,
     queryTextPresent: Boolean(normalizedQueryText),
     queryTextLength: normalizedQueryText?.length ?? 0,

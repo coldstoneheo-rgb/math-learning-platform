@@ -23,6 +23,8 @@ test('normalizes RAG query text without keeping empty queries', () => {
   assert.equal(normalizeRagQueryText('  기본도형 기말고사  '), '기본도형 기말고사');
   assert.equal(normalizeRagQueryText('   '), undefined);
   assert.equal(normalizeRagQueryText(undefined), undefined);
+  // @ts-expect-error testing runtime safety at API boundaries
+  assert.equal(normalizeRagQueryText(12345), undefined);
 });
 
 test('diagnostics record provided memories without marking retrieval attempted', () => {
@@ -45,7 +47,6 @@ test('diagnostics record retrieval failures without requiring memories', () => {
   const diagnostics = buildRagDiagnostics({
     queryText: '통계 약점 분석',
     retrievalSource: 'failed',
-    retrievalAttempted: true,
     failureReason: getRagFailureReason(new Error('RPC unavailable')),
   });
 
@@ -53,6 +54,14 @@ test('diagnostics record retrieval failures without requiring memories', () => {
   assert.equal(diagnostics.retrievalSource, 'failed');
   assert.equal(diagnostics.memoryCount, 0);
   assert.equal(diagnostics.failureReason, 'RPC unavailable');
+});
+
+test('normalizes non-Error failure reasons for client and RPC errors', () => {
+  assert.equal(getRagFailureReason('string error'), 'string error');
+  assert.equal(getRagFailureReason({ message: 'object message' }), 'object message');
+  assert.equal(getRagFailureReason({ error: 'object error' }), 'object error');
+  assert.equal(getRagFailureReason({ message: 404 }), 'unknown error');
+  assert.equal(getRagFailureReason(null), 'unknown error');
 });
 
 test('detects whether the context prompt contains the RAG memory drawer', () => {
