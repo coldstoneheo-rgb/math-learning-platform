@@ -142,18 +142,24 @@ export default function EmbeddingsAdminPage() {
   }, []);
 
   const checkAuthAndLoad = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push('/login'); return; }
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/login'); return; }
 
-    const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
-    if (!userData || !['teacher', 'super_admin'].includes(userData.role)) { router.push('/'); return; }
+      const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
+      if (!userData || !['teacher', 'super_admin'].includes(userData.role)) { router.push('/'); return; }
 
-    const { data: studentList } = await supabase.from('students').select('*').order('name');
-    setStudents(studentList ?? []);
-    await loadStats(studentList ?? []);
-    setLoading(false);
-  }, [loadStats, router]);
+      const { data: studentList } = await supabase.from('students').select('*').order('name');
+      setStudents(studentList ?? []);
+      await loadStats(studentList ?? []);
+    } catch (error) {
+      console.error('[EmbeddingsAdminPage] failed to load initial data:', error);
+      addToast('RAG 기억 서랍 데이터를 불러오는 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addToast, loadStats, router]);
 
   useEffect(() => {
     checkAuthAndLoad();
