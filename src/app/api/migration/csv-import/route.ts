@@ -23,8 +23,12 @@ interface ValidationResult {
   message: string;
 }
 
-function buildCsvImportKey(studentId: number | string, testDate: string, testName: string) {
-  return `${studentId}::${testDate.trim()}::${testName.trim()}`;
+function buildCsvImportKey(
+  studentId: number | string,
+  testDate: string | null | undefined,
+  testName: string | null | undefined
+) {
+  return `${studentId}::${(testDate ?? '').trim()}::${(testName ?? '').trim()}`;
 }
 
 function validateRow(row: CsvRow, rowIndex: number): ValidationResult[] {
@@ -142,7 +146,7 @@ export async function POST(req: Request) {
 
     const { data: existingReports, error: existingErr } = await supabase
       .from('reports')
-      .select('id, student_id, test_date, test_name, analysis_data')
+      .select('id, student_id, test_date, test_name')
       .in('student_id', mappedStudentDbIds)
       .in('test_date', testDates)
       .eq('report_type', 'test');
@@ -153,23 +157,24 @@ export async function POST(req: Request) {
     }
 
     const existingKeys = new Set(
-      (existingReports ?? [])
-        .filter(report => (
-          typeof report.analysis_data === 'object' &&
-          report.analysis_data !== null &&
-          !Array.isArray(report.analysis_data) &&
-          (report.analysis_data as { _importedFromCsv?: unknown })._importedFromCsv === true
-        ))
-        .map(report => buildCsvImportKey(report.student_id, report.test_date, report.test_name))
+      (existingReports ?? []).map(report => (
+        buildCsvImportKey(report.student_id, report.test_date, report.test_name)
+      ))
     );
 
-    const duplicateRows = mappedRows.filter(({ row, studentDbId }) => (
-      existingKeys.has(buildCsvImportKey(studentDbId, row.test_date, row.test_name))
-    ));
+    const seenKeysInCsv = new Set<string>();
+    const duplicateRows: typeof mappedRows = [];
+    const rowsToInsert: typeof mappedRows = [];
 
-    const rowsToInsert = mappedRows.filter(({ row, studentDbId }) => (
-      !existingKeys.has(buildCsvImportKey(studentDbId, row.test_date, row.test_name))
-    ));
+    for (const mapped of mappedRows) {
+      const key = buildCsvImportKey(mapped.studentDbId, mapped.row.test_date, mapped.row.test_name);
+      if (existingKeys.has(key) || seenKeysInCsv.has(key)) {
+        duplicateRows.push(mapped);
+      } else {
+        seenKeysInCsv.add(key);
+        rowsToInsert.push(mapped);
+      }
+    }
 
     if (rowsToInsert.length === 0) {
       return NextResponse.json({
