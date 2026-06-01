@@ -16,6 +16,10 @@ export const TEST_ACCOUNTS = {
     email: process.env.TEST_PARENT_EMAIL,
     password: process.env.TEST_PARENT_PASSWORD,
   },
+  student: {
+    email: process.env.TEST_STUDENT_EMAIL,
+    password: process.env.TEST_STUDENT_PASSWORD,
+  },
 };
 
 function requireTestAccount(
@@ -67,6 +71,7 @@ async function submitLoginAndWaitForURL(
 export const test = base.extend<{
   loginAsTeacher: () => Promise<void>;
   loginAsParent: () => Promise<void>;
+  loginAsStudent: () => Promise<void>;
 }>({
   // 교사로 로그인
   loginAsTeacher: async ({ page }, use) => {
@@ -96,6 +101,19 @@ export const test = base.extend<{
       await page.fill('input[type="email"]', account.email);
       await page.fill('input[type="password"]', account.password);
       await submitLoginAndWaitForURL(page, /\/parent\/?$/, 'parent');
+    };
+    await use(login);
+  },
+
+  // 학생으로 로그인
+  loginAsStudent: async ({ page }, use) => {
+    const login = async () => {
+      const account = requireTestAccount('student');
+
+      await page.goto('/login');
+      await page.fill('input[type="email"]', account.email);
+      await page.fill('input[type="password"]', account.password);
+      await submitLoginAndWaitForURL(page, /\/student\/?$/, 'student');
     };
     await use(login);
   },

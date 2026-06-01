@@ -4,7 +4,7 @@ import path from 'path';
 /**
  * Migration 페이지 E2E 테스트
  *
- * 레거시 데이터 마이그레이션 (Batch Ingestion Engine) 페이지의
+ * 과거 학습자료 가져오기 페이지의
  * UI 렌더링, 파일 업로드, 큐 관리, 유효성 검사 등을 검증합니다.
  */
 
@@ -24,15 +24,15 @@ test.describe('Migration 페이지', () => {
   // TC-M00: 교사 대시보드 진입점
   // ────────────────────────────────────────────────────────────────
   test.describe('TC-M00: 교사 대시보드 진입점', () => {
-    test('TC-M00-1: 과거 데이터 입력 메뉴가 대시보드에 표시됨', async ({ page }) => {
+    test('TC-M00-1: 과거 학습자료 입력 메뉴가 대시보드에 표시됨', async ({ page }) => {
       await page.goto('/teacher');
 
-      const migrationLink = page.getByRole('link', { name: /과거 데이터 가져오기/ });
+      const migrationLink = page.getByRole('link', { name: /과거 학습자료 가져오기/ });
       await expect(migrationLink).toBeVisible();
       await expect(migrationLink).toHaveAttribute('href', '/teacher/migration');
     });
 
-    test('TC-M00-2: RAG 기억 서랍 관리 메뉴가 대시보드에 표시됨', async ({ page }) => {
+    test('TC-M00-2: AI 기억 서랍 관리 메뉴가 대시보드에 표시됨', async ({ page }) => {
       await page.goto('/teacher');
 
       const embeddingsLink = page.getByRole('link', { name: /AI 기억 서랍 관리/ });
@@ -45,18 +45,18 @@ test.describe('Migration 페이지', () => {
   // TC-M01: 페이지 기본 렌더링
   // ────────────────────────────────────────────────────────────────
   test.describe('TC-M01~03: 페이지 기본 렌더링', () => {
-    test('TC-M01: 마이그레이션 페이지가 올바르게 로드됨', async ({ page }) => {
+    test('TC-M01: 과거 학습자료 페이지가 올바르게 로드됨', async ({ page }) => {
       await page.goto('/teacher/migration');
 
       // 페이지 헤더 확인
-      await expect(page.locator('h1:has-text("레거시 데이터 마이그레이션")')).toBeVisible();
+      await expect(page.getByRole('heading', { name: '과거 학습자료 가져오기' })).toBeVisible();
     });
 
     test('TC-M02: 타임머신 학습 엔진 안내 배너가 표시됨', async ({ page }) => {
       await page.goto('/teacher/migration');
 
       await expect(page.locator('text=타임머신 학습 엔진 안내')).toBeVisible();
-      await expect(page.locator('text=메타프로필')).toBeVisible();
+      await expect(page.locator('text=약점, 강점, 반복 실수')).toBeVisible();
     });
 
     test('TC-M03: 대시보드로 돌아가기 링크가 존재함', async ({ page }) => {
@@ -78,10 +78,10 @@ test.describe('Migration 페이지', () => {
       await expect(studentSelect).toBeVisible();
     });
 
-    test('TC-M05: 학생 선택 없이 마이그레이션 시작 버튼이 비활성화됨', async ({ page }) => {
+    test('TC-M05: 학생 선택 없이 자료 읽기 시작 버튼이 비활성화됨', async ({ page }) => {
       await page.goto('/teacher/migration');
 
-      const startButton = page.locator('button:has-text("마이그레이션 시작")');
+      const startButton = page.locator('button:has-text("자료 읽기 시작")');
       await expect(startButton).toBeDisabled();
     });
 
@@ -116,10 +116,11 @@ test.describe('Migration 페이지', () => {
   // TC-M07~09: 일괄 설정
   // ────────────────────────────────────────────────────────────────
   test.describe('TC-M07~09: 파일 일괄 설정', () => {
-    test('TC-M07: 기본 지정 날짜 입력 필드가 표시됨', async ({ page }) => {
+    test('TC-M07: 데이터 소스 유형을 먼저 선택하고 자료 시점을 입력함', async ({ page }) => {
       await page.goto('/teacher/migration');
 
-      const dateInput = page.locator('input[type="date"]').first();
+      await expect(page.getByLabel('데이터 소스 유형')).toBeVisible();
+      const dateInput = page.getByLabel('자료 시점 날짜 선택');
       await expect(dateInput).toBeVisible();
     });
 
@@ -134,11 +135,20 @@ test.describe('Migration 페이지', () => {
     test('TC-M09: 소스 유형 옵션들이 올바르게 표시됨', async ({ page }) => {
       await page.goto('/teacher/migration');
 
-      const sourceTypeOptions = ['시험지/평가문제', '월간/반기 리포트', '일일학습/문제풀이노트'];
+      const sourceTypeOptions = ['시험지/평가문제', '주간 리포트', '월간 리포트', '반기/연간 리포트', '일일학습/문제풀이노트'];
       const sourceTypeSelect = page.locator('select').nth(1);
       await expect(sourceTypeSelect).toBeVisible();
       const optionTexts = await sourceTypeSelect.locator('option').allTextContents();
       expect(optionTexts).toEqual(expect.arrayContaining(sourceTypeOptions));
+    });
+
+    test('TC-M09-1: 주간 리포트 선택 시 월과 주차를 입력함', async ({ page }) => {
+      await page.goto('/teacher/migration');
+
+      await page.getByLabel('데이터 소스 유형').selectOption('주간리포트');
+      await expect(page.getByLabel('자료 시점 월 선택')).toBeVisible();
+      await expect(page.getByLabel('주차 선택')).toBeVisible();
+      await expect(page.locator('p').filter({ hasText: /주간 리포트.*주차/ })).toBeVisible();
     });
   });
 
@@ -180,10 +190,10 @@ test.describe('Migration 페이지', () => {
       await expect(page.locator('text=추가된 파일이 없습니다')).toBeVisible();
     });
 
-    test('TC-M14: 마이그레이션 대기열 헤더가 표시됨', async ({ page }) => {
+    test('TC-M14: 자료 가져오기 대기열 헤더가 표시됨', async ({ page }) => {
       await page.goto('/teacher/migration');
 
-      await expect(page.locator('text=마이그레이션 대기열')).toBeVisible();
+      await expect(page.locator('text=자료 가져오기 대기열')).toBeVisible();
     });
 
     test('TC-M15: 완료 항목 지우기 버튼이 초기에 비활성화됨', async ({ page }) => {
@@ -218,7 +228,7 @@ test.describe('Migration 페이지', () => {
       await expect(page.locator('text=test-image.png')).toBeVisible({ timeout: 3000 });
     });
 
-    test('TC-M17: 파일 추가 후 마이그레이션 시작 버튼은 학생 미선택 시 비활성화 유지', async ({ page }) => {
+    test('TC-M17: 파일 추가 후 자료 읽기 시작 버튼은 학생 미선택 시 비활성화 유지', async ({ page }) => {
       await page.goto('/teacher/migration');
 
       const buffer = Buffer.from(
@@ -234,7 +244,7 @@ test.describe('Migration 페이지', () => {
       });
 
       // 파일은 추가됐지만 학생 미선택 → 버튼 비활성화
-      const startButton = page.locator('button:has-text("마이그레이션 시작")');
+      const startButton = page.locator('button:has-text("자료 읽기 시작")');
       await expect(startButton).toBeDisabled();
     });
 
@@ -324,7 +334,7 @@ test.describe('Migration 페이지', () => {
       ]);
 
       // 큐 헤더에 개수가 표시됨
-      await expect(page.locator('text=마이그레이션 대기열 (2)')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('text=자료 가져오기 대기열 (2)')).toBeVisible({ timeout: 3000 });
     });
   });
 
@@ -390,7 +400,7 @@ test.describe('Migration 페이지', () => {
   // ────────────────────────────────────────────────────────────────
   // TC-M26: CSV 업로드 회귀
   // ────────────────────────────────────────────────────────────────
-  test.describe('TC-M26: CSV 일괄 업로드', () => {
+  test.describe('TC-M26: 점수표 한 번에 올리기', () => {
     test('TC-M26: CSV 업로드 성공 시 성장 그래프 반영 안내가 표시됨', async ({ page }) => {
       await page.route('**/api/migration/csv-import', async route => {
         await route.fulfill({
@@ -405,7 +415,7 @@ test.describe('Migration 페이지', () => {
       });
 
       await page.goto('/teacher/migration');
-      await page.getByRole('button', { name: /CSV 일괄 업로드/ }).click();
+      await page.getByRole('button', { name: /점수표 한 번에 올리기/ }).click();
 
       const csv = [
         'student_id,test_date,test_name,total_score,max_score,rank,total_students',
