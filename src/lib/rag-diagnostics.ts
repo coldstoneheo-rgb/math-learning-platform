@@ -1,5 +1,15 @@
 import type { RagDiagnostics, RelevantMemory } from '@/types';
 
+export type RagDiagnosticsTone = 'success' | 'warning' | 'danger' | 'neutral';
+
+export interface RagDiagnosticsDisplay {
+  title: string;
+  detail: string;
+  sourceLabel: string;
+  attemptLabel: string;
+  tone: RagDiagnosticsTone;
+}
+
 export function normalizeRagQueryText(queryText?: string): string | undefined {
   if (typeof queryText !== 'string') return undefined;
   const normalized = queryText?.trim();
@@ -52,4 +62,83 @@ export function buildRagDiagnostics(args: {
 
 export function hasRagMemoryDrawer(prompt: string): boolean {
   return prompt.includes('과거 기억 서랍');
+}
+
+export function getRagRetrievalSourceLabel(
+  source: RagDiagnostics['retrievalSource'] | undefined
+): string {
+  switch (source) {
+    case 'retrieved':
+      return '벡터 검색 수행';
+    case 'provided':
+      return '검색 결과 제공';
+    case 'failed':
+      return '검색 실패';
+    case 'none':
+    default:
+      return '검색 없음';
+  }
+}
+
+export function getRagDiagnosticsDisplay(
+  diagnostics: RagDiagnostics | undefined
+): RagDiagnosticsDisplay {
+  if (!diagnostics) {
+    return {
+      title: '진단 정보 없음',
+      detail: '검색 테스트 응답에 RAG 진단 정보가 포함되지 않았습니다.',
+      sourceLabel: '미확인',
+      attemptLabel: '미확인',
+      tone: 'neutral',
+    };
+  }
+
+  const sourceLabel = getRagRetrievalSourceLabel(diagnostics.retrievalSource);
+  const attemptLabel = diagnostics.retrievalAttempted ? '시도됨' : '시도 안 함';
+
+  if (diagnostics.retrievalSource === 'failed') {
+    return {
+      title: 'RAG 검색 실패',
+      detail: diagnostics.failureReason
+        ? `검색 시도 중 오류가 발생했습니다: ${diagnostics.failureReason}`
+        : '검색 시도 중 오류가 발생했습니다.',
+      sourceLabel,
+      attemptLabel,
+      tone: 'danger',
+    };
+  }
+
+  if (diagnostics.retrievalSource === 'retrieved') {
+    return {
+      title: diagnostics.memoryCount > 0 ? 'RAG 검색 성공' : 'RAG 검색 결과 없음',
+      detail: diagnostics.memoryCount > 0
+        ? `벡터 검색으로 과거 기억 ${diagnostics.memoryCount}건을 찾았습니다.`
+        : '벡터 검색은 실행됐지만 현재 쿼리와 충분히 유사한 과거 기억이 없습니다.',
+      sourceLabel,
+      attemptLabel,
+      tone: diagnostics.memoryCount > 0 ? 'success' : 'warning',
+    };
+  }
+
+  if (diagnostics.retrievalSource === 'provided') {
+    return {
+      title: diagnostics.memoryCount > 0 ? '컨텍스트 주입 후보 확인' : '제공된 기억 없음',
+      detail: diagnostics.memoryCount > 0
+        ? `검색된 기억 ${diagnostics.memoryCount}건을 분석 컨텍스트 미리보기에 전달했습니다.`
+        : '분석 컨텍스트에 전달된 과거 기억이 없습니다.',
+      sourceLabel,
+      attemptLabel,
+      tone: diagnostics.memoryCount > 0 ? 'success' : 'neutral',
+    };
+  }
+
+  return {
+    title: 'RAG 검색 미실행',
+    detail: diagnostics.queryTextPresent
+      ? '검색 조건은 있지만 이 경로에서는 벡터 검색이 실행되지 않았습니다.'
+      : '검색 쿼리가 없어 RAG 검색을 실행하지 않았습니다.',
+    sourceLabel,
+    attemptLabel,
+    tone: 'neutral',
+  };
 }
