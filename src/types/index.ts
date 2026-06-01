@@ -1802,6 +1802,20 @@ export interface RelevantMemory {
 }
 
 /**
+ * RAG 기억 서랍 진단 정보
+ * 원문 쿼리/기억 본문 없이 검색 경로와 주입 여부만 관측한다.
+ */
+export interface RagDiagnostics {
+  retrievalAttempted: boolean;
+  retrievalSource: 'none' | 'provided' | 'retrieved' | 'failed';
+  queryTextPresent: boolean;
+  queryTextLength: number;
+  memoryCount: number;
+  promptInjected?: boolean;
+  failureReason?: string;
+}
+
+/**
  * ContextData - AI 프롬프트 컨텍스트 데이터
  * 이전 리포트에서 주입할 데이터
  */
@@ -1854,6 +1868,8 @@ export interface AnalysisContextData {
   strategyFeedback?: StrategyFeedbackContext;
   // RAG 기억 서랍 (과거 유사 분석 메모리)
   relevantMemories?: RelevantMemory[];
+  // RAG 검색/주입 관측성
+  ragDiagnostics?: RagDiagnostics;
 }
 
 /**
