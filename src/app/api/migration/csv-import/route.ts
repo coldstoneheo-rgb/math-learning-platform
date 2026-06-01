@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireTeacherOrSuperAdmin } from '@/lib/api-auth';
 import Papa from 'papaparse';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,10 @@ interface ValidationResult {
   rowIndex: number;
   field: string;
   message: string;
+}
+
+function buildCsvImportKey(studentId: number | string, testDate: string, testName: string) {
+  return `${studentId}::${testDate.trim()}::${testName.trim()}`;
 }
 
 function validateRow(row: CsvRow, rowIndex: number): ValidationResult[] {
@@ -55,22 +60,8 @@ export async function POST(req: Request) {
   try {
     const supabase = await createClient();
 
-    // 인증 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // teacher 권한 확인
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!userData || userData.role !== 'teacher') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const auth = await requireTeacherOrSuperAdmin(supabase);
+    if (!auth.ok) return auth.response;
 
     // FormData에서 CSV 파일 추출
     const formData = await req.formData();
@@ -141,9 +132,57 @@ export async function POST(req: Request) {
       }, { status: 422 });
     }
 
+    const mappedRows = rows.map(row => ({
+      row,
+      studentDbId: studentMap.get(row.student_id.trim())!,
+    }));
+
+    const mappedStudentDbIds = [...new Set(mappedRows.map(({ studentDbId }) => studentDbId))];
+    const testDates = [...new Set(rows.map(row => row.test_date.trim()))];
+
+    const { data: existingReports, error: existingErr } = await supabase
+      .from('reports')
+      .select('id, student_id, test_date, test_name, analysis_data')
+      .in('student_id', mappedStudentDbIds)
+      .in('test_date', testDates)
+      .eq('report_type', 'test');
+
+    if (existingErr) {
+      console.error('CSV import duplicate check error:', existingErr);
+      return NextResponse.json({ error: '기존 CSV 데이터를 확인하는 중 오류가 발생했습니다.', detail: existingErr.message }, { status: 500 });
+    }
+
+    const existingKeys = new Set(
+      (existingReports ?? [])
+        .filter(report => (
+          typeof report.analysis_data === 'object' &&
+          report.analysis_data !== null &&
+          !Array.isArray(report.analysis_data) &&
+          (report.analysis_data as { _importedFromCsv?: unknown })._importedFromCsv === true
+        ))
+        .map(report => buildCsvImportKey(report.student_id, report.test_date, report.test_name))
+    );
+
+    const duplicateRows = mappedRows.filter(({ row, studentDbId }) => (
+      existingKeys.has(buildCsvImportKey(studentDbId, row.test_date, row.test_name))
+    ));
+
+    const rowsToInsert = mappedRows.filter(({ row, studentDbId }) => (
+      !existingKeys.has(buildCsvImportKey(studentDbId, row.test_date, row.test_name))
+    ));
+
+    if (rowsToInsert.length === 0) {
+      return NextResponse.json({
+        success: true,
+        importedCount: 0,
+        skippedCount: duplicateRows.length,
+        message: `이미 가져온 시험 데이터 ${duplicateRows.length}건을 건너뛰었습니다.`,
+      });
+    }
+
     // reports 테이블에 일괄 삽입
-    const reportInserts = rows.map(row => ({
-      student_id: studentMap.get(row.student_id.trim())!,
+    const reportInserts = rowsToInsert.map(({ row, studentDbId }) => ({
+      student_id: studentDbId,
       report_type: 'test' as const,
       test_name: row.test_name.trim(),
       test_date: row.test_date.trim(),
@@ -202,8 +241,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      importedCount: inserted?.length ?? rows.length,
-      message: `${inserted?.length ?? rows.length}건의 시험 데이터를 성공적으로 가져왔습니다.`,
+      importedCount: inserted?.length ?? rowsToInsert.length,
+      skippedCount: duplicateRows.length,
+      message: duplicateRows.length > 0
+        ? `${inserted?.length ?? rowsToInsert.length}건의 시험 데이터를 가져오고, 이미 있던 ${duplicateRows.length}건은 건너뛰었습니다.`
+        : `${inserted?.length ?? rowsToInsert.length}건의 시험 데이터를 성공적으로 가져왔습니다.`,
     });
 
   } catch (error) {
