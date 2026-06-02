@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import dynamic from 'next/dynamic';
 import ChartSkeleton from '@/components/common/ChartSkeleton';
@@ -166,9 +167,9 @@ export default function ParentReportDetailPage() {
           <p className="mt-2 text-sm leading-6 text-gray-500">
             자녀 연결이 해제되었거나 리포트 접근 권한이 바뀌었을 수 있습니다. 학부모 대시보드에서 자녀와 리포트 목록을 다시 확인해주세요.
           </p>
-          <a href="/parent" className="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <Link href="/parent" className="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
             학부모 대시보드로 돌아가기
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -237,7 +238,7 @@ export default function ParentReportDetailPage() {
       <header className="bg-white shadow-sm print:hidden">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="/parent" className="text-gray-500 hover:text-gray-700">← 대시보드</a>
+            <Link href="/parent" className="text-gray-500 hover:text-gray-700">← 대시보드</Link>
             <h1 className="text-xl font-bold text-gray-900">{typeLabel}</h1>
           </div>
           <div className="flex items-center gap-2">
@@ -1563,9 +1564,9 @@ export default function ParentReportDetailPage() {
 
         {/* 하단 네비게이션 */}
         <div className="flex justify-center print:hidden">
-          <a href="/parent" className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+          <Link href="/parent" className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
             ← 대시보드로 돌아가기
-          </a>
+          </Link>
         </div>
       </main>
     </div>
