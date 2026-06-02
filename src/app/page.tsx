@@ -106,7 +106,7 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-sm">🎒</div>
                   <div>
-                    <h4 className="font-bold text-sm text-gray-900 dark:text-white">최지수 학생</h4>
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white">허승재 학생</h4>
                     <p className="text-[10px] text-gray-400">중학교 2학년 1학기 과정</p>
                   </div>
                 </div>
