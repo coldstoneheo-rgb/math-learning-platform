@@ -120,27 +120,21 @@ export default function ParentReportDetailPage() {
       return;
     }
 
-    const reportResults = await Promise.all(
-      childrenData.map(child =>
-        supabase
-          .from('reports')
-          .select('*')
-          .eq('student_id', child.id)
-          .eq('id', reportId)
-          .single()
-      )
-    );
+    const childrenIds = childrenData.map(child => child.id);
+    const { data: reportData, error: reportError } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('id', reportId)
+      .in('student_id', childrenIds)
+      .maybeSingle();
 
-    const matchedReportIndex = reportResults.findIndex(result => result.data && !result.error);
-    const reportData = matchedReportIndex >= 0 ? reportResults[matchedReportIndex].data : null;
-
-    if (!reportData) {
+    if (reportError || !reportData) {
       addToast('리포트를 찾을 수 없거나 접근 권한이 없습니다.', 'error');
       router.push('/parent');
       return;
     }
 
-    const reportStudent = childrenData[matchedReportIndex];
+    const reportStudent = childrenData.find(child => child.id === reportData.student_id);
     if (!reportStudent) {
       addToast('리포트를 찾을 수 없거나 접근 권한이 없습니다.', 'error');
       router.push('/parent');
