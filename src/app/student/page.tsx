@@ -317,6 +317,8 @@ export default function StudentDashboard() {
   };
 
   if (!student) {
+    const accountEmail = user?.email || '로그인 이메일';
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6">
@@ -372,7 +374,7 @@ export default function StudentDashboard() {
           <div className="flex flex-col gap-2 pt-2">
             <button
               onClick={() => {
-                alert("담당 선생님에게 '수학 학습 분석 플랫폼 학생 계정 이메일(" + user?.email + ")을 제 학생 프로필과 연결해 주세요'라고 요청해 주세요. 선생님이 연결하면 이 안내 화면이 사라지고 학생 대시보드가 열립니다.");
+                alert("담당 선생님에게 '수학 학습 분석 플랫폼 학생 계정 이메일(" + accountEmail + ")을 제 학생 프로필과 연결해 주세요'라고 요청해 주세요. 선생님이 연결하면 이 안내 화면이 사라지고 학생 대시보드가 열립니다.");
               }}
               className="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
             >
