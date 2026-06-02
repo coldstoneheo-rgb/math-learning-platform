@@ -133,13 +133,13 @@ export default function StudentReportDetailPage() {
       );
 
       if (!success) {
-        addToast('PDF 내보내기에 실패했습니다.', 'error');
+        addToast('PDF 내보내기에 실패했습니다. 인쇄 버튼 또는 브라우저 저장 기능을 다시 시도해주세요.', 'error');
       } else {
         addToast('PDF가 저장되었습니다.', 'success');
       }
     } catch (error) {
       console.error('PDF 내보내기 오류:', error);
-      addToast('PDF 내보내기 중 오류가 발생했습니다.', 'error');
+      addToast('PDF 내보내기 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'error');
     } finally {
       setExporting(false);
     }
@@ -152,9 +152,12 @@ export default function StudentReportDetailPage() {
   if (!report) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">리포트를 찾을 수 없습니다.</p>
-          <Link href="/student" className="mt-4 text-indigo-600 hover:underline">
+        <div className="max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-lg font-bold text-gray-900">리포트를 찾을 수 없습니다</p>
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            학생 계정 연결이 바뀌었거나 리포트 접근 권한이 달라졌을 수 있습니다. 학생 대시보드에서 내 리포트 목록을 다시 확인해주세요.
+          </p>
+          <Link href="/student" className="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
             대시보드로 돌아가기
           </Link>
         </div>
@@ -238,6 +241,11 @@ export default function StudentReportDetailPage() {
               )}
             </button>
           </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+          <p className="text-xs text-gray-500">
+            PDF 저장이 되지 않으면 브라우저의 인쇄 또는 저장 기능을 이용하거나 선생님에게 리포트 확인을 요청해주세요.
+          </p>
         </div>
       </header>
 
