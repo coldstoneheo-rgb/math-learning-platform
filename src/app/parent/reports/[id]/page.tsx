@@ -160,8 +160,16 @@ export default function ParentReportDetailPage() {
 
   if (!report) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">리포트를 찾을 수 없습니다.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-lg font-bold text-gray-900">리포트를 찾을 수 없습니다</p>
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            자녀 연결이 해제되었거나 리포트 접근 권한이 바뀌었을 수 있습니다. 학부모 대시보드에서 자녀와 리포트 목록을 다시 확인해주세요.
+          </p>
+          <a href="/parent" className="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            학부모 대시보드로 돌아가기
+          </a>
+        </div>
       </div>
     );
   }
@@ -248,6 +256,11 @@ export default function ParentReportDetailPage() {
               🖨️ 인쇄
             </button>
           </div>
+        </div>
+        <div className="container mx-auto px-4 pb-3">
+          <p className="text-xs text-gray-500">
+            PDF/인쇄는 브라우저와 기기 환경에 따라 저장 방식이 다를 수 있습니다. 저장이 되지 않으면 인쇄 버튼에서 PDF 저장을 선택하거나 선생님에게 리포트 확인을 요청해주세요.
+          </p>
         </div>
       </header>
 

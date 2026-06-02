@@ -364,8 +364,16 @@ export default function ReportDetailPage() {
 
   if (!report || (!analysis && !levelTestAnalysis)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">리포트를 찾을 수 없습니다.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-lg font-bold text-gray-900">리포트를 찾을 수 없습니다</p>
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            리포트가 삭제되었거나 접근 권한이 바뀌었을 수 있습니다. 리포트 목록에서 해당 학생의 최근 리포트 생성 상태를 다시 확인해주세요.
+          </p>
+          <Link href="/teacher/reports" className="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+            리포트 목록으로 돌아가기
+          </Link>
+        </div>
       </div>
     );
   }
@@ -417,6 +425,12 @@ export default function ReportDetailPage() {
             🖨️ 인쇄
           </button>
         </div>
+      </div>
+      <div className="container mx-auto px-4 pb-3">
+        <p className="text-xs text-gray-500">
+          PDF/인쇄는 브라우저 환경에 따라 저장 방식이 다를 수 있습니다. 학부모 알림은 현재 인앱 알림과 이메일 발송이며, 카카오톡 자동 알림은 베타 이후 별도 연동 예정입니다.
+          {!report.students?.parent_id && ' 이 학생은 아직 학부모 계정이 연결되지 않아 알림 발송 버튼이 표시되지 않습니다.'}
+        </p>
       </div>
     </header>
 
