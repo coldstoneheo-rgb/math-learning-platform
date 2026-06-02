@@ -335,8 +335,11 @@ export default function AdminDashboard() {
           {todayStudents.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-2">🎉</div>
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="font-medium text-gray-700 dark:text-gray-200">
                 오늘은 예정된 수업이 없습니다.
+              </p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                베타 운영 중이라면 학생 연결, 최근 리포트, 과거 학습자료 등록 상태를 먼저 확인해 주세요.
               </p>
               <a
                 href="/teacher/schedules"
@@ -411,6 +414,12 @@ export default function AdminDashboard() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">성장 기록 연결하기</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">예전 시험지, 리포트, 점수 기록을 현재 성장 분석에 이어 붙입니다.</p>
           </div>
+          <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-800 dark:border-indigo-900/60 dark:bg-indigo-950/40 dark:text-indigo-200">
+            <p className="font-semibold">베타 전 확인 순서</p>
+            <p className="mt-1">
+              먼저 학생과 학부모 계정 연결을 확인하고, 과거 점수나 시험지를 가져온 뒤 AI 기억 서랍에서 과거 리포트 준비 상태를 확인하세요.
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <DashboardCard
               title="과거 학습자료 가져오기"
@@ -437,10 +446,18 @@ export default function AdminDashboard() {
           </div>
 
           {recentReports.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-              아직 이벤트가 없습니다.<br />
-              시험지를 분석하여 첫 리포트를 생성해보세요.
-            </p>
+            <div className="text-center py-8">
+              <p className="font-medium text-gray-700 dark:text-gray-200">아직 최근 리포트 이벤트가 없습니다.</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                학생을 등록한 뒤 시험 분석 또는 레벨 테스트 리포트를 만들면 최근 이벤트와 성장 판단 근거가 이곳에 표시됩니다.
+              </p>
+              <Link
+                href="/teacher/reports/create"
+                className="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+              >
+                첫 리포트 생성하기 →
+              </Link>
+            </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-slate-800">
               {recentReports.map((report) => {

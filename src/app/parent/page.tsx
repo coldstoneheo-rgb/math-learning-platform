@@ -545,12 +545,17 @@ export default function ParentDashboard() {
       <main className="container mx-auto px-4 py-8">
         {children.length === 0 ? (
           /* 연결된 자녀 없음 */
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+          <div className="bg-white rounded-xl shadow-sm p-8 md:p-12 text-center">
             <div className="text-6xl mb-4">👨‍👩‍👧</div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">연결된 자녀가 없습니다</h2>
-            <p className="text-gray-500">
-              선생님에게 자녀 연결을 요청해주세요.
+            <p className="mx-auto max-w-xl text-sm leading-6 text-gray-500">
+              계정은 정상적으로 로그인되었지만, 아직 이 학부모 계정에 연결된 학생 정보가 없습니다.
+              담당 선생님에게 <span className="font-semibold text-gray-700">학부모 이메일({user?.email})과 자녀 이름</span>을 전달해 연결을 요청해주세요.
             </p>
+            <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-left text-sm text-indigo-800">
+              <p className="font-semibold">정상 빈 상태입니다.</p>
+              <p className="mt-1 text-indigo-700">선생님이 자녀를 연결하면 총 리포트, 성장 여정, 리포트 목록이 이 화면에 표시됩니다.</p>
+            </div>
           </div>
         ) : (
           <>
@@ -833,12 +838,18 @@ export default function ParentDashboard() {
                   </div>
 
                   {selectedChild.reports.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">아직 생성된 리포트가 없습니다.</p>
+                    <div className="text-center py-8">
+                      <p className="text-sm font-semibold text-gray-700">아직 생성된 리포트가 없습니다.</p>
+                      <p className="mt-1 text-sm text-gray-500">
+                        선생님이 첫 시험 분석 또는 레벨 테스트 리포트를 만들면 성장 판단과 리포트 목록이 자동으로 표시됩니다.
+                      </p>
+                    </div>
                   ) : (
                     <>
                       {selectedChild.reports.filter(r => reportTypeFilter === 'all' || r.report_type === reportTypeFilter).length === 0 ? (
                         <div className="text-center py-8 text-gray-400">
-                          <p className="text-sm">해당 유형의 리포트가 없습니다.</p>
+                          <p className="text-sm font-medium text-gray-500">선택한 유형의 리포트가 아직 없습니다.</p>
+                          <p className="mt-1 text-xs text-gray-400">전체 리포트를 보거나, 선생님이 해당 유형 리포트를 만든 뒤 다시 확인해주세요.</p>
                           <button onClick={() => setReportTypeFilter('all')} className="mt-2 text-xs text-indigo-500 hover:underline">
                             전체 보기
                           </button>

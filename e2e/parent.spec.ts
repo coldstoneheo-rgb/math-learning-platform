@@ -13,7 +13,7 @@ async function expectChildOrEmptyState(page: Page) {
   await expect(emptyStateHeading.or(childStateIndicator).first()).toBeVisible({ timeout: 15_000 });
 
   if (await emptyStateHeading.isVisible()) {
-    await expect(page.getByText('선생님에게 자녀 연결을 요청해주세요.')).toBeVisible();
+    await expect(page.getByText(/학부모 이메일.*자녀 이름/)).toBeVisible();
     return 'empty' as const;
   }
 

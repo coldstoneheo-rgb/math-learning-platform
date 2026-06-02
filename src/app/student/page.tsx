@@ -317,6 +317,8 @@ export default function StudentDashboard() {
   };
 
   if (!student) {
+    const accountEmail = user?.email || '로그인 이메일';
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6">
@@ -324,10 +326,14 @@ export default function StudentDashboard() {
             <span className="text-6xl inline-block transform hover:scale-110 transition-transform duration-300">👨‍🏫</span>
             <h2 className="mt-4 text-2xl font-bold text-slate-800">아직 학생 정보가 연결되지 않았어요</h2>
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-              수학을 더 쉽고 재미있게 공부할 준비는 되었나요?
-              학습 리포트와 분석 내용을 확인하려면 담당 선생님께 <strong>“학생 계정 연결”</strong>을 요청해 주시거나,
-              선생님께 전달받은 초대 코드가 있다면 아래에 직접 입력해 보세요!
+              로그인은 정상적으로 되었지만, 아직 이 계정과 학생 프로필이 연결되지 않았습니다.
+              선생님께 받은 연결 코드가 있으면 아래에 입력하고, 코드가 없다면 선생님께 계정 연결을 요청해주세요.
             </p>
+          </div>
+
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+            <p className="font-semibold">연결되면 무엇이 보이나요?</p>
+            <p className="mt-1 text-indigo-700">내 성장 방향, 최근 리포트, 학습 계획, 풀이 분석 결과를 한 화면에서 확인할 수 있습니다.</p>
           </div>
 
           <form onSubmit={handleConnect} className="space-y-4">
@@ -368,7 +374,7 @@ export default function StudentDashboard() {
           <div className="flex flex-col gap-2 pt-2">
             <button
               onClick={() => {
-                alert("담당 선생님 혹은 다니고 있는 학원에 '수학 학습 분석 플랫폼 학생 계정(이메일: " + user?.email + ")과 제 프로필을 연결해 주세요' 라고 요청해 주세요. 선생님이 연결해 주시면 자동으로 본 화면이 사라지고 대시보드로 진입합니다.");
+                alert("담당 선생님에게 '수학 학습 분석 플랫폼 학생 계정 이메일(" + accountEmail + ")을 제 학생 프로필과 연결해 주세요'라고 요청해 주세요. 선생님이 연결하면 이 안내 화면이 사라지고 학생 대시보드가 열립니다.");
               }}
               className="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
             >
@@ -680,8 +686,8 @@ export default function StudentDashboard() {
             </div>
           ) : (
             <div className="text-center py-8 text-gray-400">
-              <p className="text-sm">등록된 학습 계획이 없습니다</p>
-              <p className="text-xs mt-1">선생님이 분석 리포트를 작성하면 자동으로 생성돼요!</p>
+              <p className="text-sm font-medium text-gray-500">아직 등록된 학습 계획이 없습니다</p>
+              <p className="text-xs mt-1">선생님이 분석 리포트를 저장하면, 실천할 학습 계획이 이곳에 표시됩니다.</p>
             </div>
           )}
         </div>
@@ -773,7 +779,8 @@ export default function StudentDashboard() {
             );
           })() : (
             <div className="text-center py-8 text-gray-400">
-              <p className="text-sm">아직 리포트가 없습니다</p>
+              <p className="text-sm font-medium text-gray-500">아직 리포트가 없습니다</p>
+              <p className="text-xs mt-1">시험 분석이나 레벨 테스트 리포트가 생기면 현재 위치와 다음 목표를 확인할 수 있어요.</p>
             </div>
           )}
         </div>
