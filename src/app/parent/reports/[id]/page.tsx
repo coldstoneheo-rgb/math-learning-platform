@@ -109,19 +109,42 @@ export default function ParentReportDetailPage() {
 
     setUser(userData);
 
-    const { data: reportData, error } = await supabase
-      .from('reports')
-      .select(`*, students (*)`)
-      .eq('id', reportId)
-      .single();
+    const { data: childrenData, error: childrenError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('parent_id', authUser.id);
 
-    if (error || !reportData || reportData.students?.parent_id !== authUser.id) {
+    if (childrenError || !childrenData || childrenData.length === 0) {
+      addToast('연결된 자녀 정보를 찾을 수 없습니다.', 'error');
+      router.push('/parent');
+      return;
+    }
+
+    const childrenIds = childrenData.map(child => child.id);
+    const { data: reportData, error: reportError } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('id', reportId)
+      .in('student_id', childrenIds)
+      .maybeSingle();
+
+    if (reportError || !reportData) {
       addToast('리포트를 찾을 수 없거나 접근 권한이 없습니다.', 'error');
       router.push('/parent');
       return;
     }
 
-    setReport(reportData);
+    const reportStudent = childrenData.find(child => child.id === reportData.student_id);
+    if (!reportStudent) {
+      addToast('리포트를 찾을 수 없거나 접근 권한이 없습니다.', 'error');
+      router.push('/parent');
+      return;
+    }
+
+    setReport({
+      ...reportData,
+      students: reportStudent,
+    });
     setLoading(false);
   };
 
