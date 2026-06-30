@@ -1,5 +1,8 @@
 # AGENTS.md
 
-> 이 프로젝트의 모든 핵심 아키텍처, 규칙, 프롬프트 지침 및 데이터 모델 정의는 `CLAUDE.md` 파일에 통합되어 관리됩니다. (Single Source of Truth)
-> 
-> 코드를 작성하거나 리뷰하기 전에, 혹은 시스템 구조를 파악해야 할 때 **반드시 `CLAUDE.md`를 먼저 읽고 숙지**하시기 바랍니다.
+> 작업 **원칙**(Karpathy 4원칙 · 루프 하네스 · PR 규칙)은 루트 [`CLAUDE.md`](CLAUDE.md)에 있습니다.
+> 코드를 작성·리뷰하기 전에 **반드시 먼저 읽으세요.**
+>
+> 상세 레퍼런스는 분리되어 있습니다:
+> - 아키텍처·서비스·워크플로: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+> - 데이터 모델·타입: [`docs/DATA_MODELS.md`](docs/DATA_MODELS.md) (구현: `src/types/index.ts`)
