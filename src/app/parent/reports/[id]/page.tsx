@@ -32,6 +32,7 @@ import {
   generateWeeklyComparison,
 } from '@/lib/report-utils';
 import { FormatAIText } from '@/lib/format-ai-text';
+import { stripTeacherOnlyAnalysisFields } from '@/lib/report-utils';
 import ProblemAnalysisSection from '@/components/report/ProblemAnalysisSection';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
@@ -142,8 +143,9 @@ export default function ParentReportDetailPage() {
       return;
     }
 
+    // 교사 전용 내부 필드(qaReport 등)를 제거한 뒤 상태에 저장(학부모 노출 차단)
     setReport({
-      ...reportData,
+      ...stripTeacherOnlyAnalysisFields(reportData),
       students: reportStudent,
     });
     setLoading(false);
