@@ -15,7 +15,7 @@ import type {
   VerifiedDerivedGuidance,
 } from '@/types';
 import { routeModel, createRoutingLog, getModelConfigInfo, type ModelRoutingContext } from './model-router';
-import type { QaReport } from './report-critic';
+import type { QaReport } from '@/types';
 import { generateKnowledgeTracingContext } from './knowledge-graph';
 import { generatePredictiveAnalysisContext } from './predictive-analysis';
 import { assertCompleteVerifiedDerivedGuidance } from './teacher-verified-analysis';

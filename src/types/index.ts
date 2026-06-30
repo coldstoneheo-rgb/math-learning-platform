@@ -243,6 +243,25 @@ export interface StaminaAnalysis {
 }
 
 /**
+ * QaReport - 독립 Critic 평가 결과 (Loop Engineering 하네스)
+ * REPORT_CRITIC_LOOP 활성화 시 생성되어 analysis_data에 저장된다.
+ */
+export type QaSeverity = 'critical' | 'major' | 'minor';
+
+export interface QaIssue {
+  severity: QaSeverity;
+  area: string;   // 예: '실행가능성', '논리 일관성'
+  detail: string; // 구체적 결함 + 권장 조치
+}
+
+export interface QaReport {
+  score: number;                       // 0-10
+  verdict: 'PASS' | 'NEEDS_REVISION';
+  issues: QaIssue[];
+  selfBiasNote: string;                // self-bias 경고(평가자가 강제 부착)
+}
+
+/**
  * TestAnalysisData - 시험 분석 리포트 데이터 (기본 형태)
  * report_type: 'test' 또는 'level_test'에 사용
  */
@@ -262,6 +281,8 @@ export interface TestAnalysisData {
   metaCognitionAnalysis?: MetaCognitionAnalysis;
   // 지구력 분석 (시험 풀이 집중력 및 시간 배분)
   staminaAnalysis?: StaminaAnalysis;
+  // 독립 Critic 평가 결과 (REPORT_CRITIC_LOOP 활성화 시에만 채워짐)
+  qaReport?: QaReport;
   // AI 초안과 교사 확정값을 구분하기 위한 검증 메타데이터
   verificationStatus?: 'ai_draft' | 'teacher_verified';
   aiInferred?: {

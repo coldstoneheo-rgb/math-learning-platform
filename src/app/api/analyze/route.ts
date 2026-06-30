@@ -270,6 +270,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
             ),
         });
         analysisData = criticResult.analysis;
+        // qa_report를 분석 결과에 부착 → 기존 저장 경로로 analysis_data에 영구화(관측·감사용)
+        analysisData.qaReport = criticResult.finalReport;
         console.log(
           '[Critic Loop]',
           JSON.stringify({
