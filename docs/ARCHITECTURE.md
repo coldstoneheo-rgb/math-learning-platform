@@ -165,6 +165,9 @@ PostgreSQL Database (with RLS policies)
 
 ```
 math-learning-platform/
+├── docs/                             # 상세 레퍼런스 문서
+│   ├── ARCHITECTURE.md               # 본 파일 - 아키텍처 & 엔지니어링 레퍼런스
+│   └── DATA_MODELS.md                # 데이터 모델 & 타입 정의 레퍼런스
 ├── src/
 │   ├── app/                          # Next.js App Router pages
 │   │   ├── (auth)/                   # Auth group (login, signup)
@@ -226,7 +229,8 @@ math-learning-platform/
 ├── tailwind.config.js
 ├── tsconfig.json
 │
-├── CLAUDE.md                         # This file - AI assistant guide
+├── CLAUDE.md                         # 작업 원칙 (Karpathy 4원칙 + 루프 하네스, ~60줄)
+├── AGENTS.md                         # 에이전트 진입점 (CLAUDE.md/docs 포인터)
 ├── MathLearning_PRD_v3.0_Implementation.md  # Product requirements
 ├── ML_ENGINE_ENHANCEMENT_PLAN.md     # ML Engine roadmap
 ├── IMPROVEMENT_ROADMAP.md            # Development roadmap

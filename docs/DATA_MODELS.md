@@ -38,14 +38,15 @@ interface Student {
   connection_code?: string;// Unique student connection code (STU-XXXXXX)
   learning_style?: 'visual' | 'verbal' | 'logical';
   personality_traits?: string[];
+  meta_profile?: StudentMetaProfile | null; // 학생 메타프로필 (JSONB)
   created_at: string;
 }
 ```
 
 ### Report Types
 ```typescript
-// Growth Loop 시스템: 6개 리포트 타입
-type ReportType = 'level_test' | 'test' | 'weekly' | 'monthly' | 'semi_annual' | 'annual' | 'consolidated';
+// Growth Loop 시스템: 리포트 타입
+type ReportType = 'level_test' | 'test' | 'weekly' | 'monthly' | 'semi_annual' | 'annual' | 'consolidated' | 'self_analysis';
 
 interface Report {
   id: number;
@@ -57,7 +58,7 @@ interface Report {
   max_score?: number;
   rank?: number;
   total_students?: number;
-  analysis_data: AnalysisData;  // JSONB column
+  analysis_data: AnalysisData | AnyAnalysisData;  // JSONB column (report_type별 구조 상이)
   created_at: string;
 }
 
@@ -175,35 +176,44 @@ interface Schedule {
 interface ClassSession {
   id: number;
   student_id: number;
-  schedule_id?: number;
   session_date: string;
   start_time?: string;
   end_time?: string;
-  learning_keywords: string[];      // 학습 키워드 태그
-  covered_concepts: string[];       // 다룬 개념
+  curriculum_unit_id?: number;
+  learning_keywords?: string[];     // 학습 키워드 태그
+  covered_concepts?: string[];      // 다룬 개념
   summary?: string;
-  understanding_level: number;      // 1-5
-  attention_level: number;          // 1-5
+  understanding_level?: number;     // 1-5
+  attention_level?: number;         // 1-5
   notes?: string;
   created_at: string;
+  // JOIN 결과
+  students?: Student;
+  curriculum_units?: CurriculumUnit;
 }
 
 // 숙제
+type AssignmentType = 'workbook' | 'review' | 'practice' | 'preview';
 type AssignmentStatus = 'assigned' | 'in_progress' | 'completed' | 'overdue';
 
 interface Assignment {
   id: number;
   student_id: number;
   class_session_id?: number;
-  assignment_type: 'workbook' | 'review' | 'practice' | 'custom';
+  assignment_type?: AssignmentType;
   title: string;
-  source?: string;      // 교재명
-  page_range?: string;  // 페이지 범위
+  description?: string;
+  source?: string;          // 교재명
+  page_range?: string;      // 페이지 범위
+  problem_numbers?: string;
   due_date?: string;
   status: AssignmentStatus;
   completed_at?: string;
-  notes?: string;
+  completion_note?: string;
   created_at: string;
+  // JOIN 결과
+  students?: Student;
+  class_sessions?: ClassSession;
 }
 ```
 
