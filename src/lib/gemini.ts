@@ -890,7 +890,8 @@ export async function analyzeTestPaperWithContext(
   reportType: ReportType = 'test',
   context?: AnalysisContextData,
   studentGrade?: number,
-  revisionFeedback?: string
+  revisionFeedback?: string,
+  previousDraft?: AnalysisData
 ): Promise<AnalysisData> {
   const ai = getGeminiClient();
 
@@ -980,8 +981,15 @@ ${context?.relevantMemories?.length ? `
 ` : ''}
 ${revisionFeedback ? `
 ## [보정 요청] 독립 평가자(Critic) 피드백
-직전 분석이 아래 결함으로 보정이 필요합니다. 지적된 부분을 구체적으로 보강하여 다시 작성하세요.
-정확하게 분석된 부분은 그대로 유지하고, 결함 부분만 개선하세요.
+아래 '직전 분석 결과'를 기준으로, 지적된 결함만 정확히 보강하여 다시 작성하세요.
+정확하게 분석된 부분은 그대로 유지하고, 결함 부분만 개선하세요(전면 재작성 금지).
+${previousDraft ? `
+### 직전 분석 결과 (보정 대상)
+\`\`\`json
+${JSON.stringify(previousDraft)}
+\`\`\`
+` : ''}
+### 피드백 내용
 ${revisionFeedback}
 ` : ''}
 응답은 반드시 지정된 JSON 스키마를 따라주세요.`;

@@ -32,8 +32,6 @@ export interface CriticLoopOptions {
   evaluate: (draft: AnalysisData) => Promise<QaReport>;
   /** 보정 생성 — Critic 피드백을 받아 다시 생성한다 */
   regenerate: (feedback: string) => Promise<AnalysisData>;
-  /** 합격 임계 점수(기본 7) */
-  threshold?: number;
   /** 최대 보정 횟수(기본 1) */
   maxRevisions?: number;
 }
@@ -61,17 +59,16 @@ export function formatCriticFeedback(report: QaReport): string {
 }
 
 /**
- * 생성 → 독립 평가 → (임계 미달 시) 1회 보정 루프.
+ * 생성 → 독립 평가 → (NEEDS_REVISION이면) 1회 보정 루프.
  *
  * - draft를 평가한다.
- * - PASS이거나 임계 이상이면 즉시 반환.
- * - NEEDS_REVISION이고 임계 미달이면 보정 생성 후 재평가한다.
- * - best-of: 보정본 점수가 원본보다 높을 때만 채택. 개선이 없으면 원본을 유지하고 중단.
+ * - verdict가 PASS면 즉시 반환.
+ * - NEEDS_REVISION이면 보정 생성 후 재평가한다.
+ * - best-of: 보정본 점수가 더 높거나, 동점이라도 판정이 PASS로 개선되면 채택. 아니면 원본 유지하고 중단.
  *
  * evaluate/regenerate가 throw하면 호출자(라우트)가 잡아 원본으로 폴백한다.
  */
 export async function applyCriticLoop(options: CriticLoopOptions): Promise<CriticLoopResult> {
-  const threshold = options.threshold ?? 7;
   const maxRevisions = options.maxRevisions ?? 1;
 
   let bestAnalysis = options.draft;
@@ -79,11 +76,9 @@ export async function applyCriticLoop(options: CriticLoopOptions): Promise<Criti
   const reports: QaReport[] = [bestReport];
   let revisions = 0;
 
-  while (
-    bestReport.verdict === 'NEEDS_REVISION' &&
-    bestReport.score < threshold &&
-    revisions < maxRevisions
-  ) {
+  // verdict만 신뢰한다(평가자가 'critical 결함 OR score<7' → NEEDS_REVISION으로 판정).
+  // 점수 게이트를 두면 점수는 높지만 critical 결함이 있는 case가 보정되지 않는다.
+  while (bestReport.verdict === 'NEEDS_REVISION' && revisions < maxRevisions) {
     revisions += 1;
     const feedback = formatCriticFeedback(bestReport);
     const revised = await options.regenerate(feedback);
@@ -91,7 +86,15 @@ export async function applyCriticLoop(options: CriticLoopOptions): Promise<Criti
     reports.push(revisedReport);
 
     // best-of: 보정이 실제로 개선했을 때만 채택. 아니면 원본 유지하고 중단.
-    if (revisedReport.score > bestReport.score) {
+    // 점수가 더 높거나, 동점이라도 판정이 NEEDS_REVISION→PASS로 개선되면 채택한다
+    // (예: 원본 8점이지만 critical 결함으로 NEEDS_REVISION, 보정본 8점 PASS인 경우).
+    const isImproved =
+      revisedReport.score > bestReport.score ||
+      (revisedReport.score === bestReport.score &&
+        revisedReport.verdict === 'PASS' &&
+        bestReport.verdict === 'NEEDS_REVISION');
+
+    if (isImproved) {
       bestAnalysis = revised;
       bestReport = revisedReport;
     } else {

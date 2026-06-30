@@ -265,7 +265,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
               reportType,
               context,
               undefined,
-              feedback
+              feedback,
+              analysisData
             ),
         });
         analysisData = criticResult.analysis;
