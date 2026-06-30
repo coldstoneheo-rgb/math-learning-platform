@@ -35,10 +35,10 @@ Vercel \+ Supabase 기반 웹 플랫폼 구축
 | 영역 | 상태 | 비고 |
 | ----- | ----- | ----- |
 | Growth Loop 6리포트 (level\_test/test/weekly/monthly/semi\_annual/annual) | ✅ | `src/app/api/*-report`, `src/lib/gemini.ts` |
-| Anchor Loop 메타프로필 업데이트 | ✅ | `/api/meta-profile/update` |
+| Anchor Loop 메타프로필 업데이트 | ✅ | `src/app/api/meta-profile/update/route.ts` |
 | 학생 프로필 자동추출 | ✅ | `src/lib/student-profile-extractor.ts` |
-| 모델 라우팅 / 레이트리밋 / Zod 입력검증 | ✅ | `model-router.ts`, `rate-limiter.ts`, `validations.ts` |
-| RAG / 임베딩 분석 | 🟡 | `embedding-*.ts`, `rag-diagnostics.ts` |
+| 모델 라우팅 / 레이트리밋 / Zod 입력검증 | ✅ | `src/lib/model-router.ts`, `src/lib/rate-limiter.ts`, `src/lib/validations.ts` |
+| RAG / 임베딩 분석 | 🟡 | `src/lib/embedding-*.ts`, `src/lib/rag-diagnostics.ts` |
 | 생성·평가 분리 (Critic 보정 루프) | ⬜ | 하네스 앱 층위(PR 4+)에서 도입 예정 |
 | 카카오 알림톡 | ⬜ | `docs/KAKAO_ALIMTALK_ROADMAP.md` |
 
