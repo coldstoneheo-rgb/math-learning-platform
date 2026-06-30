@@ -11,6 +11,43 @@ Vercel \+ Supabase 기반 웹 플랫폼 구축
 
 대상 사용자: 50명 (학생 25명 \+ 학부모 25명)
 
+---
+
+## 📌 Living Document 운영 규칙 (2026-06-30 신설)
+
+이 PRD는 **살아있는 문서**다. 1회성 명세가 아니라 구현 상태와 함께 지속 갱신한다.
+
+- **갱신 시점**: 동작·스키마·기능이 바뀌는 작업에서 같은 흐름으로 이 문서를 갱신한다.
+- **버전 규칙**: 의미 있는 변경마다 아래 Changelog에 한 줄 추가하고 "현재 버전"을 올린다.
+- **현재 버전**: **v3.4** (Loop 하네스 도입) · 최종 업데이트 **2026-06-30**
+- **정합성**: 구현과 어긋난 항목은 "구현 현황 스냅샷"에 기록하고, 해소되면 본문을 정정한다.
+- 작업 원칙·하네스 정의는 루트 `CLAUDE.md`, `.claude/HARNESS.md` 참조.
+
+### Changelog
+| 날짜 | 버전 | 변경 |
+| ----- | ----- | ----- |
+| 2026-06-30 | v3.4 | Loop 엔지니어링 하네스 도입. PRD를 living document로 전환(운영 규칙·Changelog·구현 현황 스냅샷 신설). |
+| 2026-04-29 | v3.3 | 상용화 준비. Growth Loop 6리포트, Anchor Loop, 학생 프로필 자동추출 반영. |
+
+### 구현 현황 스냅샷 (2026-06-30)
+> PRD 본문과 실제 코드의 차이를 추적한다. ✅구현 / 🟡부분 / ⬜계획.
+
+| 영역 | 상태 | 비고 |
+| ----- | ----- | ----- |
+| Growth Loop 6리포트 (level\_test/test/weekly/monthly/semi\_annual/annual) | ✅ | `src/app/api/*-report`, `src/lib/gemini.ts` |
+| Anchor Loop 메타프로필 업데이트 | ✅ | `src/app/api/meta-profile/update/route.ts` |
+| 학생 프로필 자동추출 | ✅ | `src/lib/student-profile-extractor.ts` |
+| 모델 라우팅 / 레이트리밋 / Zod 입력검증 | ✅ | `src/lib/model-router.ts`, `src/lib/rate-limiter.ts`, `src/lib/validations.ts` |
+| RAG / 임베딩 분석 | 🟡 | `src/lib/embedding-*.ts`, `src/lib/rag-diagnostics.ts` |
+| 생성·평가 분리 (Critic 보정 루프) | ⬜ | 하네스 앱 층위(PR 4+)에서 도입 예정 |
+| 카카오 알림톡 | ⬜ | `docs/KAKAO_ALIMTALK_ROADMAP.md` |
+
+### PRD 본문 드리프트 (갱신 필요)
+- **1.2 기술 스택**: "Next.js 14+" → 실제 **16.1.0**. (본문 추후 정정)
+- **문서 버전 표기 불일치**(헤더 v3.2 / 문서 버전 3.3) → 본 운영 규칙의 "현재 버전"으로 단일화.
+
+---
+
 **목차**
 
 **1\. Executive Summary**
