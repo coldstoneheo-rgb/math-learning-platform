@@ -345,3 +345,24 @@ export function generateWeeklyComparison(
     return `지난주보다 ${absDiff}점 하락했어요. 무슨 일이 있었는지 확인이 필요해요.`;
   }
 }
+
+// ============================================
+// 교사 전용 내부 필드 제거 (학부모/학생 노출 차단)
+// ============================================
+
+/**
+ * 학부모/학생에게 노출하면 안 되는 교사 전용 내부 필드를
+ * 리포트의 analysis_data에서 제거한 새 리포트 객체를 반환한다.
+ *
+ * 현재 대상: qaReport(독립 Critic의 내부 비평 — REPORT_CRITIC_LOOP 활성화 시 저장됨).
+ * 학부모/학생 리포트 fetch는 select('*')로 analysis_data 전체를 받으므로,
+ * 화면에 쓰기 전에 이 함수로 걸러 내부 비평이 새지 않게 한다.
+ */
+export function stripTeacherOnlyAnalysisFields<T>(report: T): T {
+  if (!report || typeof report !== 'object') return report;
+  const data = (report as { analysis_data?: unknown }).analysis_data;
+  if (!data || typeof data !== 'object') return report;
+  const { qaReport: _qaReport, ...rest } = data as Record<string, unknown>;
+  void _qaReport;
+  return { ...(report as Record<string, unknown>), analysis_data: rest } as T;
+}

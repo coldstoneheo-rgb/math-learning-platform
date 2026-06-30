@@ -23,6 +23,7 @@ import {
 } from '@/lib/teacher-verified-analysis';
 import { exportReportToPdf } from '@/lib/pdf-export';
 import { FormatAIText } from '@/lib/format-ai-text';
+import { stripTeacherOnlyAnalysisFields } from '@/lib/report-utils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -116,7 +117,8 @@ export default function StudentReportDetailPage() {
       return;
     }
 
-    setReport(reportData);
+    // 교사 전용 내부 필드(qaReport 등)를 제거한 뒤 상태에 저장(학생 노출 차단)
+    setReport(stripTeacherOnlyAnalysisFields(reportData));
     setLoading(false);
   };
 
