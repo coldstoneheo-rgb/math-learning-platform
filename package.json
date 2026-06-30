@@ -11,6 +11,7 @@
     "test:verified-report": "tsc -p tsconfig.verified-report-test.json && node -e \"require('fs').writeFileSync('.tmp/verified-report-test/package.json', '{\\\"type\\\":\\\"module\\\"}\\n')\" && node .tmp/verified-report-test/tests/teacher-verified-analysis.test.mjs",
     "test:notifications": "tsc -p tsconfig.notification-test.json && node -e \"require('fs').writeFileSync('.tmp/notification-test/package.json', '{\\\"type\\\":\\\"module\\\"}\\n')\" && node .tmp/notification-test/tests/notification-results.test.mjs",
     "test:rag": "tsc -p tsconfig.rag-test.json && node -e \"require('fs').writeFileSync('.tmp/rag-test/package.json', '{\\\"type\\\":\\\"module\\\"}\\n')\" && node .tmp/rag-test/tests/rag-diagnostics.test.mjs",
+    "test:report-critic": "tsc -p tsconfig.report-critic-test.json && node -e \"require('fs').writeFileSync('.tmp/report-critic-test/package.json', '{\\\"type\\\":\\\"module\\\"}\\n')\" && node .tmp/report-critic-test/tests/report-critic.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"

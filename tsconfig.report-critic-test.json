@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "noEmit": false,
+    "noEmitOnError": true,
+    "outDir": ".tmp/report-critic-test",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": [
+    "src/lib/report-critic.ts",
+    "src/types/**/*.ts",
+    "tests/report-critic.test.mts"
+  ]
+}
