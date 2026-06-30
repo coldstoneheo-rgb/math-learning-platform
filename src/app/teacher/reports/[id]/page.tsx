@@ -505,6 +505,57 @@ export default function ReportDetailPage() {
           </div>
         )}
 
+        {/* AI 품질 평가 (독립 Critic) — 교사 전용. 학부모/학생에게는 노출하지 않는다. */}
+        {analysis?.qaReport && (
+          <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm print:hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-900">AI 품질 평가 (내부 검수)</span>
+                <span className="text-xs text-slate-400">교사 전용 · 학부모/학생 비공개</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                  {analysis.qaReport.score}/10
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    analysis.qaReport.verdict === 'PASS'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}
+                >
+                  {analysis.qaReport.verdict === 'PASS' ? '합격' : '보정 필요'}
+                </span>
+              </div>
+            </div>
+            {analysis.qaReport.issues.length > 0 && (
+              <ul className="mt-3 space-y-1.5">
+                {analysis.qaReport.issues.map((issue, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-slate-700">
+                    <span
+                      className={`mt-0.5 shrink-0 rounded px-1.5 text-xs font-semibold ${
+                        issue.severity === 'critical'
+                          ? 'bg-red-100 text-red-700'
+                          : issue.severity === 'major'
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {issue.severity}
+                    </span>
+                    <span>
+                      <span className="font-medium">{issue.area}</span> — {issue.detail}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {analysis.qaReport.selfBiasNote && (
+              <p className="mt-3 text-xs text-slate-400">⚠ {analysis.qaReport.selfBiasNote}</p>
+            )}
+          </div>
+        )}
+
         {processingTrace && (
           <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
