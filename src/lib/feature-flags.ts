@@ -21,6 +21,9 @@ export const FEATURE_FLAGS = {
   PDF_EXPORT_V2: 'pdf_export_v2',
   AI_ENHANCED_REPORTS: 'ai_enhanced_reports',
   REAL_TIME_ANALYTICS: 'real_time_analytics',
+
+  // 하네스 (Loop Engineering) — 앱 층위
+  REPORT_CRITIC_LOOP: 'report_critic_loop',
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
@@ -106,6 +109,15 @@ const DEFAULT_FLAGS: Record<FeatureFlagKey, FeatureFlagConfig> = {
     enabledForRoles: ['teacher'],
     createdAt: '2025-01-01',
     updatedAt: '2025-01-01',
+  },
+
+  // 하네스: 리포트 생성 후 독립 Critic 평가 + 1회 보정 (test 파일럿). 기본 OFF.
+  [FEATURE_FLAGS.REPORT_CRITIC_LOOP]: {
+    status: 'disabled',
+    description: '리포트 생성 후 독립 Critic 평가·1회 보정 루프 (test 파일럿)',
+    enabledForRoles: ['teacher'],
+    createdAt: '2026-06-30',
+    updatedAt: '2026-06-30',
   },
 };
 

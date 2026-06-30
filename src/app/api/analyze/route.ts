@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { analyzeTestPaperWithContext, GeminiApiError, GeminiParseError } from '@/lib/gemini';
+import { analyzeTestPaperWithContext, evaluateTestAnalysisDraft, GeminiApiError, GeminiParseError } from '@/lib/gemini';
 import { buildAnalysisContext, updateStudentMetaProfile } from '@/lib/context-builder';
 import { applyRateLimitAsync } from '@/lib/rate-limiter';
 import { analyzeRequestSchema, validateRequest } from '@/lib/validations';
+import { applyCriticLoop } from '@/lib/report-critic';
+import { isFeatureEnabled, FEATURE_FLAGS } from '@/lib/feature-flags';
 import type { AnalyzeApiResponse, ReportType, TestAnalysisFormData, StudentMetaProfile, ErrorSignature, AbsorptionRate, SolvingStamina, MetaCognitionLevel } from '@/types';
 
 // Route Segment Config: 2분 타임아웃 (Vercel Pro/Enterprise)
@@ -217,10 +219,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
     }
     const body = validation.data;
 
+    const reportType: ReportType = body.reportType || 'test';
+
     // 학생 ID가 있으면 컨텍스트 빌드 (RAG queryText 포함)
     let context = undefined;
     if (body.studentId) {
-      const reportType: ReportType = body.reportType || 'test';
       const queryText = buildTestAnalysisQueryText(
         body.studentName,
         reportType,
@@ -232,14 +235,55 @@ export async function POST(request: NextRequest): Promise<NextResponse<AnalyzeAp
     }
 
     // 컨텍스트를 포함한 분석 실행
-    const analysisData = await analyzeTestPaperWithContext(
+    let analysisData = await analyzeTestPaperWithContext(
       body.studentName,
       body.formData as TestAnalysisFormData,
       body.currentImages,
       body.pastImages || [],
-      body.reportType || 'test',
+      reportType,
       context
     );
+
+    // 하네스(앱 층위): 독립 Critic 평가 + 1회 보정 루프
+    // flag ON + test 타입에서만 동작. 실패해도 원본 분석을 유지(리포트를 막지 않음).
+    if (
+      analysisData &&
+      reportType === 'test' &&
+      isFeatureEnabled(FEATURE_FLAGS.REPORT_CRITIC_LOOP)
+    ) {
+      try {
+        const formData = body.formData as TestAnalysisFormData;
+        const criticResult = await applyCriticLoop({
+          draft: analysisData,
+          evaluate: (draft) => evaluateTestAnalysisDraft(draft, formData, body.studentName),
+          regenerate: (feedback) =>
+            analyzeTestPaperWithContext(
+              body.studentName,
+              formData,
+              body.currentImages,
+              body.pastImages || [],
+              reportType,
+              context,
+              undefined,
+              feedback,
+              analysisData
+            ),
+        });
+        analysisData = criticResult.analysis;
+        console.log(
+          '[Critic Loop]',
+          JSON.stringify({
+            score: criticResult.finalReport.score,
+            verdict: criticResult.finalReport.verdict,
+            revisions: criticResult.revisions,
+            issueCount: criticResult.finalReport.issues.length,
+            selfBiasNote: criticResult.finalReport.selfBiasNote,
+          })
+        );
+      } catch (criticError) {
+        console.warn('[Critic Loop] 평가 실패 (원본 분석 유지):', criticError);
+      }
+    }
 
     // Anchor Loop: 분석 결과로 메타프로필 업데이트 (studentId가 있는 경우)
     if (body.studentId && analysisData) {
