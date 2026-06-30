@@ -80,11 +80,17 @@ test('동점이고 둘 다 NEEDS_REVISION이면 원본을 유지한다', async (
   assert.equal(result.revisions, 1);
 });
 
-test('maxRevisions(기본 1)를 넘겨 보정하지 않는다', async () => {
+test('점수가 계속 개선돼도 maxRevisions(기본 1)에서 멈춘다', async () => {
+  // 점수가 매번 오르지만 계속 NEEDS_REVISION → break가 아니라 maxRevisions 게이트로 멈춰야 한다.
+  const scores: Record<string, QaReport> = {
+    orig: qa(3, 'NEEDS_REVISION'),
+    rev1: qa(5, 'NEEDS_REVISION'),
+    rev2: qa(7, 'NEEDS_REVISION'),
+  };
   let regenCalls = 0;
   const result = await applyCriticLoop({
     draft: draft('orig'),
-    evaluate: async () => qa(3, 'NEEDS_REVISION'),
+    evaluate: async (d) => scores[id(d)],
     regenerate: async () => {
       regenCalls += 1;
       return draft('rev' + regenCalls);
@@ -92,6 +98,7 @@ test('maxRevisions(기본 1)를 넘겨 보정하지 않는다', async () => {
   });
   assert.equal(regenCalls, 1);
   assert.equal(result.revisions, 1);
+  assert.equal(id(result.analysis), 'rev1'); // 개선된 보정본 채택
 });
 
 test('maxRevisions=2로 점수가 단계적으로 오르면 두 번 채택한다', async () => {
