@@ -8,22 +8,10 @@
  * self-bias 주의: 생성·평가가 같은 모델 계열이면 자가평가 편향이 생긴다.
  * 평가자는 생성자와 다른 모델 tier + 독립 루브릭을 써서 상관을 줄인다(gemini.ts 참조).
  */
-import type { AnalysisData } from '@/types';
+import type { AnalysisData, QaReport, QaIssue, QaSeverity } from '@/types';
 
-export type QaSeverity = 'critical' | 'major' | 'minor';
-
-export interface QaIssue {
-  severity: QaSeverity;
-  area: string;   // 예: '실행가능성', '논리 일관성'
-  detail: string; // 구체적 결함 + 권장 조치
-}
-
-export interface QaReport {
-  score: number;                       // 0-10
-  verdict: 'PASS' | 'NEEDS_REVISION';
-  issues: QaIssue[];
-  selfBiasNote: string;                // self-bias 경고(평가자가 강제 부착)
-}
+// 타입 SSoT는 @/types. 기존 import 경로(report-critic) 호환을 위해 재노출한다.
+export type { QaReport, QaIssue, QaSeverity };
 
 export interface CriticLoopOptions {
   /** 1차 생성 결과(Maker 산출물) */
