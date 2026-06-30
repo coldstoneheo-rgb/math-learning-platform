@@ -14,7 +14,8 @@ import type {
   SelfAnalysisProblemType,
   VerifiedDerivedGuidance,
 } from '@/types';
-import { routeModel, createRoutingLog, type ModelRoutingContext } from './model-router';
+import { routeModel, createRoutingLog, getModelConfigInfo, type ModelRoutingContext } from './model-router';
+import type { QaReport } from './report-critic';
 import { generateKnowledgeTracingContext } from './knowledge-graph';
 import { generatePredictiveAnalysisContext } from './predictive-analysis';
 import { assertCompleteVerifiedDerivedGuidance } from './teacher-verified-analysis';
@@ -888,7 +889,8 @@ export async function analyzeTestPaperWithContext(
   pastImages: string[] = [],
   reportType: ReportType = 'test',
   context?: AnalysisContextData,
-  studentGrade?: number
+  studentGrade?: number,
+  revisionFeedback?: string
 ): Promise<AnalysisData> {
   const ai = getGeminiClient();
 
@@ -976,7 +978,12 @@ ${context?.relevantMemories?.length ? `
 - 현재 위험: 최근에도 남아 있거나 새로 등장한 오류 패턴
 - 실행 처방: 과거 패턴과 현재 증거를 연결한 구체적 개선 행동
 ` : ''}
-
+${revisionFeedback ? `
+## [보정 요청] 독립 평가자(Critic) 피드백
+직전 분석이 아래 결함으로 보정이 필요합니다. 지적된 부분을 구체적으로 보강하여 다시 작성하세요.
+정확하게 분석된 부분은 그대로 유지하고, 결함 부분만 개선하세요.
+${revisionFeedback}
+` : ''}
 응답은 반드시 지정된 JSON 스키마를 따라주세요.`;
 
   try {
@@ -1004,6 +1011,119 @@ ${context?.relevantMemories?.length ? `
   } catch (error) {
     if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
     throw new GeminiApiError('AI 분석 중 오류가 발생했습니다.', error);
+  }
+}
+
+// ============================================
+// 독립 Critic 평가 (Loop Engineering 하네스 — 앱 층위)
+// ============================================
+
+const QA_REPORT_SCHEMA = {
+  type: 'object',
+  properties: {
+    score: { type: 'number' },
+    verdict: { type: 'string', enum: ['PASS', 'NEEDS_REVISION'] },
+    issues: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          severity: { type: 'string', enum: ['critical', 'major', 'minor'] },
+          area: { type: 'string' },
+          detail: { type: 'string' },
+        },
+      },
+    },
+    selfBiasNote: { type: 'string' },
+  },
+  required: ['score', 'verdict'],
+};
+
+const CRITIC_SYSTEM_PROMPT = `당신은 수학 학습 리포트를 검수하는 **독립 평가자(Critic)**입니다.
+당신의 임무는 평가뿐입니다. 리포트를 새로 작성하지 않습니다.
+"통과시키려는" 편향을 경계하고, 추측이 아니라 근거로 채점하세요. 점수를 후하게 주지 마세요.`;
+
+/**
+ * 생성된 test 분석(AnalysisData)을 독립적으로 채점한다.
+ *
+ * self-bias 완화: 생성자(보통 flash)와 다른 **Pro 모델** + temperature 0 + 독립 루브릭.
+ * 단, 생성·평가가 같은 Gemini 계열이라 완전한 교차검증은 아니다(selfBiasNote에 명시).
+ * 비용/지연 최소화를 위해 이미지 없이 텍스트(JSON)만 평가한다.
+ */
+export async function evaluateTestAnalysisDraft(
+  analysisData: AnalysisData,
+  formData: TestAnalysisFormData,
+  studentName: string
+): Promise<QaReport> {
+  const ai = getGeminiClient();
+  const proModel = getModelConfigInfo().proModel;
+
+  const userPrompt = `## 평가 대상
+- 학생: ${studentName}
+- 시험: ${formData.testName} (${formData.testRange ?? '범위 미기록'})
+
+아래 AI 분석 결과(JSON)를 독립적으로 채점하세요.
+\`\`\`json
+${JSON.stringify(analysisData)}
+\`\`\`
+
+## 채점 기준 (0-10, 정수)
+- **정확성**: 점수/문항 채점과 서술이 서로 모순되지 않는가? 논리적 비약은 없는가?
+- **안전성**: 이미지·데이터에 근거 없는 단정(hallucination)이 없는가?
+- **실행가능성**: actionablePrescription의 각 항목이 5요소(무엇을/어디서/얼마나/어떻게/측정 방법)를 구체적으로 갖췄는가?
+- **깊이**: 문항별 5관점 심층 분석이 피상적이지 않은가?
+
+## 판정 규칙
+- critical 결함이 1개라도 있거나 종합 점수가 7 미만이면 verdict='NEEDS_REVISION'.
+- 그 외에는 'PASS'.
+- issues는 심각도(critical/major/minor)·영역·구체적 결함과 권장 조치를 담는다.
+- selfBiasNote에는 "생성·평가 모두 Gemini 계열이므로 self-bias 가능성이 있다"는 한계를 명시한다.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: proModel,
+      contents: [
+        { role: 'user', parts: [{ text: CRITIC_SYSTEM_PROMPT }] },
+        { role: 'model', parts: [{ text: '네, 독립 평가자로서 근거에 기반해 엄격히 채점하겠습니다.' }] },
+        { role: 'user', parts: [{ text: userPrompt }] },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: QA_REPORT_SCHEMA,
+        temperature: 0,
+      },
+    });
+
+    const text = response.text;
+    if (!text) throw new GeminiApiError('Critic 평가 응답이 비어있습니다.');
+
+    try {
+      const parsed = JSON.parse(text) as QaReport;
+      // score는 0-10 정수로 클램프. 누락/비정상이면 7(임계값)로 두어 불필요한 보정·비용을 막는다.
+      const score =
+        typeof parsed.score === 'number' && Number.isFinite(parsed.score)
+          ? Math.max(0, Math.min(10, Math.round(parsed.score)))
+          : 7;
+      const issues: QaReport['issues'] = Array.isArray(parsed.issues)
+        ? parsed.issues.map((issue) => ({
+            severity:
+              issue?.severity === 'critical' || issue?.severity === 'major' ? issue.severity : 'minor',
+            area: issue?.area ?? '미분류',
+            detail: issue?.detail ?? '',
+          }))
+        : [];
+      return {
+        score,
+        verdict: parsed.verdict === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'PASS',
+        issues,
+        selfBiasNote: parsed.selfBiasNote ?? '생성·평가 모두 Gemini 계열이므로 self-bias 가능성이 있습니다.',
+      };
+    } catch {
+      throw new GeminiParseError('Critic 평가 응답을 파싱할 수 없습니다.', text);
+    }
+  } catch (error) {
+    if (error instanceof GeminiApiError || error instanceof GeminiParseError) throw error;
+    throw new GeminiApiError('Critic 평가 중 오류가 발생했습니다.', error);
   }
 }
 
