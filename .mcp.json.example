@@ -1,0 +1,12 @@
+{
+  "_comment": "실제 .mcp.json은 환경별 설정이라 gitignore됩니다. 이 파일을 .mcp.json으로 복사해 사용하세요. code-index 실행 파일이 PATH에 없으면 command를 절대경로(예: Windows의 C:\\\\Python313\\\\Scripts\\\\code-index-mcp.exe)로 바꾸세요. 설치: pip install code-index-mcp",
+  "mcpServers": {
+    "Sentry": {
+      "url": "https://mcp.sentry.dev/mcp/<org>/<project>"
+    },
+    "code-index": {
+      "command": "code-index-mcp",
+      "args": ["--project-path", "."]
+    }
+  }
+}
